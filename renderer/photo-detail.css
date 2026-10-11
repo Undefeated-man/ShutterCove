@@ -1,0 +1,11 @@
+.photo-detail .inspect-layout{grid-template-columns:minmax(0,1fr) 260px;align-items:start}
+.photo-detail .pair-previews,.photo-detail .preview-block,.photo-detail .inspector-aside{min-width:0;min-height:0}
+.photo-detail .pair-previews{align-content:start}
+.photo-detail .preview-frame{position:relative;display:block;width:100%;height:clamp(180px,32vh,300px);min-width:0;min-height:0;overflow:hidden}
+.photo-detail .preview-frame img{position:absolute;inset:0;display:block;width:100%;height:100%;min-width:0;min-height:0;max-width:100%;max-height:100%;object-fit:contain;object-position:center}
+.photo-detail .preview-label{gap:8px;line-height:1.6;flex-wrap:wrap}
+.photo-detail .preview-label>span:last-child{font-size:calc(10px * var(--font-scale,1.2));color:#99a68e}
+.photo-detail .editor-buttons{min-width:0;position:relative}
+.photo-detail .modal-header>div{min-width:0}.photo-detail .modal-header h3{overflow-wrap:anywhere}
+@media(max-width:900px){.photo-detail .inspect-layout{grid-template-columns:minmax(0,1fr) 225px;gap:16px}}
+@media(max-width:700px){.photo-detail .inspect-layout{grid-template-columns:minmax(0,1fr)}.photo-detail .preview-frame{height:clamp(160px,34vh,260px)}}

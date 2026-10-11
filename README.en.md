@@ -71,7 +71,7 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 | Copy a selection to a folder | Choose an existing folder or create one in the picker, then collect JPEGs from different subfolders into one flat destination; optionally include CR3 (off by default), with unique collision names shared by each pair, progress, cancellation, and results |
 | Favorite synchronization to SD | Preview files to keep from favorites or the current selection, then move other JPEG / CR3 files into a recoverable `待删` batch with a journal |
 
-Photo details display JPEG and its corresponding CR3 preview together in the same detail view. Each format has Photoshop, Lightroom, and system-open buttons. Browsing creates lightweight cached previews rather than full original copies.
+Photo details display JPEG and its corresponding CR3 preview together, stacked in the same detail view. Each format has Photoshop, Lightroom, and system-open buttons. Large landscape, portrait, and panoramic photographs fit completely within the preview frame while preserving their aspect ratio; the frame adapts to the window height. Scroll the detail view to reach the lower CR3 preview and editor buttons, while previous / next controls stay available. Browsing creates lightweight cached previews rather than full original copies.
 
 ![Paired JPEG / CR3 previews and editor handoff using synthetic landscapes](docs/screenshots/paired-preview.png)
 
