@@ -210,7 +210,24 @@ v1.0.4 打包验收接入 `scripts/onboarding-ui-smoke.js`，使用同一个临�
 | 实际安装包脱敏 | 扫描 1,401 个文件：549 个文本、852 个二进制，包含 789 个 ASAR 条目；24 个第一方文件与当前构建一致，无发现 |
 | 独立图库回归 | 最终包 24 项全部通过；与完整安装包测试合计 555 项断言 |
 
-脱敏分类计数不与采用其他规则的旧版横向比较。CI 单步 46 分钟、构建任务 60 分钟；三平台 CI、发布资产校验及公开发布仍待实际确认。已有 v1.0.4 本地结果不作为 v1.0.5 的最终包证明。
+脱敏分类计数不与采用其他规则的旧版横向比较。CI 单步 46 分钟、构建任务 60 分钟。已有 v1.0.4 本地结果不作为 v1.0.5 的最终包证明。
+
+[三平台 CI 运行 38153762129](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38153762129) 第 2 次尝试整体成功，构建提交为 `ae087024b4a35b7677480dd9cc1661f8ff1c1c16`：macOS arm64、macOS x64、Linux x64 与草稿 Release 装配均成功。两个 Mac 任务首轮通过；Linux 首轮在时间轴 UI 测试的 “Glass timeline expands during scrubbing” 断言失败，当时使用固定 220 ms 等待。在同一个不可变标签上重跑 Linux 后完整通过。现有证据支持怀疑动画等待时序不稳定，尚未证明应用存在竞态。随后 main 分支独立维护了测试等待方式，19 项正向与 1 项负向检查通过；此维护不修改该标签的应用，也不计入本地 555 项或标签 CI 结果。
+
+三个成功平台任务的完整日志已核对：各十六次应用启动、555 项断言（独立图库 24 项 + 安装包十五次启动 531 项），均输出 `Packaged native smoke passed` 并确认实际文件结果，无 QA 错误。macOS arm64 首轮任务 `114512376064`、macOS x64 首轮任务 `114512375989`、Linux 重跑任务 `114513680335`。
+
+草稿资产验收：六个安装包与 `SHA256SUMS.txt` 共七个资产全部处于 uploaded 状态且大小非零。只下载 606 字节的 SHA-256 校验表，没有下载安装包；表中六个文件名及摘要与 GitHub 对应资产 digest 全部一致，校验表自身的 SHA-256 也与其资产 digest 一致。
+
+| 安装包 | 字节数 | SHA-256 |
+| --- | ---: | --- |
+| Shiguang-Isle-1.0.5-linux-amd64.deb | 112595512 | `c73814f85d5e51abad4bb4113879666b08c278bf6cba5ccee4a8b2f02fe86661` |
+| Shiguang-Isle-1.0.5-linux-x86_64.AppImage | 142001690 | `b0ce3ad8c3fa62ee3c5421991ca3e20a7fa14e2b6335ad5419553ecf7bcb12e0` |
+| Shiguang-Isle-1.0.5-mac-arm64.dmg | 145188548 | `8046b10dd1f7b489824d27d070144974b77c94e3c573961454626ca2f0382f6a` |
+| Shiguang-Isle-1.0.5-mac-arm64.zip | 145107951 | `b07f60641bc4791dcadb19f9b712d1649fc87263b33b1ba55bac541899f02bb7` |
+| Shiguang-Isle-1.0.5-mac-x64.dmg | 151665306 | `b4891a2552d0f35d93d4bd3dfbf62f43aa7903772fe8bbdf958021d1f1818f60` |
+| Shiguang-Isle-1.0.5-mac-x64.zip | 151623907 | `606e9a385a27c912f4e97eeabae809c042ce53733d10c29234926bd2759eff10` |
+
+2026-10-12，[v1.0.5](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.5) 已公开发布。发布后再次确认非草稿、非预发布，六个安装包与校验表完整，中英文说明与合成界面截图已保存；资产摘要及发布正文与本地记录一致。
 
 ## 当前边界
 

@@ -1,6 +1,29 @@
 (async () => {
   const checks = [];
-  const wait = async test => { for (let i = 0; i < 160; i++) { if (test()) return; await new Promise(resolve => setTimeout(resolve, 40)); } throw new Error('Timeline UI wait timeout'); };
+  const timelineDiagnostics = () => {
+    const rail = document.getElementById('photo-timeline');
+    const bubble = rail?.querySelector('.photo-timeline-bubble');
+    const style = rail && getComputedStyle(rail);
+    return {
+      width: style?.width ?? null,
+      rectWidth: rail?.getBoundingClientRect().width ?? null,
+      classes: rail?.className ?? null,
+      bubbleOpacity: bubble ? getComputedStyle(bubble).opacity : null,
+      transition: style?.transition ?? null,
+      viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },
+      visibility: { state: document.visibilityState, hidden: document.hidden },
+      animations: rail ? rail.getAnimations({ subtree: true }).map(animation => ({
+        type: animation.constructor.name,
+        transitionProperty: animation.transitionProperty ?? null,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        startTime: animation.startTime,
+        duration: animation.effect?.getTiming().duration ?? null,
+      })) : [],
+    };
+  };
+  const wait = async test => { for (let i = 0; i < 160; i++) { if (test()) return; await new Promise(resolve => setTimeout(resolve, 40)); } throw new Error('Timeline UI wait timeout: ' + JSON.stringify(timelineDiagnostics())); };
   const assert = (condition, label) => { if (!condition) throw new Error(label); checks.push(label); };
   await wait(() => window.App?.api.isDemo && window.PhotoTimeline && App.state.photos.length);
   const original = App.state.photos, originalVisible = App.state.visible;
@@ -54,8 +77,11 @@
     el('search').value = ''; el('search').dispatchEvent(new Event('input', { bubbles: true }));
     await wait(() => el('photo-timeline').getAttribute('aria-valuemax') === '299');
     el('photo-timeline').classList.add('is-dragging');
-    await new Promise(resolve => setTimeout(resolve, 220));
-    assert(Number(getComputedStyle(document.querySelector('.photo-timeline-bubble')).opacity) === 1, 'Date bubble visible during scrubbing');
+    // Reading the style starts the transition; observe its result instead of
+    // assuming CI can render its first frame within a fixed 220 ms delay.
+    getComputedStyle(el('photo-timeline')).width;
+    await wait(() => parseFloat(getComputedStyle(el('photo-timeline')).width) >= 30 && Number(getComputedStyle(document.querySelector('.photo-timeline-bubble')).opacity) >= .99);
+    assert(Number(getComputedStyle(document.querySelector('.photo-timeline-bubble')).opacity) >= .99, 'Date bubble visible during scrubbing');
     assert(parseFloat(getComputedStyle(el('photo-timeline')).width) >= 30, 'Glass timeline expands during scrubbing');
     el('photo-timeline').classList.remove('is-dragging');
     el('search').value = '时光-00'; el('search').dispatchEvent(new Event('input', { bubbles: true }));
