@@ -28,6 +28,8 @@ CR3 优先抽取内嵌 JPEG 预览。预览的分辨率、曝光、色调由相�
 
 相似搜索把每张显示图像缩到指定网格，转换为数值向量并计算余弦相似度。粗网格强调大块构图与颜色，细网格保留更多局部差异；它不提供人物身份识别或语义理解。搜索向量属于当前任务内存，不建立永久向量库。预计时间依据待扫描文件数计算，实际耗时受磁盘、CR3 预览和图像尺寸影响。
 
+拼图预览的 Alt / Option 滚轮缩放与平移仅改变显示变换，不改变导出画布。留白和胶片海报共享每行张数设置，默认 2，允许 1–12；实际导出使用相同布局计算，保留既有长边及像素容量上限。适配视图支持画布换位，放大后的画布拖动用于平移；缩略图始终用于换序。
+
 ## 安全边界
 
 Renderer 应禁用 Node integration，启用 context isolation，并通过固定 preload 方法调用主进程。动态文本使用安全 DOM API；外部文件 URL 只能访问已经加入图库或经对话框选中的路径。应用不远程加载网站。
@@ -39,6 +41,14 @@ Renderer 应禁用 Node integration，启用 context isolation，并通过固定
 `release.yml` 构建两种 Mac 架构，以及 Linux x64 AppImage / deb，然后在对应 runner 上启动打包后的应用运行合成图库界面测试；成功后统一核验预期文件名与校验和并写入草稿 Release。采用各架构原生 runner，Sharp 二进制跟随平台安装，避免跨架构的本地模块混用。
 
 macOS 使用 ad-hoc 签名；不声明 Apple 公证或 Developer ID 身份。发布记录需区分单元测试、界面截图、打包完成和真实机器安装验收。GitHub runner 的可用标签依据 [GitHub 官方 runner 文档](https://docs.github.com/en/actions/reference/runners/github-hosted-runners)；避免即将停用的 macOS 14 runner。
+
+## 应用内更新
+
+更新服务在主进程访问固定官方仓库的最新正式 Release，按系统和架构选择准确文件名。Renderer 通过固定 API 接收状态、检查、下载和安装，不传入远程 URL 或任意安装目的地。自动检查只提醒，不安装；演示和安装包 QA 不自动访问网络。
+
+下载使用 HTTPS、服务器白名单、容量与超时限制。校验表自身和安装包均核对 GitHub asset digest，并核对校验表对应 SHA-256。Mac ZIP 提取前检查路径和内部链接，提取后校验文件树、应用标识、版本、架构及签名。暂存及安装工作目录为隐藏的 `.noindex`，Mac 替换当前 Applications 内的 App、AppImage 替换自身文件，沿用原安装名及 userData，避免留下新的可搜索应用副本。
+
+独立安装 helper 在旧进程退出后替换文件，保留回退备份并重新启动同一路径。收藏、标签和设置留在原有应用资料中；Mac / AppImage 原位安装只备份设置与相册元数据，不备份照片或预览缓存。Linux deb 交由系统安装器认证与安装，完成后需手动重新打开应用，安装及恢复由系统包管理器负责。详情见 [中英文更新说明](updates.md)。系统的 Gatekeeper、签名或权限检查不因更新被关闭。
 
 ## 第三方软件
 

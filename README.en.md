@@ -51,17 +51,20 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 
 To update on Mac, quit the running older version, drag the new app into Applications, choose Replace, and launch the new copy from Applications. Keep the same macOS account and application identifier to continue using existing local settings, tags, and favorites without copying photographs again. Verify the new package against its same-version checksums; follow the per-app approval steps above if macOS requests them again.
 
+Starting with v1.0.7, **Settings → Software update** shows the installed version and offers manual checks and downloads; earlier versions need one manual installation of v1.0.7 or later. Automatic checks are on by default and only notify; installation requires your click. For Mac / AppImage, the update-and-restart action verifies downloads and retains the existing installation path and local data. Mac apps need a writable Applications location; they cannot update in place from a disk image or build folder. AppImages also need a writable location. The Linux deb action downloads and opens the system package installer for authentication and installation; reopen the app manually afterward. See the [update guide](docs/updates.md).
+
 ## Features
 
 | Feature | How it works |
 | --- | --- |
 | First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
+| Update checks and installation | Check manually in Settings or receive automatic reminders; installed Mac apps and writable AppImages can download, verify, replace themselves in place, and restart while preserving favorites, tags, and settings |
 | Detail zoom and pan | Hold Option / Alt while scrolling to zoom, then drag to pan; choose Fit to window or double-click to reset, with up to 16× relative zoom |
 | Color organization | Analyze image colors automatically and browse within a date range |
 | Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
 | Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
 | Similar photographs | Choose a directory and compare average-pooled RGB pixels using cosine similarity; adjustable granularity, estimated time, progress, and cancellation |
-| Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace and film posters; drag to reorder and export a new JPEG |
+| Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace and film posters; both posters support 1–12 photos per row, defaulting to 2, with Alt / Option wheel preview zoom, drag reordering, and JPEG export |
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
 | Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
@@ -83,6 +86,10 @@ The paired-preview screenshot uses generated photographs and sample metadata, wi
 In photo details, hold **Option (Mac) / Alt** while scrolling to zoom in or out, then drag the enlarged image to pan; ordinary scrolling still scrolls the detail view. Choose “适合窗口” (Fit to window) or double-click the image to reset. With the preview focused, use + / − to zoom and 0 to reset. **100% is relative to the fitted view, not a 1:1 original-pixel scale**; the maximum is 16 times the fitted size. JPEG and CR3 previews zoom independently; changing photographs or resizing the preview area restores the fitted view. CR3 zoom uses the camera's embedded preview rather than RAW development, so clarity depends on that preview's resolution.
 
 ![Independent detail zoom: synthetic JPEG at 223%, with the CR3 embedded preview still fitted](docs/screenshots/detail-zoom.png)
+
+![Collage preview zoom and photos-per-row controls using synthetic photographs](docs/screenshots/collage-zoom.png)
+
+![Update checks and version reminders: demonstration states without private data](docs/screenshots/update-settings.png)
 
 ![Font settings: larger defaults and an immediate preview](docs/screenshots/font-settings.png)
 
@@ -116,7 +123,7 @@ Choose “开始浏览” (Start browsing) to close the guide, or “选择照�
 2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
 3. Select multiple photographs to add tags, mark favorites, copy to a folder, or move files to trash. Use “Copy to folder” to collect photographs from different subfolders, choosing an existing destination or creating a folder in the picker. JPEGs are copied by default, and you can include corresponding CR3 files. Originals remain in place; collisions receive unique names shared by each JPEG / CR3 pair. Review progress and copied, skipped, or failed results, and cancel when needed. RAW-only photographs are skipped unless CR3 copying is enabled. A single photograph can still be revealed in the file manager or handed to an editor as JPEG or CR3.
 4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
-5. Open the collage workspace with multiple JPEG photographs, choose a layout, drag photographs into a new order, and export a new JPEG.
+5. Open the collage workspace, choose a layout, and drag photographs into a new order. Both poster templates support 1–12 photos per row, defaulting to 2. Hold Alt / Option while scrolling to zoom the preview, then drag to pan; Fit to window resets the view. Thumbnail reordering works at any zoom, and the fitted canvas also supports direct swapping. Preview zoom does not change the export dimensions.
 6. Use the editor to crop, rotate, mirror, or add rectangular and elliptical mosaics. Choose overwrite or save-as. Canvas exports do not retain the original EXIF; editing does not overwrite CR3 files.
 7. Import from an SD card or another directory into your chosen memories root. Pick an existing theme or create one. Files are copied, sorted by capture date, and checked for duplicates; source files remain available.
 8. Synchronize favorites or the current selection to an SD card. Review the keep and move lists first. Other photographs move into a `待删` batch on that card with their relative paths and a journal. Empty matches, ambiguity, or files changing after preview stop execution.
@@ -172,7 +179,7 @@ Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 
 
 ## Privacy and licenses
 
-The app has no account system, telemetry, photo-upload feature, or online photo analysis. The public repository contains source code, icons, and synthetic screenshots. `npm run privacy` checks for original media, runtime databases, personal absolute paths, and common secret formats. Screenshot contents also require visual review.
+The app has no account system, telemetry, photo-upload feature, or online photo analysis. Update checks contact only this project's GitHub Releases and package download services without sending photos, tags, or library paths; automatic checks can be turned off in Settings. The public repository contains source code, icons, and synthetic screenshots. `npm run privacy` checks for original media, runtime databases, personal absolute paths, and common secret formats. Screenshot contents also require visual review.
 
 Application source uses the [MIT License](LICENSE). Electron, Sharp, ExifTool, and other dependencies retain their own licenses. ExifTool is by Phil Harvey and uses the same dual-license terms as Perl; see [Architecture and third-party notices](docs/architecture.md).
 

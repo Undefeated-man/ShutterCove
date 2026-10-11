@@ -8,12 +8,15 @@ const { promisify } = require('node:util');
 const { createReadStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const { PhotoLibrary } = require('./library.cjs');
+const { UpdateService, waitForBootReady } = require('./updater.cjs');
 const run = promisify(execFile);
 protocol.registerSchemesAsPrivileged([
   { scheme: 'memory-app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
   { scheme: 'memory-photo', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
 ]);
-let win, library, settings, settingsPath;
+let win, library, settings, settingsPath, updater;
+let settingsSaveChain = Promise.resolve(), installingUpdate = false;
+const activeOperations = new Set();
 let exitStatus = 0;
 const approvedRoots = new Set();
 const mediaTokens = new Map();
@@ -35,6 +38,9 @@ const qaUserData = smoke && qaDataIndex >= 0 ? process.argv[qaDataIndex + 1] : n
 app.setName('Shiguang Isle');
 app.setPath('userData', path.join(app.getPath('appData'), 'Shiguang Isle'));
 if (smoke) app.setPath('userData', qaUserData ? path.resolve(qaUserData) : path.join(app.getPath('temp'), `shiguang-smoke-${process.pid}`));
+const ownsInstance = !app.isPackaged || smoke || app.requestSingleInstanceLock();
+if (!ownsInstance) app.quit();
+else app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); } });
 
 async function atomicJSON(file, value) {
   const temp = `${file}.${process.pid}.tmp`;
@@ -58,7 +64,13 @@ async function detectEditor(editor) {
   }
   return '';
 }
-async function saveSettings(patch = {}) {
+function publicSettings() { return { ...settings, currentVersion: app.getVersion() }; }
+function saveSettings(patch = {}) {
+  const operation = settingsSaveChain.catch(() => {}).then(() => persistSettings(patch));
+  settingsSaveChain = operation;
+  return operation;
+}
+async function persistSettings(patch = {}) {
   const next = { ...settings, editorPaths: { ...settings.editorPaths } };
   for (const key of ['libraryRoot', 'importDestination']) {
     if (typeof patch[key] === 'string' && patch[key] && patch[key] !== settings[key]) {
@@ -82,9 +94,13 @@ async function saveSettings(patch = {}) {
     if (typeof patch.onboardingCompleted !== 'boolean') throw new Error('无效的使用引导状态');
     next.onboardingCompleted = patch.onboardingCompleted;
   }
+  if (Object.hasOwn(patch, 'checkUpdatesAutomatically')) {
+    if (typeof patch.checkUpdatesAutomatically !== 'boolean') throw new Error('无效的自动更新检查设置');
+    next.checkUpdatesAutomatically = patch.checkUpdatesAutomatically;
+  }
   await atomicJSON(settingsPath, next);
   settings = next;
-  return settings;
+  return publicSettings();
 }
 async function approvedFolder(folder) {
   if (!folder || typeof folder !== 'string') throw new Error('请先选择照片文件夹');
@@ -106,12 +122,20 @@ async function diskResponse(file, media = false) {
 function handle(name, callback) {
   ipcMain.handle(`memory:${name}`, async (event, args) => {
     if (!win || event.sender !== win.webContents || event.senderFrame !== win.webContents.mainFrame || !event.senderFrame.url.startsWith('memory-app://app/')) throw new Error('未经授权的请求');
-    return callback(args);
+    if (installingUpdate && !['getUpdateState', 'getSettings'].includes(name)) throw new Error('正在更新，请等待应用重新打开');
+    const tracks = !['getUpdateState', 'checkForUpdates', 'downloadUpdate', 'installUpdate', 'getSettings'].includes(name);
+    const operation = Promise.resolve().then(() => callback(args));
+    if (tracks) activeOperations.add(operation);
+    try { return await operation; } finally { activeOperations.delete(operation); }
   });
 }
 function bindAPI() {
-  handle('getSettings', () => settings);
+  handle('getSettings', publicSettings);
   handle('saveSettings', saveSettings);
+  handle('getUpdateState', () => updater.snapshot());
+  handle('checkForUpdates', () => updater.checkForUpdates());
+  handle('downloadUpdate', () => updater.downloadUpdate());
+  handle('installUpdate', () => updater.installUpdate());
   handle('chooseFolder', async args => {
     const title = typeof args?.title === 'string' && args.title.trim() ? args.title.slice(0, 120) : '选择照片文件夹';
     const result = await dialog.showOpenDialog(win, { title, properties: ['openDirectory', ...(args?.createDirectory === true ? ['createDirectory'] : [])] });
@@ -264,11 +288,13 @@ function bindAPI() {
 async function start() {
   await app.whenReady();
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2 };
+  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2, checkUpdatesAutomatically: true };
   try { settings = { ...settings, ...JSON.parse(await fs.readFile(settingsPath, 'utf8')) }; } catch {}
   // Existing libraries can revisit the guide in Settings without interrupting an upgrade.
   settings.onboardingCompleted = typeof settings.onboardingCompleted === 'boolean' ? settings.onboardingCompleted : Boolean(settings.libraryRoot);
   settings.fontScale = typeof settings.fontScale === 'number' && Number.isFinite(settings.fontScale) ? Math.min(1.5, Math.max(1, settings.fontScale)) : 1.2;
+  settings.checkUpdatesAutomatically = typeof settings.checkUpdatesAutomatically === 'boolean' ? settings.checkUpdatesAutomatically : true;
+  delete settings.currentVersion;
   for (const root of [settings.libraryRoot, settings.importDestination]) if (root) approvedRoots.add(root);
   if (verifyRoot && smoke) {
     const real = await fs.realpath(verifyRoot);
@@ -281,6 +307,13 @@ async function start() {
   }
   library = new PhotoLibrary({ userData: app.getPath('userData'), emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress', payload); } });
   await library.init();
+  updater = new UpdateService({ app, disabled: smoke || demo, automatic: () => settings.checkUpdatesAutomatically, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:update-state', payload); }, openInstaller: file => shell.openPath(file), beforeInstall: async () => {
+    if (activeOperations.size) throw new Error('请等待照片处理和设置保存结束后再更新');
+    installingUpdate = true;
+    await settingsSaveChain;
+    await library.saveChain;
+  }, installFailed: () => { installingUpdate = false; }, quit: () => { app.quit(); } });
+  await updater.init();
   const renderer = path.resolve(__dirname, '..', 'renderer');
   protocol.handle('memory-app', async request => {
     const url = new URL(request.url);
@@ -306,6 +339,18 @@ async function start() {
     if (demo) query.set('demo', '1');
     if (smoke && !process.argv.includes('--onboarding')) query.set('skipOnboarding', '1');
     win.loadURL(`memory-app://app/index.html${query.size ? '?' + query.toString() : ''}`);
+    win.webContents.once('did-finish-load', async () => {
+      const updateIndex = process.argv.indexOf('--update-relaunch');
+      if (updateIndex >= 0) {
+        try {
+          const usable = await waitForBootReady(() => {
+            if (!win || win.isDestroyed()) return false;
+            return win.webContents.executeJavaScript('window.__shiguangBootReady === true');
+          });
+          if (usable && win && !win.isDestroyed()) await updater.acknowledgeRelaunch(process.argv[updateIndex + 1]);
+        } catch {}
+      }
+    });
     win.on('closed', () => { win = null; });
     if (smoke || screenshotPath) win.webContents.once('did-finish-load', async () => {
       try {
@@ -332,7 +377,8 @@ app.on('before-quit', event => {
   if (library && !closing) {
     event.preventDefault();
     closing = true;
-    Promise.resolve(library.close?.()).finally(() => app.quit());
+    updater?.stop();
+    Promise.resolve(settingsSaveChain).catch(() => {}).then(() => library.close?.()).finally(() => app.quit());
   }
 });
-start().catch(error => { console.error(error); app.exit(1); });
+if (ownsInstance) start().catch(error => { console.error(error); app.exit(1); });

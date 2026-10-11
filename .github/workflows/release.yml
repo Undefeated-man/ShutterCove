@@ -35,7 +35,7 @@ jobs:
             platform: linux
             arch: x64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 65
+    timeout-minutes: 75
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -88,7 +88,7 @@ jobs:
         timeout-minutes: 5
         run: xvfb-run -a dist/linux-unpacked/shiguang-isle --no-sandbox --demo --smoke --qa-script scripts/ui-smoke.js
       - name: Verify packaged production photo IPC and disk export
-        timeout-minutes: 49
+        timeout-minutes: 55
         run: node scripts/package-smoke.cjs
       - uses: actions/upload-artifact@v4
         with:

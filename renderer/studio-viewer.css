@@ -1,0 +1,15 @@
+.collage-studio .studio-layout{grid-template-columns:minmax(0,1fr) 224px}
+.collage-studio .studio-layout>div,.collage-studio .studio-tools{min-width:0}
+.collage-studio #collage-preview{height:clamp(230px,48vh,460px);min-height:0;max-height:none;display:block;padding:0;touch-action:auto;isolation:isolate}
+.collage-studio #collage-canvas{position:absolute;left:50%;top:50%;max-width:none;max-height:none;object-fit:initial;transform-origin:50% 50%;user-select:none;touch-action:auto;transition:none}
+.collage-studio #collage-preview.is-zoomed,.collage-studio #collage-preview.is-zoomed canvas{cursor:grab;touch-action:none}
+.collage-studio #collage-preview.is-panning,.collage-studio #collage-preview.is-panning canvas{cursor:grabbing}
+.collage-viewer-controls{display:flex;align-items:center;flex-wrap:wrap;gap:7px 10px;padding:10px 2px 0;font-size:calc(10px * var(--font-scale,1.2));line-height:1.7;color:#84957e}
+.collage-viewer-controls output{font-weight:600;font-variant-numeric:tabular-nums;color:#47756a;min-width:45px}
+.collage-viewer-controls button{font:inherit;color:#537b6b;border:1px solid #a4b49b3b;border-radius:7px;padding:3px 10px;line-height:1.6;background:#edf2e9b8;white-space:nowrap}
+.collage-viewer-controls button:hover{background:#e2eddf;color:#315d53}
+.collage-viewer-controls .viewer-hint{min-width:0}
+.collage-columns-field input{width:100%}
+.collage-studio .studio-tools>div{min-width:0}
+@media(max-width:900px){.collage-studio .studio-layout{grid-template-columns:minmax(0,1fr) 225px;gap:16px}.collage-viewer-controls .viewer-hint{flex:1 1 100%}}
+@media(max-width:700px){.collage-studio .studio-layout{grid-template-columns:minmax(0,1fr)}}
