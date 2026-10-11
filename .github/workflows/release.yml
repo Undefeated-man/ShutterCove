@@ -1,0 +1,159 @@
+name: Build desktop release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag, such as v1.0.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Package ${{ matrix.platform }} ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: mac
+            arch: arm64
+          - runner: macos-15-intel
+            platform: mac
+            arch: x64
+          - runner: ubuntu-22.04
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Validate release version
+        run: |
+          node - <<'NODE'
+          const tag = process.env.RELEASE_TAG;
+          if (!/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(tag)) {
+            throw new Error('Release tag must be a version such as v1.0.0');
+          }
+          if (tag.slice(1) !== require('./package.json').version) {
+            throw new Error('Tag and package.json version must match');
+          }
+          NODE
+      - run: npm ci
+      - run: npm test
+      - run: npm run privacy
+      - run: npm run icon
+      - name: Build macOS installers
+        if: matrix.platform == 'mac'
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never -c.mac.identity=-
+      - name: Build Linux installers
+        if: matrix.platform == 'linux'
+        run: npx electron-builder --linux AppImage deb --x64 --publish never
+      - name: Smoke test packaged macOS app
+        if: matrix.platform == 'mac'
+        timeout-minutes: 5
+        run: |
+          python3 - <<'PY'
+          import glob, os, subprocess
+          binaries = glob.glob('dist/**/Shiguang Isle.app/Contents/MacOS/Shiguang Isle', recursive=True)
+          if len(binaries) != 1:
+              raise SystemExit(f'Expected one packaged app executable, found {len(binaries)}')
+          subprocess.run([
+              os.path.abspath(binaries[0]), '--demo', '--smoke',
+              '--qa-script', os.path.abspath('scripts/ui-smoke.js')
+          ], check=True, timeout=180)
+          PY
+      - name: Smoke test packaged Linux app
+        if: matrix.platform == 'linux'
+        timeout-minutes: 5
+        run: xvfb-run -a dist/linux-unpacked/shiguang-isle --no-sandbox --demo --smoke --qa-script scripts/ui-smoke.js
+      - name: Verify packaged production photo IPC and disk export
+        timeout-minutes: 15
+        run: node scripts/package-smoke.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
+          retention-days: 14
+
+  draft-release:
+    name: Assemble draft release
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: packages-*
+          merge-multiple: true
+          path: packages
+      - name: Check complete installation packages
+        run: |
+          python3 - <<'PY'
+          import os, glob
+          tag = os.environ['RELEASE_TAG'][1:]
+          for os_name, arch, suffix in [
+              ('mac', 'arm64', 'dmg'), ('mac', 'arm64', 'zip'),
+              ('mac', 'x64', 'dmg'), ('mac', 'x64', 'zip'),
+              ('linux', 'x64', 'AppImage'), ('linux', 'x64', 'deb')]:
+              expected = f'packages/Shiguang-Isle-{tag}-{os_name}-{arch}.{suffix}'
+              if not glob.glob(expected):
+                  raise SystemExit(f'Missing release asset: {expected}')
+          PY
+      - name: Create checksums
+        working-directory: packages
+        run: sha256sum *.dmg *.zip *.AppImage *.deb > SHA256SUMS.txt
+      - name: Create or update draft
+        shell: bash
+        run: |
+          cat > release-notes.md <<'EOF'
+          拾光屿 · 摄影回忆时光机
+
+          本地管理 JPEG / CR3，原片留在所选目录；缓存可清理。
+
+          安装：Apple Silicon 下载 mac-arm64.dmg，Intel 下载 mac-x64.dmg；Linux x64 下载 AppImage 或 deb。SHA256SUMS.txt 用于核验下载完整性。
+
+          macOS 包为 ad-hoc 签名，未经过 Apple 公证。首次启动可能需要在系统设置的“隐私与安全性”中允许打开。Linux 的 Adobe 交接需改用本地编辑器。
+
+          此版本由自动化构建并先保存为草稿；发布前需核对安装包和验证记录。CR3 展示使用相机嵌入预览，不提供 RAW 显影。
+          EOF
+          if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft > existing-draft.txt 2>/dev/null; then
+            if [ "$(cat existing-draft.txt)" != "true" ]; then
+              echo 'Refusing to overwrite a published release.' >&2
+              exit 1
+            fi
+            gh release edit "$RELEASE_TAG" --title "拾光屿 $RELEASE_TAG" --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "拾光屿 $RELEASE_TAG" --notes-file release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" packages/* --clobber

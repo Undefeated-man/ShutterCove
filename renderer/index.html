@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: memory-photo: file:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' memory-photo:; font-src 'self';">
+<title>拾光屿 · 摄影回忆时光机</title>
+<link rel="stylesheet" href="style.css">
+<script defer src="demo.js"></script>
+<script defer src="studio.js"></script>
+<script defer src="app.js"></script>
+</head>
+<body>
+<div class="app-shell">
+<aside class="sidebar">
+<div class="brand"><div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M7 28c3-7 6-9 9-9 4 0 4 5 8 5 3 0 5-5 9-5M10 13h5l2-4h8l2 4h4a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3Z"/><circle cx="21" cy="22" r="7"/></svg></div><div><strong>拾光屿<span>SHIGUANG ISLAND</span></strong></div></div>
+<p class="sidebar-caption">给每一束光，一个归处。</p>
+<div class="nav-label">我的时光</div>
+<nav id="navigation" aria-label="主要导航">
+<button class="nav-item active" data-view="all"><span class="nav-icon">▦</span>全部回忆<span class="nav-count" id="all-count">0</span></button>
+<button class="nav-item" data-view="favorites"><span class="nav-icon">♡</span>精品收藏<span class="nav-count" id="favorite-count">0</span></button>
+<button class="nav-item" data-view="colors"><span class="nav-icon">◉</span>色彩漫游<span class="nav-spark">✧</span></button>
+<button class="nav-item" data-view="similar"><span class="nav-icon">◎</span>相似照片</button>
+<button class="nav-item" data-view="collage"><span class="nav-icon">▧</span>拼图工作台</button>
+</nav>
+<div class="sidebar-divider"></div>
+<div class="nav-label">主题书签 <span id="theme-count"></span></div>
+<div id="theme-bookmarks" class="theme-bookmarks"></div>
+<div class="sidebar-bottom"><div class="library-status"><span class="status-dot"></span><div><strong>原片在原地，回忆在这里</strong><span id="library-label">选择照片文件夹开始</span></div></div><button class="nav-item muted" id="settings-button"><span class="nav-icon">⚙</span>相册设置</button></div>
+</aside>
+<main class="main-panel">
+<header class="topbar"><div class="breadcrumb">我的时光<span>/</span><strong id="breadcrumb-view">全部回忆</strong></div><div class="top-actions"><span class="demo-pill" id="demo-pill" hidden>演示相册</span><button class="button quiet" id="sync-sd-button" hidden><span>⇄</span>同步精品到 SD 卡</button><button class="button quiet" id="choose-library"><span>＋</span>打开相册</button><button class="button primary" id="import-button"><span>↥</span>导入照片</button></div></header>
+<div class="main-scroll" id="main-scroll">
+<section class="hero" id="hero"><div class="hero-copy"><div class="eyebrow"><span></span> YOUR MOMENTS, FOREVER</div><h1>把瞬间，<br>留成永恒<span>。</span></h1><p>在时间与色彩之间，<br>重新遇见镜头里的那些美好。</p><div class="hero-bottom"><span class="tiny-sun">☀</span><span id="hero-stats">摄影回忆时光机 · JPEG & RAW</span></div></div><div class="hero-art" id="hero-art"><div class="hero-art-placeholder"></div><div class="hero-image-caption"><span>每一张照片，都有自己的季节</span><strong>LET THE LIGHT STAY.</strong></div><div class="hero-glass"><span>✧</span> 拾起散落的时光</div></div></section>
+<section class="gallery-heading"><div><div class="section-eyebrow" id="section-eyebrow">YOUR PHOTO JOURNEY</div><h2 id="view-title">全部回忆 <span id="result-count">0 张</span></h2><p id="view-description">顺着时间，寻找属于你的光。</p></div><div class="gallery-actions"><button class="icon-button" id="refresh-button" title="刷新照片" aria-label="刷新照片">↻</button><button class="button quiet" id="select-mode">多选照片</button><select id="sort-order" aria-label="照片排序"><option value="date-desc">时间 · 最新优先</option><option value="date-asc">时间 · 最早优先</option><option value="name">名称 · A—Z</option><option value="color">色彩 · 色相排序</option></select></div></section>
+<section class="filter-panel" aria-label="筛选照片"><div class="search-input"><span>⌕</span><input id="search" type="search" placeholder="搜索照片、主题或标签…" aria-label="搜索照片"></div><div class="filters"><div class="date-range"><label for="date-from">日期</label><input id="date-from" type="date" aria-label="开始日期"><span>—</span><input id="date-to" type="date" aria-label="结束日期"></div><select id="theme-filter" aria-label="按主题筛选"><option value="">全部主题</option></select><select id="tag-filter" aria-label="按标签筛选"><option value="">全部标签</option></select><select id="color-filter" aria-label="按色系筛选"><option value="">全部色系</option><option value="red">绯红</option><option value="orange">暖橙</option><option value="brown">大地棕</option><option value="yellow">金黄</option><option value="green">森林绿</option><option value="cyan">湖水青</option><option value="blue">天空蓝</option><option value="purple">暮光紫</option><option value="pink">花粉</option><option value="neutral">黑白灰</option></select><button class="reset-button" id="reset-filters" title="清除筛选">重置</button></div></section>
+<section class="mode-panel" id="mode-panel" hidden></section>
+<div id="active-filters" class="active-filters" hidden></div>
+<section id="progress-section" class="progress-section" hidden><div class="progress-heading"><strong id="progress-title">正在处理照片</strong><span id="progress-text"></span><button id="cancel-progress" class="link-button">取消</button></div><div class="progress-track"><div id="progress-bar"></div></div></section>
+<div class="gallery-meta"><span id="gallery-meta-text">光影，值得慢慢看。</span><span class="pair-explainer"><i class="pair-dot"></i> JPEG 与 RAW 自动相伴</span></div>
+<div id="photo-grid" class="photo-grid" aria-label="照片列表"></div>
+<div id="empty-state" class="empty-state" hidden><div class="empty-symbol">✧</div><h3>从一段旅程开始</h3><p>打开照片文件夹，让光影与回忆重新相遇。</p><button class="button primary" id="empty-open">选择照片文件夹</button></div>
+<div class="pagination"><button class="button quiet" id="previous-page" hidden>← 上一页</button><span class="light-label" id="page-label" hidden></span><button class="button quiet" id="load-more" hidden>继续翻阅 →</button></div>
+<footer class="gallery-footer"><span>每一帧，都值得被记住。</span><span>拾光屿 · 摄影回忆时光机</span></footer>
+</div>
+<div class="selection-bar" id="selection-bar" hidden><div><span class="selection-counter" id="selected-count">0</span> 张已选 <button class="link-button" id="select-all">全选筛选结果</button><button class="link-button" id="clear-selection">取消选择</button></div><div class="selection-actions"><button class="button quiet" id="batch-tags">＋ 标签 / 主题</button><button class="button quiet" id="batch-favorite">♡ 收藏</button><button class="button quiet" id="batch-reveal">↗ 文件夹中显示</button><button class="button quiet" id="batch-collage">▧ 拼图</button><button class="button danger-quiet" id="batch-delete">删除</button></div></div>
+</main>
+</div>
+<div id="modal-root"></div><div id="toast-root" class="toast-root" aria-live="polite"></div>
+</body>
+</html>
