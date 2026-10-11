@@ -49,11 +49,14 @@ See the [bilingual Mac installation guide](docs/mac-install.md) and [Apple's off
 
 Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom have no official Linux desktop editions; use the editor settings to select an executable installed on your machine.
 
+To update on Mac, quit the running older version, drag the new app into Applications, choose Replace, and launch the new copy from Applications. Keep the same macOS account and application identifier to continue using existing local settings, tags, and favorites without copying photographs again. Verify the new package against its same-version checksums; follow the per-app approval steps above if macOS requests them again.
+
 ## Features
 
 | Feature | How it works |
 | --- | --- |
 | First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
+| Detail zoom and pan | Hold Option / Alt while scrolling to zoom, then drag to pan; choose Fit to window or double-click to reset, with up to 16× relative zoom |
 | Color organization | Analyze image colors automatically and browse within a date range |
 | Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
 | Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
@@ -76,6 +79,10 @@ Photo details display JPEG and its corresponding CR3 preview together, stacked i
 ![Paired JPEG / CR3 previews and editor handoff using synthetic landscapes](docs/screenshots/paired-preview.png)
 
 The paired-preview screenshot uses generated photographs and sample metadata, with no real people or private capture information.
+
+In photo details, hold **Option (Mac) / Alt** while scrolling to zoom in or out, then drag the enlarged image to pan; ordinary scrolling still scrolls the detail view. Choose “适合窗口” (Fit to window) or double-click the image to reset. With the preview focused, use + / − to zoom and 0 to reset. **100% is relative to the fitted view, not a 1:1 original-pixel scale**; the maximum is 16 times the fitted size. JPEG and CR3 previews zoom independently; changing photographs or resizing the preview area restores the fitted view. CR3 zoom uses the camera's embedded preview rather than RAW development, so clarity depends on that preview's resolution.
+
+![Independent detail zoom: synthetic JPEG at 223%, with the CR3 embedded preview still fitted](docs/screenshots/detail-zoom.png)
 
 ![Font settings: larger defaults and an immediate preview](docs/screenshots/font-settings.png)
 
