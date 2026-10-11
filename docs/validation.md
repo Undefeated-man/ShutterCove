@@ -80,7 +80,9 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | 应用签名与 DMG | `codesign --verify --deep --strict` 通过；`hdiutil verify` 确认 DMG 有效；采用 ad-hoc 签名，未进行 Apple 公证 |
 | 安装包脱敏 | 351 个资源与二进制检查通过，未检出被禁止的个人路径 |
 
-三平台 CI 与公开 Release 仍待实际运行结果；本地通过不能代替这些项目的验证。
+三平台 CI 与公开发布已完成：[运行 38121682190](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38121682190) 的 macOS arm64、macOS x64、Linux x64 构建及安装包验收、Release 装配四个任务全部成功。[v1.0.1](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.1) 已公开发布，包含两个 DMG、两个 ZIP、AppImage、deb 和 SHA256SUMS.txt；六个包的 GitHub asset SHA-256 与校验表全部一致。
+
+本机最终应用已使用实际图库核对日历选择、手动日期输入及时间条跨分页跳转，恢复默认日期倒序浏览。首次通过系统启动服务启动时曾遇到目录读取等待；终止该测试进程并重新启动后正常加载，未更改系统权限设置，也未改动用户原片。本记录不将该等待归因于尚未证实的系统原因。
 
 ## 当前边界
 
