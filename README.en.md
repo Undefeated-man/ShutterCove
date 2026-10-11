@@ -2,9 +2,18 @@
 
 [简体中文](README.md) · [English](README.en.md)
 
-Give every captured moment a small island to return to.
+**A local photo library built specifically for DSLR and mirrorless photographers who shoot RAW.**
 
-Shiguang Isle (拾光屿) is a local desktop photo library for DSLR and mirrorless photography. Browse matching JPEG and Canon CR3 files together, keep originals on your own drives, find photographs by date, color, theme, or tags, and send either format to your preferred editor. The application interface is currently in Simplified Chinese; this guide describes its features in English.
+Shiguang Isle (拾光屿) follows the way camera photographers organize their work: import from an SD card, browse RAW / JPEG pairs, select favorites, hand files to an editor, and collect photographs for delivery. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
+
+- **One photograph, RAW and JPEG together.** Browse matching files as a pair and compare JPEG and CR3 previews while selecting photographs. Open either file in Photoshop / Lightroom on macOS, or configure a local editor on Linux.
+- **Lightweight previews with less waiting and storage overhead.** Load thumbnails on demand and prefetch upcoming previews, with a bounded, removable cache. Browsing does not duplicate full originals.
+- **Find the photographs worth keeping.** Filter by date, color, theme, and tags; save favorites and apply tags in batches. Compare similar photographs on demand, without building a vector database first.
+- **From SD card to delivery.** Organize imports by capture date and copy selections from different folders into one destination, optionally including CR3 files. Favorite synchronization first moves unselected JPEG / CR3 files on the chosen SD card into a recoverable pending-deletion folder for review.
+
+*Give every captured moment a small island to return to.*
+
+The application interface is currently in Simplified Chinese; this guide describes its features in English.
 
 ![Photo gallery with synthetic landscapes and no private photographs](docs/screenshots/gallery.png)
 
