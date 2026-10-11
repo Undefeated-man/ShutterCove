@@ -88,7 +88,7 @@ async function main() {
     const fontSmoke = path.join(__dirname, 'font-ui-smoke.js');
     if (!fs.existsSync(fontSmoke)) throw new Error('Required font-size UI smoke script is missing');
     launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', fontSmoke]);
-    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js']) {
+    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js']) {
       const smoke = path.join(__dirname, script);
       if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
       launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', smoke]);
@@ -121,7 +121,7 @@ async function main() {
       if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw new Error('SD smoke journal points outside its synthetic fixture');
       if (digest(file) !== original.sha256) throw new Error('SD synchronization changed a synthetic photo');
     }
-    console.log('Packaged native smoke passed: capped collage, font-size UI and persisted settings, calendar input, date timeline, filter dropdowns, copy UI, complete scan results, production IPC, JPEG disk export 100 × 80, flat collision-safe JPEG and optional CR3 copies with matching hashes and unchanged originals, and recoverable SD sync retaining the selected group.');
+    console.log('Packaged native smoke passed: capped collage, font-size UI and persisted settings, calendar input, date timeline, filter dropdowns, copy UI, complete scan results, sticky gallery toolbar, production IPC, JPEG disk export 100 × 80, flat collision-safe JPEG and optional CR3 copies with matching hashes and unchanged originals, and recoverable SD sync retaining the selected group.');
   } finally {
     if (nativeUserData) fs.rmSync(nativeUserData, { recursive: true, force: true });
     fs.rmSync(temporary, { recursive: true, force: true });

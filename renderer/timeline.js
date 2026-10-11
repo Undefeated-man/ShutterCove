@@ -52,7 +52,7 @@
     if (dragging || jumping || !photos().length) return;
     if (pinnedIndex != null && Math.abs(scroll.scrollTop - pinnedTop) < 2) { currentIndex = clamp(pinnedIndex); display(currentIndex); return; }
     pinnedIndex = null;
-    const top = scroll.getBoundingClientRect().top + 18;
+    const top = scroll.getBoundingClientRect().top + (app.galleryInset?.() ?? 18);
     const cards = [...grid.querySelectorAll('.photo-card')];
     const visible = cards.find(card => card.getBoundingClientRect().bottom > top) || cards.at(-1);
     const local = visible ? cards.indexOf(visible) : 0;
@@ -66,7 +66,7 @@
     rail.hidden = list.length === 0;
     panel.classList.toggle('photo-timeline-enabled', list.length > 0);
     rail.setAttribute('aria-disabled', String(list.length <= 1));
-    rail.style.top = `${scroll.getBoundingClientRect().top - panel.getBoundingClientRect().top + 16}px`;
+    rail.style.top = `${scroll.getBoundingClientRect().top - panel.getBoundingClientRect().top + (app.galleryInset?.() ?? 16)}px`;
     if (!list.length) { currentIndex = 0; pinnedIndex = null; return; }
     first.textContent = shortDate(list[0].date);
     last.textContent = shortDate(list.at(-1).date);
@@ -100,7 +100,7 @@
     if (!stillCurrent()) return cancel();
     const card = [...grid.querySelectorAll('.photo-card')].find(node => node.dataset.id === photo.id);
     if (card) {
-      const top = scroll.scrollTop + card.getBoundingClientRect().top - scroll.getBoundingClientRect().top - 18;
+      const top = scroll.scrollTop + card.getBoundingClientRect().top - scroll.getBoundingClientRect().top - (app.galleryInset?.() ?? 18);
       scroll.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
     }
     pinnedTop = scroll.scrollTop;

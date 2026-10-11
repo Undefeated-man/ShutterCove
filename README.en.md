@@ -41,6 +41,7 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
 | Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
+| Sticky gallery toolbar | Filtering, selection, and sorting controls stay at the top; returning focus after calendar or menu interactions preserves the scroll position |
 | Frosted-glass dropdowns | Sage styling matches the calendar; show up to six options with subtle scroll-edge fades, searchable long lists, arrow-key selection, Enter to confirm, and Esc to close |
 | Responsive window and font size | Resize the window; a persistent font-size slider in Settings previews changes immediately, defaults to 120%, and supports 100%–150% |
 | Simple editing | Crop, rotate, mirror horizontally or vertically, and apply rectangular or elliptical pixel mosaics; overwrite a JPEG or save a new file |
@@ -62,6 +63,8 @@ Pick a date from the calendar or type it directly. The slim timeline expands a t
 ![Calendar filtering with clickable dates and direct date input](docs/screenshots/calendar.png)
 
 ![Slim timeline with an expanded date badge for quick navigation](docs/screenshots/timeline.png)
+
+![Sticky gallery controls after scrolling: filtering, selection, and sorting using synthetic landscapes](docs/screenshots/sticky-toolbar.png)
 
 ![Frosted-glass filters with six-row scrolling and subtle edge fades](docs/screenshots/dropdown.png)
 
@@ -93,6 +96,8 @@ Filter and sort dropdowns support mouse and keyboard use. Long lists show up to 
 CR3 display uses the camera's embedded preview rather than full RAW development. Photoshop normally delegates RAW handling to Adobe Camera Raw. Lightroom may show an import dialog depending on its installed version; the app hands over the file and does not complete Adobe catalog imports automatically.
 
 Vertical and horizontal collages have no fixed photograph-count limit. To control memory, canvases are limited to a **24,000 px** long edge and **48 million pixels**. Larger results are scaled proportionally. Simple editing follows the same limit for unusually large originals; use your professional editor for full-resolution development beyond it.
+
+The gallery's filtering, selection, and sorting toolbar stays at the top as you scroll. Adjust conditions, change the order, or act on selected photographs without returning to the beginning. Its height adapts to the window and font size, and photo navigation reserves space beneath it. Returning focus after opening or closing the calendar or a menu, or confirming an option, preserves the current scroll position.
 
 ## Performance and storage
 

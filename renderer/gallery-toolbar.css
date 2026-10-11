@@ -1,0 +1,18 @@
+.gallery-toolbar{position:sticky;top:calc(-1 * var(--gallery-scroll-pad,24px));z-index:4;display:flex;flex-direction:column;gap:10px;padding:12px;margin-bottom:12px;border:1px solid #ffffffc9;border-radius:13px;background:rgba(248,251,244,.87);backdrop-filter:blur(26px) saturate(1.08);box-shadow:0 3px 18px #4d6d4206;transition:box-shadow .18s,border-color .18s}
+.gallery-toolbar.is-stuck{border-color:#e2eadbd9;box-shadow:0 9px 28px #34523e16,0 1px 0 #ffffffc9}
+.gallery-toolbar .gallery-heading{margin:0;gap:10px;align-items:center;flex-wrap:wrap}
+.gallery-toolbar .section-eyebrow,.gallery-toolbar #view-description{display:none}
+.gallery-toolbar .gallery-heading h2{font-size:calc(17px * var(--font-scale,1.2));line-height:1.5;letter-spacing:.4px;gap:9px}
+.gallery-toolbar .gallery-actions{gap:6px;justify-content:flex-end;flex-wrap:wrap}
+.gallery-toolbar .filter-panel{padding:0;gap:8px;border:0;border-radius:0;background:none;align-items:center}
+.gallery-toolbar .filters{display:contents}
+.gallery-toolbar .search-input{flex:1 1 165px;min-width:150px;min-height:38px;border:1px solid #e2e8dacf;background:#ffffffb3}
+.gallery-toolbar .search-input input{min-width:0}
+.gallery-toolbar .filter-panel .glass-select{flex:1 1 98px;min-width:98px}
+.gallery-toolbar .date-range{flex:0 1 auto;flex-wrap:nowrap;min-height:38px;gap:4px;background:#ffffffb3}
+.gallery-toolbar .reset-button{padding:7px 3px;flex:0 0 auto}
+.main-scroll{scroll-padding-top:var(--gallery-toolbar-inset,160px);scroll-padding-bottom:105px}
+.photo-grid{scroll-margin-top:0}
+@media(max-width:900px){.gallery-toolbar{padding:10px;gap:8px;border-radius:11px}.gallery-toolbar .filter-panel{gap:6px}.gallery-toolbar .gallery-actions .glass-select{width:164px;min-width:144px}.gallery-toolbar .filter-panel .glass-select{min-width:98px}.gallery-toolbar .date-range input{width:104px}}
+@media(max-width:700px){.gallery-toolbar .gallery-heading>div:first-child{flex:1 0 100%}.gallery-toolbar .gallery-actions{width:100%;justify-content:flex-start}.gallery-toolbar .date-range{width:100%;justify-content:space-between}.gallery-toolbar .search-input{flex-basis:100%}.gallery-toolbar .gallery-heading h2{font-size:calc(16px * var(--font-scale,1.2))}}
+@media(prefers-reduced-motion:reduce){.gallery-toolbar{transition:none}}
