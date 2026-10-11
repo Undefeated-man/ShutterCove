@@ -149,7 +149,22 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | 签名与 DMG | `codesign --verify --deep --strict` 独立通过；`hdiutil verify` 确认 DMG 有效；使用 ad-hoc 签名，未进行 Apple 公证 |
 | 最终打包脱敏 | 1399 个文件检查通过：866 个文本、533 个二进制，其中 786 个 ASAR 条目；未检出被禁止的私人路径、身份、媒体、运行时图库索引或凭据 |
 
-本次打包脱敏同时覆盖整个 `.app` 的物理 framework 文件，比 v1.0.2 记录包含更广的物理文件范围，文件总数不能直接比较。本机正常图库已通过鼠标操作核对：深滚动时工具栏固定，多选开关可用，日历和排序菜单打开及 Esc 关闭后保持同一照片位置。验收后恢复全部照片、日期倒序与无选择状态。三平台 CI 与公开发布仍待本次确认。
+本次打包脱敏同时覆盖整个 `.app` 的物理 framework 文件，比 v1.0.2 记录包含更广的物理文件范围，文件总数不能直接比较。本机正常图库已通过鼠标操作核对：深滚动时工具栏固定，多选开关可用，日历和排序菜单打开及 Esc 关闭后保持同一照片位置。验收后恢复全部照片、日期倒序与无选择状态。
+
+三平台 CI 与草稿装配已完成：[运行 38148076016](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38148076016) 的 macOS arm64、macOS x64、Linux x64 构建与两组安装包验收，以及 Release 装配四个任务全部成功。
+
+2026-10-11，只读核对草稿的七个已上传资产：六个安装包名称符合预期、大小非零，以及 606 字节的 `SHA256SUMS.txt`。校验表的六个不重复条目与全部安装包的 GitHub asset SHA-256 逐项一致，校验表本身也与其 asset 摘要一致。只下载校验表，没有重新下载安装包。
+
+| 安装包 | 大小（字节） | 校验表与 GitHub SHA-256 |
+| --- | ---: | --- |
+| `Shiguang-Isle-1.0.3-mac-arm64.dmg` | 145175378 | 一致 |
+| `Shiguang-Isle-1.0.3-mac-arm64.zip` | 145102611 | 一致 |
+| `Shiguang-Isle-1.0.3-mac-x64.dmg` | 151661924 | 一致 |
+| `Shiguang-Isle-1.0.3-mac-x64.zip` | 151618570 | 一致 |
+| `Shiguang-Isle-1.0.3-linux-x86_64.AppImage` | 141993482 | 一致 |
+| `Shiguang-Isle-1.0.3-linux-amd64.deb` | 112589532 | 一致 |
+
+[v1.0.3](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.3) 已公开发布。发布后再次确认 Release 不是草稿或预发布，包含上述六个安装包及校验表，中英文说明与合成界面截图均已保存。
 
 ## 当前边界
 
