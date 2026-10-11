@@ -114,7 +114,20 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 
 本机正常应用已实际核对：扫描完成后的全部照片、RAW 和精品与整理后的基线一致；精品搜索与 RAW 配对显示正常；跨目录选片的复制窗口默认只选 JPEG。原生选择器在临时目录中新建空文件夹并返回真实路径，随后复制按钮可用；取消复制没有改动私人原片。验收后恢复全部照片及日期倒序浏览。该记录不包含私人照片数量、名称或路径。
 
-三平台 CI 与公开 Release 仍待确认；本地验收不能代替这些项目。
+三平台 CI 与草稿装配已完成：[运行 38144050635](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38144050635) 的 macOS arm64、macOS x64、Linux x64 构建与安装包验收，以及 Release 装配四个任务全部成功。
+
+2026-10-11，只读核对草稿中的六个安装包和 `SHA256SUMS.txt`。全部资产已上传、大小非零，安装包名称集合与预期完全一致；下载的 606 字节校验表包含六个不重复条目，每项均与 GitHub asset SHA-256 一致。此步骤没有下载安装包，核对的是 GitHub 上传资产的摘要与校验表。
+
+| 安装包 | 大小（字节） | 校验表与 GitHub SHA-256 |
+| --- | ---: | --- |
+| `Shiguang-Isle-1.0.2-mac-arm64.dmg` | 145178752 | 一致 |
+| `Shiguang-Isle-1.0.2-mac-arm64.zip` | 145101735 | 一致 |
+| `Shiguang-Isle-1.0.2-mac-x64.dmg` | 151660705 | 一致 |
+| `Shiguang-Isle-1.0.2-mac-x64.zip` | 151617688 | 一致 |
+| `Shiguang-Isle-1.0.2-linux-x86_64.AppImage` | 141993624 | 一致 |
+| `Shiguang-Isle-1.0.2-linux-amd64.deb` | 112588620 | 一致 |
+
+[v1.0.2](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.2) 已公开发布，包含上述六个安装包及 `SHA256SUMS.txt`。发布前核对草稿资产，发布后再次确认 Release 非草稿、中英文说明与合成界面截图均已保存。
 
 ## 当前边界
 
