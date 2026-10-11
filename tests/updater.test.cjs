@@ -8,7 +8,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { EventEmitter } = require('node:events');
 const { Readable } = require('node:stream');
-const { spawn } = require('node:child_process');
+const { spawn, execFile } = require('node:child_process');
+const { promisify } = require('node:util');
+const run = promisify(execFile);
 const core = require('../app/updater-core.cjs');
 const { UpdateService, waitForBootReady } = require('../app/updater.cjs');
 const helper = require('../app/updater-helper.cjs');
@@ -68,6 +70,19 @@ async function downloadedFixture(t) {
   } };
   const service = new UpdateService(options); await service.init(); t.after(() => service.stop()); await service.checkForUpdates(); assert.equal((await service.downloadUpdate()).status, 'ready');
   return { root, app, service, options, requests: () => requests, payload };
+}
+async function completedFixture(t) {
+  const fixture = await downloadedFixture(t), ready = fixture.service.ready, userData = fixture.app.getPath('userData'); fixture.service.stop();
+  const job = { platform: 'linux', arch: 'x64', parentPid: process.pid, target: ready.target, staged: ready.staged, stagingRoot: ready.stagingRoot, backupRoot: path.join(fixture.root, `.shiguang-backup-${ready.suffix}.noindex`), workRoot: ready.workRoot, userData, metadataBackup: await core.backupMetadata(userData, '1.0.6'), token: 'a'.repeat(48), version: '1.0.7', sha256: ready.sha256, resultFile: path.join(userData, '.update-result.json'), pendingFile: path.join(userData, '.update-pending.json'), launchMarker: path.join(ready.workRoot, '.launched.json'), readyFile: fixture.service.readyFile };
+  await fs.mkdir(job.backupRoot); await fs.copyFile(job.target, path.join(job.backupRoot, path.basename(job.target))); await fs.rename(job.staged, job.target);
+  await core.atomicJSON(path.join(job.workRoot, '.job.json'), job);
+  await core.atomicJSON(job.pendingFile, { token: job.token, version: job.version, target: job.target, launchMarker: job.launchMarker, workRoot: job.workRoot, helperPid: 2147483647 });
+  await core.atomicJSON(job.launchMarker, { token: job.token, version: job.version, target: job.target });
+  // v1.0.7's completed result had no token/target, so the matching private
+  // pending job and launch receipt provide that compatibility evidence.
+  await core.atomicJSON(job.resultFile, { status: 'completed', version: job.version, message: 'temporary files retained' });
+  const service = new UpdateService({ ...fixture.options, app: { ...fixture.app, getVersion: () => '1.0.7' } }); await service.init(); t.after(() => service.stop());
+  return { ...fixture, service, job };
 }
 
 test('stable semver compares numerically and rejects prerelease, padding and invalid integers', () => {
@@ -226,4 +241,35 @@ test('metadata backups retain three generated backups and leave unrelated user d
 test('packaged linux-unpacked binaries do not masquerade as installed deb packages', async t => {
   const root = await fixture(t), unpacked = path.join(root, 'dist', 'linux-unpacked', 'shiguang-isle'); await fs.mkdir(path.dirname(unpacked), { recursive: true }); await fs.writeFile(unpacked, 'fixture executable', { mode: 0o755 });
   const installation = await core.detectInstallation({ packaged: true, platform: 'linux', execPath: unpacked, home: root }); assert.equal(installation.support, 'manual'); assert.equal(installation.installSupported, false);
+});
+test('physical cleanup removes real ASAR archives in Electron Node without disabling live ASAR reads', async t => {
+  const root = await fixture(t), source = path.join(root, 'source'), resources = path.join(root, 'Old.app', 'Contents', 'Resources'), live = path.join(root, 'Live.app', 'Contents', 'Resources');
+  await fs.mkdir(source); await fs.writeFile(path.join(source, 'sentinel.txt'), 'live archive'); await fs.mkdir(resources, { recursive: true }); await fs.mkdir(live, { recursive: true });
+  await require('@electron/asar').createPackage(source, path.join(resources, 'app.asar')); await fs.copyFile(path.join(resources, 'app.asar'), path.join(live, 'app.asar'));
+  const script = path.join(root, 'electron-cleanup.cjs');
+  await fs.writeFile(script, `const assert = require('node:assert/strict'); const fs = require('node:fs/promises'); const core = require(${JSON.stringify(require.resolve('../app/updater-core.cjs'))}); (async () => { const old = ${JSON.stringify(path.join(root, 'Old.app'))}; let code; try { await fs.rm(old, { recursive:true, force:true }); } catch (error) { code = error.code; } assert.equal(code, 'ENOTEMPTY'); await core.removePhysical(old, { recursive:true, force:true }); await assert.rejects(fs.stat(old), {code:'ENOENT'}); assert.equal(await fs.readFile(${JSON.stringify(path.join(live, 'app.asar', 'sentinel.txt'))}, 'utf8'), 'live archive'); assert.notEqual(process.noAsar, true); console.log('physical-asar-cleanup-passed'); })().catch(error => { console.error(error); process.exitCode = 1; });`);
+  const result = await run(require('electron'), [script], { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 20_000 });
+  assert.match(result.stdout, /physical-asar-cleanup-passed/);
+});
+test('post-boot recovery cleans a confirmed completed old-helper job after its helper exits', async t => {
+  const { service, job } = await completedFixture(t), before = await fs.readFile(job.target), metadata = await fs.readFile(path.join(job.metadataBackup, 'settings.json')).catch(() => null);
+  assert.equal((await service.reconcileCompletedUpdate()).recovered, true);
+  for (const file of [job.backupRoot, job.stagingRoot, job.workRoot, job.pendingFile, job.readyFile]) await assert.rejects(fs.stat(file), { code: 'ENOENT' });
+  assert.deepEqual(await fs.readFile(job.target), before); assert.ok((await fs.stat(job.metadataBackup)).isDirectory()); if (metadata) assert.deepEqual(await fs.readFile(path.join(job.metadataBackup, 'settings.json')), metadata);
+  const result = JSON.parse(await fs.readFile(job.resultFile)); assert.equal(result.status, 'completed'); assert.equal(result.cleanupRecovered, true);
+});
+test('post-boot cleanup preserves active-helper, failed, mismatched and unsafe recovery evidence', async t => {
+  for (const scenario of ['active', 'error', 'nonce', 'target', 'stageOwner', 'backupBoundary', 'payload']) await t.test(scenario, async t => {
+    const { service, job } = await completedFixture(t);
+    if (scenario === 'active') { const pending = JSON.parse(await fs.readFile(job.pendingFile)); pending.helperPid = process.pid; await core.atomicJSON(job.pendingFile, pending); }
+    if (scenario === 'error') await core.atomicJSON(job.resultFile, { status: 'error', version: job.version });
+    if (scenario === 'nonce') await core.atomicJSON(job.launchMarker, { token: 'b'.repeat(48), version: job.version, target: job.target });
+    if (scenario === 'target') await core.atomicJSON(job.launchMarker, { token: job.token, version: job.version, target: '/foreign/AppImage' });
+    if (scenario === 'stageOwner') await core.atomicJSON(path.join(job.stagingRoot, '.owner.json'), { userData: '/foreign', workRoot: job.workRoot, target: job.target });
+    if (scenario === 'backupBoundary') await core.atomicJSON(path.join(job.workRoot, '.job.json'), { ...job, backupRoot: path.join(path.dirname(job.backupRoot), `.shiguang-backup-${'b'.repeat(24)}.noindex`) });
+    if (scenario === 'payload') await fs.writeFile(job.target, appImageBytes());
+    assert.equal((await service.reconcileCompletedUpdate({ timeoutMs: 15, intervalMs: 5 })).recovered, false);
+    for (const directory of [job.backupRoot, job.stagingRoot, job.workRoot]) assert.ok((await fs.stat(directory)).isDirectory());
+    assert.ok((await fs.stat(job.pendingFile)).isFile());
+  });
 });

@@ -42,7 +42,9 @@ class UpdateService {
       const result = JSON.parse(await fs.readFile(path.join(this.userData, '.update-result.json'), 'utf8'));
       if (result.status === 'error') this.state = { ...this.state, status: 'error', message: result.message };
       else if (result.status === 'completed' && result.version === this.currentVersion) this.state.message = result.message || `已更新至 ${this.currentVersion}`;
-      await fs.rm(path.join(this.userData, '.update-result.json'), { force: true });
+      // A previous helper can leave a completed result plus a cleanup job.
+      // Keep that evidence until post-boot recovery verifies the launch receipt.
+      if (!await fs.lstat(path.join(this.userData, '.update-pending.json')).catch(() => null)) await fs.rm(path.join(this.userData, '.update-result.json'), { force: true });
     } catch {}
     if (!this.disabled && this.app.isPackaged && this.installation.installSupported) await this.restoreReadyAndClean();
     if (!this.disabled) {
@@ -138,7 +140,7 @@ class UpdateService {
     try {
       if (!await this.ownedDirectory(stagingRoot)) return;
       const owner = await this.privateJSON(path.join(stagingRoot, '.owner.json'));
-      if (owner.userData === this.userData && (!workRoot || owner.workRoot === workRoot) && this.validWorkRoot(owner.workRoot)) await fs.rm(stagingRoot, { recursive: true, force: true });
+      if (owner.userData === this.userData && (!workRoot || owner.workRoot === workRoot) && this.validWorkRoot(owner.workRoot)) await core.removePhysical(stagingRoot, { recursive: true, force: true });
     } catch {}
   }
   async cleanOrphans(protectedJob) {
@@ -146,7 +148,7 @@ class UpdateService {
     for (const name of await fs.readdir(this.updateBase).catch(() => [])) {
       const directory = path.join(this.updateBase, name);
       if (!this.validWorkRoot(directory) || keptWork.has(directory)) continue;
-      try { if (await this.ownedDirectory(directory)) await fs.rm(directory, { recursive: true, force: true }); } catch {}
+      try { if (await this.ownedDirectory(directory)) await core.removePhysical(directory, { recursive: true, force: true }); } catch {}
     }
     for (const parent of this.stageParents || []) {
       for (const name of await fs.readdir(parent).catch(() => [])) {
@@ -170,7 +172,7 @@ class UpdateService {
   async discardReady() {
     if (this.ready) {
       await this.removeOwnedStage(this.ready.stagingRoot, this.ready.workRoot);
-      await fs.rm(this.ready.workRoot, { recursive: true, force: true });
+      await core.removePhysical(this.ready.workRoot, { recursive: true, force: true });
     }
     this.ready = null;
     await fs.rm(this.readyFile, { force: true });
@@ -223,8 +225,8 @@ class UpdateService {
       this.ready = { ...prepared, helperExecutable };
       return this.set({ status: 'ready', progress: { receivedBytes: result.size, totalBytes: result.size, percent: 100 }, message: format === 'deb' ? '下载已校验，可打开系统安装器；安装完成后手动重新打开应用' : '下载与应用校验通过，点击后会退出并在原位置重启' });
     } catch (error) {
-      if (stagingRoot) await fs.rm(stagingRoot, { recursive: true, force: true }).catch(() => {});
-      if (workRoot) await fs.rm(workRoot, { recursive: true, force: true }).catch(() => {});
+      if (stagingRoot) await core.removePhysical(stagingRoot, { recursive: true, force: true }).catch(() => {});
+      if (workRoot) await core.removePhysical(workRoot, { recursive: true, force: true }).catch(() => {});
       await fs.rm(this.readyFile, { force: true }).catch(() => {});
       return this.set({ status: 'error', progress: null, message: this.safeError(error, '下载或应用校验失败，原应用未改变，请重试') });
     } finally { this.busy = null; }
@@ -279,6 +281,52 @@ class UpdateService {
       if (pending.token !== token || pending.version !== this.currentVersion || pending.target !== this.installation.target || !core.inside(path.join(this.userData, '.updates.noindex'), pending.workRoot) || !core.inside(pending.workRoot, pending.launchMarker) || pending.launchMarker !== path.join(pending.workRoot, '.launched.json')) return;
       await core.atomicJSON(pending.launchMarker, { token, version: this.currentVersion, target: this.installation.target });
     } catch {}
+  }
+  async reconcileCompletedUpdate({ timeoutMs = 20_000, intervalMs = 500 } = {}) {
+    if (this.disabled || !this.app.isPackaged || !['mac', 'appimage'].includes(this.installation?.support)) return { recovered: false };
+    const deadline = Date.now() + timeoutMs;
+    while (!this.stopped) {
+      let pending, job;
+      try {
+        pending = await this.privateJSON(path.join(this.userData, '.update-pending.json'));
+        if (!/^[a-f\d]{48}$/.test(pending.token || '') || pending.version !== this.currentVersion || pending.target !== this.installation.target || !this.validWorkRoot(pending.workRoot) || pending.launchMarker !== path.join(pending.workRoot, '.launched.json') || !Number.isSafeInteger(pending.helperPid) || pending.helperPid <= 0) return { recovered: false };
+        job = await this.privateJSON(path.join(pending.workRoot, '.job.json'));
+        require('./updater-helper.cjs').validateJob(job);
+        const suffix = /^\.shiguang-update-([a-f\d]{24})\.noindex$/.exec(path.basename(job.stagingRoot));
+        if (!suffix || job.backupRoot !== path.join(this.installation.parent, `.shiguang-backup-${suffix[1]}.noindex`) || job.stagingRoot !== path.join(this.installation.parent, `.shiguang-update-${suffix[1]}.noindex`) || job.platform !== this.platform || job.arch !== this.arch || job.userData !== this.userData || job.workRoot !== pending.workRoot || job.token !== pending.token || job.version !== this.currentVersion || job.target !== this.installation.target || job.launchMarker !== pending.launchMarker || !await this.ownedDirectory(job.workRoot)) return { recovered: false };
+        let active = false;
+        try { process.kill(pending.helperPid, 0); active = true; } catch (error) { if (error.code !== 'ESRCH') active = true; }
+        if (active) {
+          if (Date.now() >= deadline) return { recovered: false, active: true };
+          await pause(Math.min(intervalMs, Math.max(1, deadline - Date.now()))); continue;
+        }
+        const result = await this.privateJSON(job.resultFile), receipt = await this.privateJSON(job.launchMarker);
+        if (result.status !== 'completed' || result.version !== job.version || (result.token && result.token !== job.token) || (result.target && result.target !== job.target) || receipt.token !== job.token || receipt.version !== job.version || receipt.target !== job.target) return { recovered: false };
+        // The old helper is gone and the current app has finished basic boot.
+        // Verify the installed payload again before deleting any rollback copy.
+        if (this.platform === 'darwin') await core.validateMacBundle(job.target, job.version, this.arch);
+        else { await core.validateAppImage(job.target, this.arch); if (await core.hashFile(job.target) !== job.sha256) return { recovered: false }; }
+        for (const directory of [job.backupRoot, job.stagingRoot]) {
+          if (await fs.lstat(directory).catch(() => null) && !await this.ownedDirectory(directory)) return { recovered: false };
+        }
+        if (await fs.lstat(job.stagingRoot).catch(() => null)) {
+          const owner = await this.privateJSON(path.join(job.stagingRoot, '.owner.json'));
+          if (owner.userData !== this.userData || owner.workRoot !== job.workRoot || owner.target !== job.target) return { recovered: false };
+        }
+        await core.removePhysical(job.backupRoot, { recursive: true, force: true });
+        await core.removePhysical(job.stagingRoot, { recursive: true, force: true });
+        if (job.readyFile) await fs.rm(job.readyFile, { force: true });
+        await core.removePhysical(job.workRoot, { recursive: true, force: true });
+        await fs.rm(job.pendingFile, { force: true });
+        await core.atomicJSON(job.resultFile, { status: 'completed', version: job.version, token: job.token, target: job.target, message: `已更新至 ${job.version}`, cleanupRecovered: true });
+        this.set({ message: `已更新至 ${job.version}` });
+        return { recovered: true };
+      } catch (error) {
+        // No confirmed commit or an unsafe path: preserve recovery evidence.
+        return { recovered: false, cleanupErrorCode: error.code || 'UNKNOWN' };
+      }
+    }
+    return { recovered: false };
   }
 }
 module.exports = { UpdateService, waitForBootReady };

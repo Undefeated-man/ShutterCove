@@ -36,6 +36,35 @@
     c.width=c.height=1;return [img.width,img.height];
   };
   try {
+    // Exercise the visible custom control, rather than assigning its hidden
+    // select. The portalled menu sits outside aria-modal and must still be
+    // painted and clickable with a real two-photo collage open.
+    await Studio.collage(photos.slice(0,2));await paint();
+    for(const scale of [1.2,1.5]){
+      App.applyFontScale(scale);await paint();
+      for(const mode of ['poster','film']){
+        const select=el('collage-template');
+        await wait(()=>select.parentElement.querySelector('.glass-select-trigger'));
+        const trigger=select.parentElement.querySelector('.glass-select-trigger');
+        trigger.scrollIntoView({block:'nearest',behavior:'instant'});await paint();trigger.focus({preventScroll:true});
+        trigger.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0}));trigger.click();
+        await wait(()=>el('glass-dropdown')&&trigger.getAttribute('aria-expanded')==='true');await paint();
+        const popup=el('glass-dropdown'),r=popup.getBoundingClientRect(),label=Math.round(scale*100)+' percent two-photo '+mode;
+        assert(r.width>0&&r.height>0&&r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1,label+': clicking the visible template trigger paints a menu inside the window',r.toJSON());
+        const index=[...select.options].findIndex(option=>option.value===mode),option=popup.querySelector('[data-position="'+index+'"]');
+        option.scrollIntoView({block:'nearest',behavior:'instant'});await paint();const o=option.getBoundingClientRect(),hit=document.elementFromPoint(o.left+o.width/2,o.top+o.height/2);
+        assert(hit===option||option.contains(hit),label+': the actual poster option is clickable above the modal backdrop');
+        option.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,button:0}));option.click();
+        await wait(()=>select.value===mode&&!el('glass-dropdown'));await paint();
+        assert(!el('collage-columns-field').hidden&&el('collage-columns').value==='2',label+': selecting the actual menu option reveals the two-column setting');
+        assert(document.activeElement===trigger&&document.querySelector('.collage-studio'),label+': menu choice returns focus without closing the workbench');
+      }
+    }
+    change('collage-columns',3);
+    const menuTrigger=el('collage-template').parentElement.querySelector('.glass-select-trigger');menuTrigger.click();await wait(()=>el('glass-dropdown'));
+    el('glass-dropdown').querySelector('[data-position="4"]').click();
+    assert(el('collage-template').value==='poster'&&el('collage-columns').value==='3','Choosing another poster from the visible menu retains the user’s column count');
+    App.closeModal();App.applyFontScale(originals.scale);
     await Studio.collage(photos);await paint();
     assert(document.querySelector('.collage-studio'), 'Dedicated collage layout is mounted');
     assert(el('collage-columns-field').hidden&&el('collage-columns').value==='2', 'Poster column setting defaults to two and is hidden for grids');

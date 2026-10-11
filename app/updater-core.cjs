@@ -2,6 +2,14 @@
 
 // The renderer never supplies a URL, destination, version or installer argument.
 const fs = require('node:fs/promises');
+// Electron's regular fs sees app.asar as a virtual directory. Recursive rm can
+// therefore leave the physical archive behind and fail with ENOTEMPTY. Only
+// physical cleanup uses original-fs; normal reads must keep ASAR support.
+const physicalFS = (() => {
+  try { return require('original-fs').promises; }
+  catch { return fs; } // Plain Node (tests and the private acceptance driver).
+})();
+const removePhysical = (file, options) => physicalFS.rm(file, options);
 const { createReadStream, constants } = require('node:fs');
 const path = require('node:path');
 const https = require('node:https');
@@ -284,7 +292,7 @@ async function backupMetadata(userData, version, { keep = 3, preserve = [] } = {
     if (stat.isDirectory() && !stat.isSymbolicLink() && !preserve.includes(file) && file !== target) retained.push({ file, modified: stat.mtimeMs });
   }
   retained.sort((a, b) => b.modified - a.modified);
-  for (const old of retained.slice(Math.max(0, keep - 1))) await fs.rm(old.file, { recursive: true, force: true });
+  for (const old of retained.slice(Math.max(0, keep - 1))) await removePhysical(old.file, { recursive: true, force: true });
   return target;
 }
-module.exports = { REPOSITORY, RELEASE_API, RELEASES_URL, MAX_ASSET, versionParts, newerVersion, trustedURL, assetURL, selectRelease, checksumFor, transfer, hashFile, inside, inspectZip, validateTree, validateMacBundle, validateAppImage, detectInstallation, atomicJSON, backupMetadata };
+module.exports = { REPOSITORY, RELEASE_API, RELEASES_URL, MAX_ASSET, versionParts, newerVersion, trustedURL, assetURL, selectRelease, checksumFor, transfer, hashFile, inside, inspectZip, validateTree, validateMacBundle, validateAppImage, detectInstallation, atomicJSON, backupMetadata, removePhysical };

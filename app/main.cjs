@@ -341,13 +341,16 @@ async function start() {
     win.loadURL(`memory-app://app/index.html${query.size ? '?' + query.toString() : ''}`);
     win.webContents.once('did-finish-load', async () => {
       const updateIndex = process.argv.indexOf('--update-relaunch');
-      if (updateIndex >= 0) {
+      if (!smoke && !demo && app.isPackaged) {
         try {
           const usable = await waitForBootReady(() => {
             if (!win || win.isDestroyed()) return false;
             return win.webContents.executeJavaScript('window.__shiguangBootReady === true');
           });
-          if (usable && win && !win.isDestroyed()) await updater.acknowledgeRelaunch(process.argv[updateIndex + 1]);
+          if (usable && win && !win.isDestroyed()) {
+            if (updateIndex >= 0) await updater.acknowledgeRelaunch(process.argv[updateIndex + 1]);
+            await updater.reconcileCompletedUpdate();
+          }
         } catch {}
       }
     });

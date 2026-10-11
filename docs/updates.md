@@ -2,7 +2,7 @@
 
 ## 简体中文
 
-v1.0.7 起，打开 **相册设置 → 软件更新**，可查看当前版本、检查新版，以及下载并安装更新。更早版本需要先手动安装 v1.0.7 或更新版本，之后才能使用应用内更新。
+v1.0.8 起，打开 **相册设置 → 软件更新**，可查看当前版本、检查新版，以及下载并安装更新。更早版本需要先手动安装 v1.0.8 或更新版本，之后才能使用应用内更新。
 
 默认自动检查正式新版，有新版时显示提醒。检查不会自动安装，也不会打断照片编辑；可以关闭自动检查，随时手动检查。预发布及草稿版本不参与自动更新。
 
@@ -23,7 +23,7 @@ Mac 包仍使用 ad-hoc 签名，没有 Developer ID 或 Apple 公证。更新�
 
 ## English
 
-From v1.0.7, **Settings → Software update** shows the current version, checks for releases, and downloads and installs updates. Earlier versions require one manual installation of v1.0.7 or later before in-app updates become available.
+From v1.0.8, **Settings → Software update** shows the current version, checks for releases, and downloads and installs updates. Earlier versions require one manual installation of v1.0.8 or later before in-app updates become available.
 
 Automatic checks are enabled by default and display a reminder for newer stable releases. Checks do not install updates or interrupt photo editing. You can turn them off and check manually at any time. Drafts and prereleases are excluded.
 

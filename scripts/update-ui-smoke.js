@@ -41,11 +41,20 @@
     assert(!el('update-notice') || el('update-notice').hidden,'Initial idle state creates no disruptive update notice');
     available({notify:false});assert(el('update-notice').hidden,'A manual or previously announced update does not create an extra banner');
     available({notify:true});assert(!el('update-notice').hidden,'A first automatic update notification is shown');
-    const scroll=el('main-scroll');scroll.scrollTop=Math.min(180,scroll.scrollHeight-scroll.clientHeight);el('search').focus({preventScroll:true});
+    const scroll=el('main-scroll'),scrollTarget=Math.min(180,scroll.scrollHeight-scroll.clientHeight);
+    // scrollTop assignment inherits the gallery's CSS smooth behavior. Finish
+    // positioning before measuring whether an update notice itself moves it.
+    scroll.scrollTo({top:scrollTarget,behavior:'instant'});
+    await wait(()=>scroll.scrollTop===scrollTarget);await frames();
+    el('search').focus({preventScroll:true});
     const scrollTop=scroll.scrollTop,focus=document.activeElement;
     App.state.selected.add(App.state.photos[0].id);
     available();await frames();
-    assert(!el('update-notice').hidden && document.activeElement===focus && scroll.scrollTop===scrollTop,'Available update appears without taking focus or moving the gallery');
+    assert(!el('update-notice').hidden && document.activeElement===focus && scroll.scrollTop===scrollTop,'Available update appears without taking focus or moving the gallery',{
+      noticeVisible:!el('update-notice').hidden,
+      focus:{unchanged:document.activeElement===focus,before:focus?.id,after:document.activeElement?.id},
+      scroll:{unchanged:scroll.scrollTop===scrollTop,before:scrollTop,after:scroll.scrollTop}
+    });
     assert(App.state.selected.has(App.state.photos[0].id) && !el('modal-root').children.length,'Update notice preserves photo selection and leaves the gallery open');
     clicked('update-notice-later');assert(el('update-notice').hidden,'Later dismisses the current version');
     available();assert(el('update-notice').hidden,'The dismissed version stays unobtrusive for this session');

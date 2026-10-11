@@ -6,7 +6,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
-const { inside, atomicJSON, validateMacBundle, validateAppImage, hashFile } = require('./updater-core.cjs');
+const { inside, atomicJSON, validateMacBundle, validateAppImage, hashFile, removePhysical } = require('./updater-core.cjs');
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function waitForParent(pid, timeoutMs = 60_000) {
@@ -80,17 +80,17 @@ async function transactionalReplace(job, { launchNew = () => launch(job), launch
     await rename(job.staged, job.target); installed = true;
     await launchNew();
     committed = true;
-    await atomicJSON(job.resultFile, { status: 'completed', version: job.version, message: `已更新至 ${job.version}` });
-    await fs.rm(job.backupRoot, { recursive: true, force: true });
-    await fs.rm(job.stagingRoot, { recursive: true, force: true });
-    await fs.rm(job.workRoot, { recursive: true, force: true });
+    await atomicJSON(job.resultFile, { status: 'completed', version: job.version, token: job.token, target: job.target, message: `已更新至 ${job.version}` });
+    await removePhysical(job.backupRoot, { recursive: true, force: true });
+    await removePhysical(job.stagingRoot, { recursive: true, force: true });
+    await removePhysical(job.workRoot, { recursive: true, force: true });
     if (job.readyFile) await fs.rm(job.readyFile, { force: true });
     await fs.rm(job.pendingFile, { force: true });
     return { updated: true };
   } catch (error) {
     if (committed) {
       // A cleanup error must never roll back a healthy, running new version.
-      await atomicJSON(job.resultFile, { status: 'completed', version: job.version, message: `已更新至 ${job.version}；旧应用备份或临时文件仍保留` }).catch(() => {});
+      await atomicJSON(job.resultFile, { status: 'completed', version: job.version, token: job.token, target: job.target, message: `已更新至 ${job.version}；旧应用备份或临时文件仍保留`, cleanupErrorCode: error.code || 'UNKNOWN' }).catch(() => {});
       return { updated: true, cleanupPending: true };
     }
     if (error.unsafeRollback) {
@@ -107,9 +107,9 @@ async function transactionalReplace(job, { launchNew = () => launch(job), launch
       await atomicJSON(job.resultFile, { status: 'error', version: job.version, message: restored || !movedOld ? '更新未完成，原版本已保留；请重试或从正式发布页下载安装' : '更新未完成，请从正式发布页重新安装；相册记录备份已保留' });
       await fs.rm(job.pendingFile, { force: true });
       if (restored || !movedOld) {
-        await fs.rm(job.backupRoot, { recursive: true, force: true });
-        await fs.rm(job.stagingRoot, { recursive: true, force: true });
-        await fs.rm(job.workRoot, { recursive: true, force: true });
+        await removePhysical(job.backupRoot, { recursive: true, force: true });
+        await removePhysical(job.stagingRoot, { recursive: true, force: true });
+        await removePhysical(job.workRoot, { recursive: true, force: true });
         if (job.readyFile) await fs.rm(job.readyFile, { force: true });
         await launchOld();
       }
