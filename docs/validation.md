@@ -52,7 +52,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | `npm run privacy` | 当前源文件扫描通过；并在隔离的临时 Git 仓库验证干净源码通过，模拟密钥、个人路径、已跟踪 RAW、PNG 元数据均被阻止 |
 | `npm run icon` | 成功生成 1024 px PNG 与 macOS ICNS，已查看图标 |
 | GitHub Actions 三平台安装包 | [运行 38119864948](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38119864948) 的 macOS arm64、macOS x64 与 Linux x64 构建、后端测试、隐私检查、安装包界面测试及完整生产烟雾测试均成功 |
-| Release 自动装配 | 同次运行的文件名完整性检查失败：Linux AppImage 实际为 `linux-x86_64.AppImage`，deb 为 `linux-amd64.deb`，检查原先都预期 `linux-x64`；安装包 artifacts 已完整上传，失败发生在发布装配阶段。后续工作流已修正名称预期，其重新执行与公开 Release 完成状态需单独核验 |
+| Release 自动装配与公开发布 | [修正后的运行 38120190987](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38120190987) 的三个原生构建及 Release 装配全部成功；六个安装包已上传，SHA256SUMS 与 GitHub asset SHA-256 全部一致。[v1.0.0](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.0) 已公开发布。此前 Linux 包格式使用 x86_64 / amd64 架构名导致装配检查失败，已修正 |
 
 以上测试不会启动已安装的 Adobe 应用，也不会操作用户原片。合成图库界面脚本将保存接口替换为数据验收；生产 IPC 脚本另行验证临时目录内的真实 JPEG 保存。`scripts/package-smoke.cjs` 在三平台打包后的应用重复超长拼图、SD 界面、生产 IPC 和 SD 同步验收，检查实际输出尺寸、三个合成原片的 SHA-256 未变，以及一张保留、两张可恢复地移入待删的操作记录。真实机器上的首次安装与 Adobe 交接仍需独立验收；尚未记录的项目不视为通过。
 
