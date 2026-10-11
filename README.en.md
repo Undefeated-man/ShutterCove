@@ -41,11 +41,12 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
 | Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
+| Frosted-glass dropdowns | Sage styling matches the calendar; show up to six options with subtle scroll-edge fades, searchable long lists, arrow-key selection, Enter to confirm, and Esc to close |
 | Responsive window and font size | Resize the window; a persistent font-size slider in Settings previews changes immediately, defaults to 120%, and supports 100%–150% |
 | Simple editing | Crop, rotate, mirror horizontally or vertically, and apply rectangular or elliptical pixel mosaics; overwrite a JPEG or save a new file |
 | SD card import | Copy new photographs into a chosen memories root, use an existing or new theme, organize by capture date, and skip duplicate content |
 | Batch selection and deletion | Multi-select, range selection, and select all filtered results; move files to the system trash after confirmation |
-| Reveal selected files | Select matching JPEG / CR3 files in Finder on macOS; use a compatible FileManager1 file manager on Linux |
+| Copy a selection to a folder | Choose an existing folder or create one in the picker, then collect JPEGs from different subfolders into one flat destination; optionally include CR3 (off by default), with unique collision names shared by each pair, progress, cancellation, and results |
 | Favorite synchronization to SD | Preview files to keep from favorites or the current selection, then move other JPEG / CR3 files into a recoverable `待删` batch with a journal |
 
 Photo details display JPEG and its corresponding CR3 preview together in the same detail view. Each format has Photoshop, Lightroom, and system-open buttons. Browsing creates lightweight cached previews rather than full original copies.
@@ -62,6 +63,10 @@ Pick a date from the calendar or type it directly. The slim timeline expands a t
 
 ![Slim timeline with an expanded date badge for quick navigation](docs/screenshots/timeline.png)
 
+![Frosted-glass filters with six-row scrolling and subtle edge fades](docs/screenshots/dropdown.png)
+
+![Batch folder copy: JPEG by default, optional CR3, and a target folder picker with new-folder support](docs/screenshots/copy.png)
+
 SD favorite synchronization shows the keep and move lists before confirmation. Other photographs move into a recoverable `待删` batch. This screenshot shows only a synthetic preview; no move was executed and no real SD card was accessed.
 
 ![SD favorite synchronization preview with keep and move lists](docs/screenshots/sd-sync.png)
@@ -72,7 +77,7 @@ These screenshots use synthetic photographs, with no real portraits, private pat
 
 1. Choose a photo root. The app scans recursively and identifies JPEG / CR3 pairs using names, dates, and directory relationships while retaining the original file locations.
 2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
-3. Select multiple photographs to add tags, mark favorites, reveal files, or move files to trash. In a photo's details, choose JPEG or CR3 when handing it to an editor.
+3. Select multiple photographs to add tags, mark favorites, copy to a folder, or move files to trash. Use “Copy to folder” to collect photographs from different subfolders, choosing an existing destination or creating a folder in the picker. JPEGs are copied by default, and you can include corresponding CR3 files. Originals remain in place; collisions receive unique names shared by each JPEG / CR3 pair. Review progress and copied, skipped, or failed results, and cancel when needed. RAW-only photographs are skipped unless CR3 copying is enabled. A single photograph can still be revealed in the file manager or handed to an editor as JPEG or CR3.
 4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
 5. Open the collage workspace with multiple JPEG photographs, choose a layout, drag photographs into a new order, and export a new JPEG.
 6. Use the editor to crop, rotate, mirror, or add rectangular and elliptical mosaics. Choose overwrite or save-as. Canvas exports do not retain the original EXIF; editing does not overwrite CR3 files.
@@ -82,6 +87,8 @@ These screenshots use synthetic photographs, with no real portraits, private pat
 Moving files into `待删` preserves their contents and does not immediately free card space. Open the batch directory to review or restore files to their recorded original locations; remove pending files yourself when you decide they are no longer needed.
 
 Themes and tags are manually assigned local metadata. Color families are derived from image pixels and help find warm, blue, green, or similar visual tones; they do not identify locations or interpret a photograph's story.
+
+Filter and sort dropdowns support mouse and keyboard use. Long lists show up to six options at a time and support scrolling or option search. Use ↑ / ↓ to move, Enter to confirm, and Esc to close. Subtle blurred edges indicate more scrollable content.
 
 CR3 display uses the camera's embedded preview rather than full RAW development. Photoshop normally delegates RAW handling to Adobe Camera Raw. Lightroom may show an import dialog depending on its installed version; the app hands over the file and does not complete Adobe catalog imports automatically.
 
@@ -93,7 +100,7 @@ Thumbnails are generated on demand, with visible and nearby photographs prioriti
 
 Local records, favorites, tags, themes, settings, and clearable previews are stored in the operating system's application-data directory (Electron `userData`). An initial large-library scan still needs to read file information. Damaged, offline, or preview-less RAW files can show an error while other photographs remain usable.
 
-Overwrite editing, collage exports, and SD imports create or change files according to your choices. Batch deletion uses system trash with a count and confirmation before execution. Permission failures, disconnected drives, and insufficient space are reported as operation errors.
+Overwrite editing, collage exports, batch copies, and SD imports create or change files according to your choices. Batch copies leave originals in place; completed copies remain when you cancel. Batch deletion uses system trash with a count and confirmation before execution. Permission failures, disconnected drives, and insufficient space are reported as operation errors.
 
 ## Development and builds
 
@@ -122,7 +129,7 @@ npm run build:mac
 npm run build:linux
 ```
 
-Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 15 Intel, and Ubuntu 22.04 x64, then launches the packaged applications for gallery, collage-limit, SD interface, font settings, calendar input, date timeline, production IPC, disk-export, and recoverable SD synchronization checks using synthetic fixtures. Successful assembly produces a draft Release with packages and checksums. Push a `v` tag matching `package.json`, or manually run the workflow for an existing tag. Review the draft before publishing.
+Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 15 Intel, and Ubuntu 22.04 x64, then launches the packaged applications for gallery, collage-limit, SD interface, font settings, calendar input, date timeline, dropdown menus, batch-copy interface and real disk copies, production IPC, disk-export, and recoverable SD synchronization checks using synthetic fixtures. Successful assembly produces a draft Release with packages and checksums. Push a `v` tag matching `package.json`, or manually run the workflow for an existing tag. Review the draft before publishing.
 
 ## Privacy and licenses
 

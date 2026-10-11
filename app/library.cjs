@@ -572,6 +572,105 @@ class PhotoLibrary {
     return Promise.all(this.filePaths(ids, format).map(file => this._authorized(file)));
   }
 
+  async copySelected({ ids, directory, destination, includeRaw = false } = {}) {
+    if (!Array.isArray(ids) || !ids.length || ids.length > 50000 || ids.some(id => typeof id !== 'string' || id.length > 128)) throw new Error('请选择 1 至 50,000 组照片');
+    if (typeof includeRaw !== 'boolean') throw new Error('请选择是否包含 CR3 原片');
+    ids = [...new Set(ids)];
+    const selected = ids.map(id => this._photo(id));
+    const requested = directory || destination;
+    if (typeof requested !== 'string' || !requested) throw new Error('请选择复制目标文件夹');
+    const requestedPath = path.resolve(requested);
+    const directoryStat = await fs.lstat(requestedPath);
+    if (directoryStat.isSymbolicLink() || !directoryStat.isDirectory()) throw new Error('复制目标必须是真实文件夹，不能是符号链接');
+    directory = await fs.realpath(requestedPath);
+    if (inside(this.userData, directory)) throw new Error('不能复制到应用内部数据目录');
+    for (const photo of selected) {
+      for (const file of [photo.jpegPath, photo.rawPath].filter(Boolean)) {
+        const parent = await fs.realpath(path.dirname(file)).catch(() => path.dirname(file));
+        if (parent === directory) throw new Error('复制目标不能是所选原片所在文件夹，请选择其他文件夹');
+      }
+    }
+    const verifyDirectory = async () => {
+      const current = await fs.lstat(directory);
+      if (current.isSymbolicLink() || !current.isDirectory() || current.dev !== directoryStat.dev || current.ino !== directoryStat.ino || await fs.realpath(directory) !== directory) throw new Error('复制目标文件夹已变化，请重新选择');
+    };
+    const stemKey = stem => stem.normalize('NFKC').toLocaleLowerCase();
+    const occupied = new Set((await fs.readdir(directory)).filter(name => PHOTO_EXTENSIONS.has(path.extname(name).toLowerCase())).map(name => stemKey(path.basename(name, path.extname(name)))));
+    const copied = [], skipped = [], errors = [];
+    const job = this._start('copy', selected.length);
+    try {
+      for (const photo of selected) {
+        if (job.cancelled) break;
+        try {
+          await verifyDirectory();
+          const files = [photo.jpegPath && { source: photo.jpegPath, format: 'jpeg' }, includeRaw && photo.rawPath && { source: photo.rawPath, format: 'raw' }].filter(Boolean);
+          if (!files.length) {
+            skipped.push({ id: photo.id, name: photo.name, reason: photo.rawPath ? 'raw-only' : 'no-original', message: photo.rawPath ? '仅有 CR3；勾选“包含 CR3 原片”后可以复制。' : '这组照片没有可复制的原片。' });
+            continue;
+          }
+          const available = [];
+          for (const file of files) {
+            try {
+              const source = await this._authorized(file.source);
+              available.push({ ...file, source, stat: await fs.stat(source) });
+            } catch (error) { errors.push({ id: photo.id, name: photo.name, source: file.source, message: error.message }); }
+          }
+          if (!available.length) continue;
+          const primary = photo.jpegPath || photo.rawPath;
+          const stem = path.basename(primary, path.extname(primary));
+          let completed = false;
+          for (let suffix = 0; !completed; suffix++) {
+            if (suffix > 100000) throw new Error('同名照片过多，请选择其他目标文件夹');
+            const outputStem = `${stem}${suffix ? `-${suffix + 1}` : ''}`;
+            if (occupied.has(stemKey(outputStem))) continue;
+            occupied.add(stemKey(outputStem));
+            const group = [];
+            let collision = false;
+            for (const file of available) {
+              const target = path.join(directory, outputStem + path.extname(file.source));
+              let created = false, targetStat;
+              try {
+                await verifyDirectory();
+                await this._authorized(file.source);
+                await fs.copyFile(file.source, target, require('node:fs').constants.COPYFILE_EXCL);
+                created = true;
+                targetStat = await fs.lstat(target);
+                const currentSource = await fs.stat(file.source);
+                if (!targetStat.isFile() || targetStat.isSymbolicLink() || currentSource.dev !== file.stat.dev || currentSource.ino !== file.stat.ino || currentSource.size !== file.stat.size || currentSource.mtimeMs !== file.stat.mtimeMs || targetStat.size !== file.stat.size || await this._digest(file.source) !== await this._digest(target)) throw new Error('复制校验失败；原片可能已变化');
+                await verifyDirectory();
+                await fs.utimes(target, file.stat.atime, file.stat.mtime);
+                group.push({ id: photo.id, format: file.format, source: file.source, path: target, stat: targetStat });
+              } catch (error) {
+                if (created) {
+                  const current = await fs.lstat(target).catch(() => null);
+                  if (current && targetStat && current.dev === targetStat.dev && current.ino === targetStat.ino) await fs.unlink(target).catch(() => {});
+                }
+                if (error.code === 'EEXIST') { collision = true; break; }
+                errors.push({ id: photo.id, name: photo.name, source: file.source, message: error.message });
+              }
+            }
+            if (collision) {
+              // Retry the whole pair with one suffix; never unlink the pre-existing collision.
+              for (const file of group) {
+                const current = await fs.lstat(file.path).catch(() => null);
+                if (current && current.dev === file.stat.dev && current.ino === file.stat.ino) await fs.unlink(file.path);
+                else throw new Error('复制结果已被修改，无法安全重试同名文件');
+              }
+            } else {
+              copied.push(...group.map(({ stat, ...file }) => file));
+              completed = true;
+            }
+          }
+        } catch (error) { errors.push({ id: photo.id, name: photo.name, message: error.message }); }
+        finally { job.done++; if (this.jobs.get('copy') === job) this._progress('copy', job); }
+      }
+    } finally {
+      if (job.cancelled && this.jobs.get('copy') === job) this._progress('copy', job);
+      if (this.jobs.get('copy') === job) this.jobs.delete('copy');
+    }
+    return { directory, destination: directory, copied, copiedCount: copied.length, skipped, skippedCount: skipped.length, errors, errorCount: errors.length, cancelled: job.cancelled };
+  }
+
   async forget(ids) {
     for (const id of ids) {
       const photo = this.photos.get(id);

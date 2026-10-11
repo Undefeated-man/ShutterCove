@@ -215,6 +215,175 @@ test('imports pairs without touching SD originals; collision rename stays paired
   assert.equal((await fs.readdir(path.join(root, '旅途', '2026-10-02'))).length, 4);
 });
 
+test('selected copy defaults to preferred JPEG, explains RAW-only skips, and optionally includes original CR3', async t => {
+  const { root, directory, library } = await fixture(t);
+  library.exifTool = { async read() { return { DateTimeOriginal: new Date('2026-10-02T12:00:00+08:00') }; }, async end() {} };
+  const regular = await jpeg(path.join(root, '10.2', '照片', 'KEEP.JPG'), '#118833');
+  const preferred = await jpeg(path.join(root, '精品', 'KEEP.JPG'), '#cc7733');
+  const pairedRaw = await raw(path.join(root, 'RAW', 'KEEP.CR3'));
+  const rawOnly = await raw(path.join(root, 'RAW', 'LONE.CR3'), 'raw-only-original');
+  const originals = [regular, preferred, pairedRaw, rawOnly];
+  const before = await Promise.all(originals.map(file => library._digest(file)));
+  const scanned = await library.scan(root);
+  const ids = scanned.photos.map(photo => photo.id);
+  const output = path.join(directory, 'picked-jpeg');
+  await fs.mkdir(output);
+  const result = await library.copySelected({ ids: [...ids, ids[0]], directory: output });
+  assert.equal(result.directory, output);
+  assert.equal(result.copiedCount, 1);
+  assert.equal(result.copied[0].source, preferred);
+  assert.equal(await library._digest(result.copied[0].path), await library._digest(preferred));
+  assert.equal((await fs.stat(result.copied[0].path)).mtimeMs, (await fs.stat(preferred)).mtimeMs);
+  assert.equal(result.skippedCount, 1);
+  assert.equal(result.skipped[0].reason, 'raw-only');
+  assert.match(result.skipped[0].message, /包含 CR3/);
+  assert.equal(result.errorCount, 0);
+  assert.equal(result.cancelled, false);
+  assert.deepEqual(await fs.readdir(output), ['KEEP.JPG']);
+  const withRaw = path.join(directory, 'picked-with-raw');
+  await fs.mkdir(withRaw);
+  const complete = await library.copySelected({ ids, directory: withRaw, includeRaw: true });
+  assert.equal(complete.copiedCount, 3);
+  assert.equal(complete.skippedCount, 0);
+  assert.deepEqual((await fs.readdir(withRaw)).sort(), ['KEEP.CR3', 'KEEP.JPG', 'LONE.CR3']);
+  assert.deepEqual(await Promise.all(originals.map(file => library._digest(file))), before);
+  assert.deepEqual((await library.scan(root)).photos.map(photo => photo.id).sort(), ids.sort(), 'copy does not change library identities');
+});
+
+test('selected copy flattens cross-directory camera-name collisions with one suffix per JPEG/CR3 pair and never overwrites', async t => {
+  const { root, directory, library } = await fixture(t);
+  const originals = [];
+  for (const [index, theme] of ['山的回信', '海的来信'].entries()) {
+    originals.push(await jpeg(path.join(root, theme, '10.2', '照片', `IMG_1000.${index ? 'JPEG' : 'JPG'}`), index ? '#22aa33' : '#aa2233'));
+    originals.push(await raw(path.join(root, theme, 'RAW', 'IMG_1000.CR3'), `raw-${index}`));
+  }
+  const before = await Promise.all(originals.map(file => library._digest(file)));
+  const photos = (await library.scan(root)).photos;
+  assert.equal(photos.length, 2);
+  const output = path.join(directory, 'picked');
+  await fs.mkdir(output);
+  const existingRaw = path.join(output, 'IMG_1000.CR3');
+  const caseCollision = path.join(output, 'img_1000-2.JPEG');
+  await fs.writeFile(existingRaw, 'already-here');
+  await fs.writeFile(caseCollision, 'case-insensitive-collision');
+  const result = await library.copySelected({ ids: photos.map(photo => photo.id), directory: output, includeRaw: true });
+  assert.equal(result.copiedCount, 4);
+  assert.equal(result.errorCount, 0);
+  for (const photo of photos) {
+    const group = result.copied.filter(file => file.id === photo.id);
+    assert.equal(group.length, 2);
+    assert.equal(new Set(group.map(file => path.basename(file.path, path.extname(file.path)))).size, 1);
+    assert.ok(group.every(file => /^IMG_1000-[34]\./.test(path.basename(file.path))));
+    for (const file of group) assert.equal(await library._digest(file.path), await library._digest(file.source));
+  }
+  assert.equal(await fs.readFile(existingRaw, 'utf8'), 'already-here');
+  assert.equal(await fs.readFile(caseCollision, 'utf8'), 'case-insensitive-collision');
+  assert.deepEqual(await Promise.all(originals.map(file => library._digest(file))), before);
+  assert.equal((await fs.readdir(output)).length, 6);
+});
+
+test('selected copy cancellation keeps completed pairs and reports group progress without copying the next group', async t => {
+  let library;
+  const events = [];
+  const data = await fixture(t, { emit: event => { events.push(event); if (event.kind === 'copy' && event.done === 1) library.cancel('copy'); } });
+  library = data.library;
+  for (const stem of ['FIRST', 'SECOND']) {
+    await jpeg(path.join(data.root, `${stem}.JPG`));
+    await raw(path.join(data.root, 'RAW', `${stem}.CR3`));
+  }
+  const photos = (await library.scan(data.root)).photos;
+  const output = path.join(data.directory, 'picked');
+  await fs.mkdir(output);
+  const result = await library.copySelected({ ids: photos.map(photo => photo.id), directory: output, includeRaw: true });
+  assert.equal(result.cancelled, true);
+  assert.equal(result.copiedCount, 2);
+  assert.equal(result.errorCount, 0);
+  assert.deepEqual((await fs.readdir(output)).sort(), ['FIRST.CR3', 'FIRST.JPG']);
+  const last = events.filter(event => event.kind === 'copy').at(-1);
+  assert.equal(last.done, 1);
+  assert.equal(last.total, 2);
+  assert.equal(last.cancelled, true);
+  assert.equal(library.jobs.has('copy'), false);
+  assert.equal((await library._walk(data.root)).length, 4);
+});
+
+test('selected copy rejects source folders, symlink destinations, invalid selection and changed symlink sources without extending library authorization', async t => {
+  const { root, directory, library } = await fixture(t);
+  const source = await jpeg(path.join(root, 'SOURCE.JPG'));
+  const id = (await library.scan(root)).photos[0].id;
+  const output = path.join(directory, 'picked');
+  await fs.mkdir(output);
+  const linkedOutput = path.join(directory, 'linked-output');
+  await fs.symlink(output, linkedOutput);
+  await assert.rejects(library.copySelected({ ids: [id], directory: linkedOutput }), /符号链接/);
+  await assert.rejects(library.copySelected({ ids: [id], directory: root }), /原片所在文件夹/);
+  await assert.rejects(library.copySelected({ ids: [], directory: output }), /请选择/);
+  await assert.rejects(library.copySelected({ ids: Array(50001).fill(id), directory: output }), /50,000/);
+  await assert.rejects(library.copySelected({ ids: ['stale-id'], directory: output }), /找不到/);
+  await assert.rejects(library.copySelected({ ids: [id], directory: output, includeRaw: 'false' }), /是否包含/);
+  const outside = await jpeg(path.join(directory, 'private', 'OUTSIDE.JPG'));
+  await fs.rm(source);
+  await fs.symlink(outside, source);
+  const result = await library.copySelected({ ids: [id], directory: output });
+  assert.equal(result.copiedCount, 0);
+  assert.equal(result.errorCount, 1);
+  assert.match(result.errors[0].message, /符号链接/);
+  assert.deepEqual(await fs.readdir(output), []);
+  assert.equal(library.roots.has(output), false);
+  await assert.rejects(library._authorized(outside), /已选择/);
+});
+
+test('selected copy retries a pair together when a destination appears after collision preflight', async t => {
+  const { root, directory, library } = await fixture(t);
+  const sourceJpeg = await jpeg(path.join(root, 'RACE.JPG'));
+  const sourceRaw = await raw(path.join(root, 'RAW', 'RACE.CR3'));
+  const photo = (await library.scan(root)).photos[0];
+  const output = path.join(directory, 'picked');
+  await fs.mkdir(output);
+  const originalCopy = fs.copyFile;
+  let injected = false;
+  fs.copyFile = async (source, target, flags) => {
+    assert.equal(flags, require('node:fs').constants.COPYFILE_EXCL);
+    if (source === sourceRaw && !injected) { injected = true; await fs.writeFile(target, 'concurrent-existing-file', { flag: 'wx' }); }
+    return originalCopy(source, target, flags);
+  };
+  let result;
+  try { result = await library.copySelected({ ids: [photo.id], directory: output, includeRaw: true }); }
+  finally { fs.copyFile = originalCopy; }
+  assert.equal(result.copiedCount, 2);
+  assert.equal(result.errorCount, 0);
+  assert.ok(result.copied.every(file => path.basename(file.path).startsWith('RACE-2.')));
+  assert.deepEqual((await fs.readdir(output)).sort(), ['RACE-2.CR3', 'RACE-2.JPG', 'RACE.CR3']);
+  assert.equal(await fs.readFile(path.join(output, 'RACE.CR3'), 'utf8'), 'concurrent-existing-file');
+  assert.equal(await library._digest(path.join(output, 'RACE-2.JPG')), await library._digest(sourceJpeg));
+  assert.equal(await library._digest(path.join(output, 'RACE-2.CR3')), await library._digest(sourceRaw));
+});
+
+test('selected copy returns a successful JPEG and a useful RAW failure while originals remain untouched', async t => {
+  const { root, directory, library } = await fixture(t);
+  const sourceJpeg = await jpeg(path.join(root, 'PARTIAL.JPG'));
+  const sourceRaw = await raw(path.join(root, 'RAW', 'PARTIAL.CR3'));
+  const originals = await Promise.all([sourceJpeg, sourceRaw].map(file => library._digest(file)));
+  const photo = (await library.scan(root)).photos[0];
+  const output = path.join(directory, 'picked');
+  await fs.mkdir(output);
+  const originalCopy = fs.copyFile;
+  fs.copyFile = async (source, target, flags) => {
+    if (source === sourceRaw) throw Object.assign(new Error('模拟磁盘写入失败'), { code: 'EIO' });
+    return originalCopy(source, target, flags);
+  };
+  let result;
+  try { result = await library.copySelected({ ids: [photo.id], directory: output, includeRaw: true }); }
+  finally { fs.copyFile = originalCopy; }
+  assert.equal(result.copiedCount, 1);
+  assert.equal(result.copied[0].format, 'jpeg');
+  assert.equal(result.errorCount, 1);
+  assert.equal(result.errors[0].source, sourceRaw);
+  assert.match(result.errors[0].message, /写入失败/);
+  assert.deepEqual(await fs.readdir(output), ['PARTIAL.JPG']);
+  assert.deepEqual(await Promise.all([sourceJpeg, sourceRaw].map(file => library._digest(file))), originals);
+});
+
 test('scan skips symbolic links and source access rejects roots outside selected directories', async t => {
   const { root, directory, library } = await fixture(t);
   const outside = await jpeg(path.join(directory, 'private', 'outside.jpg'));

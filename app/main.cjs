@@ -19,6 +19,7 @@ const approvedRoots = new Set();
 const mediaTokens = new Map();
 const syncPlans = new Map();
 const syncBatches = new Set();
+const copyDestinations = new Set();
 const demo = process.argv.includes('--demo');
 const screenshotIndex = process.argv.indexOf('--screenshot');
 const smoke = process.argv.includes('--smoke');
@@ -105,9 +106,12 @@ function handle(name, callback) {
 function bindAPI() {
   handle('getSettings', () => settings);
   handle('saveSettings', saveSettings);
-  handle('chooseFolder', async () => {
-    const result = await dialog.showOpenDialog(win, { title: '选择照片文件夹', properties: ['openDirectory'] });
+  handle('chooseFolder', async args => {
+    const title = typeof args?.title === 'string' && args.title.trim() ? args.title.slice(0, 120) : '选择照片文件夹';
+    const result = await dialog.showOpenDialog(win, { title, properties: ['openDirectory', ...(args?.createDirectory === true ? ['createDirectory'] : [])] });
     if (result.canceled) return null;
+    const stat = await fs.lstat(result.filePaths[0]);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('请选择真实文件夹，不能选择符号链接');
     const real = await fs.realpath(result.filePaths[0]);
     approvedRoots.add(real);
     return real;
@@ -140,6 +144,16 @@ function bindAPI() {
     if (!theme || /[\x00-\x1f/\\]/.test(theme) || theme === '.' || theme === '..') throw new Error('请填写有效主题名称');
     return library.importPhotos({ source, destination, theme });
   });
+  handle('copySelected', async args => {
+    const requested = args?.directory || args?.destination;
+    if (typeof requested !== 'string' || !requested) throw new Error('请选择复制目标文件夹');
+    const stat = await fs.lstat(requested);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('复制目标必须是真实文件夹，不能是符号链接');
+    const directory = await approvedFolder(requested);
+    const result = await library.copySelected({ ids: args.ids, directory, includeRaw: args.includeRaw ?? false });
+    copyDestinations.add(result.directory);
+    return result;
+  });
   handle('cacheInfo', () => library.cacheInfo());
   handle('clearCache', () => library.clearCache());
   handle('syncPreview', async args => {
@@ -155,8 +169,10 @@ function bindAPI() {
     return result;
   });
   handle('revealDirectory', async ({ directory }) => {
+    const stat = await fs.lstat(directory);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('请选择真实文件夹，不能选择符号链接');
     const real = await fs.realpath(directory);
-    if (!syncBatches.has(real)) throw new Error('请选择本次同步生成的待删目录');
+    if (!syncBatches.has(real) && !(copyDestinations.has(real) && approvedRoots.has(real))) throw new Error('请选择本次复制目标或同步生成的待删目录');
     const error = await shell.openPath(real);
     if (error) throw new Error(error);
     return { opened: true };
@@ -250,6 +266,10 @@ async function start() {
     const real = await fs.realpath(verifyRoot);
     approvedRoots.add(real);
     settings.libraryRoot = real;
+  }
+  if (qaOutput) {
+    await fs.mkdir(path.resolve(qaOutput), { recursive: true });
+    approvedRoots.add(await fs.realpath(qaOutput));
   }
   library = new PhotoLibrary({ userData: app.getPath('userData'), emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress', payload); } });
   await library.init();

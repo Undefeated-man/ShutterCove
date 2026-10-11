@@ -32,5 +32,24 @@
   await timeMachine.saveSettings({ fontScale: 1.4 });
   const similar = await timeMachine.similar({ referenceId: photo.id, directory: settings.libraryRoot, grid: 8, limit: 10 });
   assert(similar.photos.length > 0, 'Native on-demand cosine search');
-  return { passed: checks.length, checks, originalDimensions: [image.naturalWidth, image.naturalHeight], output: saved.path };
+  const jpegPhotos = App.state.photos.filter(item => item.jpegPath);
+  const ids = jpegPhotos.map(item => item.id);
+  const destination = saved.path.replace(/[\\/][^\\/]+$/, '');
+  const copies = await timeMachine.copySelected({ ids, directory: destination });
+  assert(!copies.cancelled && !copies.errors.length && copies.copiedCount === ids.length && !copies.skippedCount, 'Production copy defaults to JPEG and reports every selected photo');
+  assert(copies.copied.every(item => item.format === 'jpeg' && item.path.replace(/[\\/][^\\/]+$/, '') === destination && ids.includes(item.id)), 'Production copy collects cross-directory JPEGs into a flat destination');
+  const repeated = await timeMachine.copySelected({ ids, directory: destination, includeRaw: false });
+  assert(!repeated.cancelled && !repeated.errors.length && repeated.copiedCount === ids.length, 'Repeated production copy completes without overwriting existing files');
+  const paired = jpegPhotos.filter(item => item.rawPath);
+  const withRaw = await timeMachine.copySelected({ ids, directory: destination, includeRaw: true });
+  assert(paired.length > 0 && !withRaw.cancelled && !withRaw.errors.length && withRaw.copiedCount === ids.length + paired.length && withRaw.copied.filter(item => item.format === 'raw').length === paired.length, 'Optional CR3 copying uses the production bridge and transfers each synthetic pair');
+  const stem = file => file.replace(/\.[^\\/.]+$/, '');
+  assert(paired.every(item => {
+    const jpeg = withRaw.copied.find(copy => copy.id === item.id && copy.format === 'jpeg');
+    const raw = withRaw.copied.find(copy => copy.id === item.id && copy.format === 'raw');
+    return jpeg && raw && stem(jpeg.path) === stem(raw.path);
+  }), 'Collision-renamed JPEG and CR3 share the same destination stem');
+  const allCopies = [...copies.copied, ...repeated.copied, ...withRaw.copied];
+  assert(new Set(allCopies.map(item => item.path)).size === ids.length * 3 + paired.length, 'Collision copies receive distinct target names');
+  return { passed: checks.length, checks, originalDimensions: [image.naturalWidth, image.naturalHeight], output: saved.path, copyCount: allCopies.length };
 })();

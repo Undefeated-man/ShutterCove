@@ -1,0 +1,57 @@
+(async()=>{
+  const checks=[],calls=[],folderCalls=[],revealed=[],canceled=[];
+  const wait=async test=>{for(let i=0;i<180;i++){if(test())return;await new Promise(r=>setTimeout(r,40));}throw new Error('Copy UI wait timeout');};
+  const assert=(ok,name)=>{if(!ok)throw new Error(name);checks.push(name);};
+  const el=id=>document.getElementById(id);
+  await wait(()=>window.App?.api.isDemo&&App.state.photos.length===16&&typeof App.api.copySelected==='function');
+  assert(App.api.isDemo,'Synthetic-only copy UI test');
+  const api=App.api,original={chooseFolder:api.chooseFolder,copySelected:api.copySelected,revealDirectory:api.revealDirectory,cancel:api.cancel};
+  const originalPhotos=App.state.photos,originalSelection=new Set(App.state.selected),pairs=originalPhotos.filter(p=>p.jpegPath&&p.rawPath).slice(0,3);
+  const rawOnly={...pairs[2],jpegPath:null,name:'合成 RAW 示例.CR3'};
+  const selectedIds=pairs.map(p=>p.id),directory='/演示导出';
+  let nextFolder=null,resultMode='partial',finishCopy;
+  const copiedEntry=(photo,format)=>({id:photo.id,format,source:format==='jpeg'?photo.jpegPath:photo.rawPath,path:directory+'/'+photo.stem+(format==='jpeg'?'.JPG':'.CR3')});
+  const baseResult=()=>({directory,destination:directory,copied:[],copiedCount:0,skipped:[],skippedCount:0,errors:[],errorCount:0,cancelled:false});
+  api.chooseFolder=async options=>{folderCalls.push(options);return nextFolder;};
+  api.revealDirectory=async options=>{revealed.push(options);return {demo:true};};
+  api.copySelected=async options=>{calls.push(options);if(resultMode==='pending')return new Promise(resolve=>finishCopy=resolve);if(resultMode==='all'){const copied=[copiedEntry(pairs[0],'jpeg'),copiedEntry(pairs[0],'raw'),copiedEntry(pairs[1],'jpeg'),copiedEntry(pairs[1],'raw'),copiedEntry(rawOnly,'raw')];return {...baseResult(),copied,copiedCount:copied.length};}const skipped=[{id:rawOnly.id,name:rawOnly.name,reason:'raw-only',message:'仅 RAW 照片组默认跳过'}],errors=[{id:pairs[1].id,name:pairs[1].name,message:'合成测试失败说明'}],copied=[copiedEntry(pairs[0],'jpeg')];return {...baseResult(),copied,copiedCount:1,skipped,skippedCount:1,errors,errorCount:1};};
+  api.cancel=async kind=>{canceled.push(kind);if(finishCopy){finishCopy({...baseResult(),copied:[copiedEntry(pairs[0],'jpeg')],copiedCount:1,cancelled:true});finishCopy=null;}};
+  const open=async()=>{el('batch-reveal').click();await wait(()=>el('copy-start'));};
+  const pick=async()=>{el('copy-pick-directory').click();await wait(()=>!el('copy-start').disabled);};
+  try{
+    App.state.photos=originalPhotos.map(p=>p.id===rawOnly.id?rawOnly:p);App.state.selected=new Set(selectedIds);App.state.selectionMode=true;App.render();
+    assert(el('batch-reveal').textContent.includes('复制到文件夹'),'Batch action clearly offers folder copy');
+    await open();assert(!el('copy-include-raw').checked,'JPEG-only is the default');
+    assert(el('copy-start').disabled,'Copy cannot start before a target folder is chosen');
+    assert(el('copy-pick-directory').textContent.includes('新建'),'Folder picker makes new-folder support visible');
+    assert(/RAW|CR3/.test(el('modal-root').textContent)&&el('modal-root').textContent.includes('跳过'),'RAW-only skip is explained before copying');
+    assert(el('modal-root').textContent.includes('原片')&&/同名|重名/.test(el('modal-root').textContent),'Source preservation and name collision behavior are explained');
+    el('copy-pick-directory').click();await wait(()=>folderCalls.length===1);
+    assert(el('copy-start').disabled&&calls.length===0,'Canceling target choice leaves the form ready without copying');
+    assert(folderCalls[0].createDirectory===true&&folderCalls[0].title==='选择或新建目标文件夹','Native target picker supports creating a folder');
+    nextFolder=directory;await pick();assert(el('copy-directory').textContent.includes(directory),'Chosen target path is shown as text');
+    el('copy-start').click();await wait(()=>el('copy-results'));
+    assert(calls[0].includeRaw===false&&calls[0].directory===directory&&calls[0].ids.length===3&&selectedIds.every(id=>calls[0].ids.includes(id)),'Default copy submits exactly the selected groups and JPEG-only flag');
+    const partial=el('copy-results').textContent;
+    assert(/已复制\s*1\s*个文件/.test(partial)&&/跳过\s*1/.test(partial)&&/失败\s*1/.test(partial),'Partial result distinguishes file copies, skipped groups and failures');
+    assert(partial.includes(rawOnly.name)&&partial.includes('合成测试失败说明'),'Skipped RAW-only and failure details remain visible');
+    el('copy-open-directory').click();await wait(()=>revealed.length===1);assert(revealed[0].directory===directory,'Result opens the authorized output folder');
+    el('copy-result-close').click();assert(!el('copy-results')&&App.state.selected.size===3,'Closing results preserves the photo selection');
+    await open();el('copy-include-raw').checked=true;el('copy-include-raw').dispatchEvent(new Event('change',{bubbles:true}));await pick();resultMode='all';el('copy-start').click();await wait(()=>el('copy-results'));
+    assert(calls[1].includeRaw===true,'CR3 checkbox explicitly enables paired RAW and RAW-only copying');
+    assert(/已复制\s*5\s*个文件/.test(el('copy-results').textContent),'JPEG and CR3 output counts are files rather than photo groups');
+    el('copy-result-close').click();await open();await pick();resultMode='pending';el('copy-start').click();await wait(()=>App.state.progressKind==='copy'&&finishCopy);
+    assert(!el('progress-section').hidden&&!el('cancel-progress').hidden,'Copy exposes progress and cancellation');
+    el('cancel-progress').click();await wait(()=>el('copy-results'));
+    assert(canceled[0]==='copy','Cancel targets the current copy job');
+    assert(/取消|停止/.test(el('modal-root').textContent)&&/已复制\s*1\s*个文件/.test(el('copy-results').textContent),'Canceled copy reports already copied files that remain in the target');
+    el('copy-result-close').click();App.applyFontScale(1.5);await open();await pick();
+    const modal=el('modal-root').querySelector('.modal'),rect=modal.getBoundingClientRect();
+    assert(rect.left>=0&&rect.right<=innerWidth+1&&rect.top>=0&&rect.bottom<=innerHeight+1,'Copy form fits a compact window at 150 percent font size');
+    assert(modal.scrollWidth<=modal.clientWidth+1&&el('main-scroll').scrollWidth<=el('main-scroll').clientWidth+1,'Copy form and selected toolbar have no horizontal overflow');
+    App.closeModal();
+    return {passed:checks.length,checks,viewport:{width:innerWidth,height:innerHeight}};
+  }finally{
+    Object.assign(api,original);App.closeModal();App.applyFontScale(1.2);App.state.photos=originalPhotos;App.state.selected=originalSelection;App.state.selectionMode=false;App.render();el('toast-root').replaceChildren();
+  }
+})();

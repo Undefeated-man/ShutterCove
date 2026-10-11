@@ -88,7 +88,7 @@ jobs:
         timeout-minutes: 5
         run: xvfb-run -a dist/linux-unpacked/shiguang-isle --no-sandbox --demo --smoke --qa-script scripts/ui-smoke.js
       - name: Verify packaged production photo IPC and disk export
-        timeout-minutes: 25
+        timeout-minutes: 31
         run: node scripts/package-smoke.cjs
       - uses: actions/upload-artifact@v4
         with:
