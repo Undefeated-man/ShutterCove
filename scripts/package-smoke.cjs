@@ -42,15 +42,22 @@ function executable() {
 function launch(binary, args) {
   const linux = process.platform === 'linux';
   const command = linux ? 'xvfb-run' : binary;
-  const parameters = linux ? ['-a', binary, '--no-sandbox', ...args] : args;
-  const result = spawnSync(command, parameters, { cwd: root, stdio: 'inherit', timeout: 180_000 });
+  // xvfb-run has a separate process ID. The shell prints its own PID and then
+  // execs Electron, preserving that PID; filenames remain separate arguments.
+  const parameters = linux ? ['-a', '/bin/sh', '-c', 'printf "SHIGUANG_SMOKE_PID=%s\\n" "$$"; exec "$@"', 'shiguang-smoke', binary, '--no-sandbox', ...args] : args;
+  const result = spawnSync(command, parameters, { cwd: root, stdio: ['inherit', 'pipe', 'inherit'], encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 180_000 });
+  if (result.stdout) process.stdout.write(result.stdout);
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Packaged smoke failed: exit ${result.status}, signal ${result.signal || 'none'}`);
+  const pid = linux ? Number(result.stdout.match(/^SHIGUANG_SMOKE_PID=(\d+)$/m)?.[1]) : result.pid;
+  if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error('Cannot identify the packaged smoke application process');
+  return pid;
 }
 
 async function main() {
   const binary = executable();
   const temporary = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'shiguang-package-smoke-')));
+  let nativeUserData;
   try {
     const photos = path.join(temporary, 'photos');
     const output = path.join(temporary, 'output');
@@ -64,7 +71,18 @@ async function main() {
     }
     launch(binary, ['--demo', '--smoke', '--qa-script', path.join(__dirname, 'ui-cap-smoke.js')]);
     launch(binary, ['--demo', '--smoke', '--qa-script', path.join(__dirname, 'sync-ui-smoke.js')]);
-    launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'native-smoke.js')]);
+    const fontSmoke = path.join(__dirname, 'font-ui-smoke.js');
+    if (!fs.existsSync(fontSmoke)) throw new Error('Required font-size UI smoke script is missing');
+    launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', fontSmoke]);
+    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js']) {
+      const smoke = path.join(__dirname, script);
+      if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
+      launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', smoke]);
+    }
+    const nativePID = launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'native-smoke.js')]);
+    nativeUserData = path.join(os.tmpdir(), `shiguang-smoke-${nativePID}`);
+    const settings = JSON.parse(fs.readFileSync(path.join(nativeUserData, 'settings.json'), 'utf8'));
+    if (settings.fontScale !== 1.4) throw new Error('Font-size setting was not persisted to the application settings file');
     const exported = path.join(output, 'synthetic-native-export.jpg');
     const info = await sharp(exported).metadata();
     if (info.format !== 'jpeg' || info.width !== 100 || info.height !== 80) throw new Error('Production JPEG save returned the wrong output format or dimensions');
@@ -84,8 +102,9 @@ async function main() {
       if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw new Error('SD smoke journal points outside its synthetic fixture');
       if (digest(file) !== original.sha256) throw new Error('SD synchronization changed a synthetic photo');
     }
-    console.log('Packaged native smoke passed: capped collage, production IPC, JPEG disk export 100 × 80, unchanged original hashes, and recoverable SD sync keeping one and moving two.');
+    console.log('Packaged native smoke passed: capped collage, font-size UI and persisted settings, calendar input, date timeline, production IPC, JPEG disk export 100 × 80, unchanged original hashes, and recoverable SD sync keeping one and moving two.');
   } finally {
+    if (nativeUserData) fs.rmSync(nativeUserData, { recursive: true, force: true });
     fs.rmSync(temporary, { recursive: true, force: true });
   }
 }

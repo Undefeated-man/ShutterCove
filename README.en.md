@@ -34,29 +34,44 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 | Feature | How it works |
 | --- | --- |
 | Color organization | Analyze image colors automatically and browse within a date range |
-| Date and theme search | Limit dates, search theme names, and assign themes to individual or selected photographs |
+| Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
+| Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
 | Similar photographs | Choose a directory and compare average-pooled RGB pixels using cosine similarity; adjustable granularity, estimated time, progress, and cancellation |
 | Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace and film posters; drag to reorder and export a new JPEG |
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
 | Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
-| Responsive window | Resize the window; the sidebar, gallery, and workspaces adapt to available space |
+| Responsive window and font size | Resize the window; a persistent font-size slider in Settings previews changes immediately, defaults to 120%, and supports 100%–150% |
 | Simple editing | Crop, rotate, mirror horizontally or vertically, and apply rectangular or elliptical pixel mosaics; overwrite a JPEG or save a new file |
 | SD card import | Copy new photographs into a chosen memories root, use an existing or new theme, organize by capture date, and skip duplicate content |
 | Batch selection and deletion | Multi-select, range selection, and select all filtered results; move files to the system trash after confirmation |
 | Reveal selected files | Select matching JPEG / CR3 files in Finder on macOS; use a compatible FileManager1 file manager on Linux |
 | Favorite synchronization to SD | Preview files to keep from favorites or the current selection, then move other JPEG / CR3 files into a recoverable `待删` batch with a journal |
 
-Photo details display JPEG and its corresponding CR3 preview side by side. Each format has Photoshop, Lightroom, and system-open buttons. Browsing creates lightweight cached previews rather than full original copies.
+Photo details display JPEG and its corresponding CR3 preview together in the same detail view. Each format has Photoshop, Lightroom, and system-open buttons. Browsing creates lightweight cached previews rather than full original copies.
 
 ![Paired JPEG / CR3 previews and editor handoff using synthetic landscapes](docs/screenshots/paired-preview.png)
 
 The paired-preview screenshot uses generated photographs and sample metadata, with no real people or private capture information.
 
+![Font settings: larger defaults and an immediate preview](docs/screenshots/font-settings.png)
+
+Pick a date from the calendar or type it directly. The slim timeline expands a translucent date badge to help you jump through the current filtered results.
+
+![Calendar filtering with clickable dates and direct date input](docs/screenshots/calendar.png)
+
+![Slim timeline with an expanded date badge for quick navigation](docs/screenshots/timeline.png)
+
+SD favorite synchronization shows the keep and move lists before confirmation. Other photographs move into a recoverable `待删` batch. This screenshot shows only a synthetic preview; no move was executed and no real SD card was accessed.
+
+![SD favorite synchronization preview with keep and move lists](docs/screenshots/sd-sync.png)
+
+These screenshots use synthetic photographs, with no real portraits, private paths, or real capture information.
+
 ## Using the library
 
 1. Choose a photo root. The app scans recursively and identifies JPEG / CR3 pairs using names, dates, and directory relationships while retaining the original file locations.
-2. Filter by date range, color, tags, and theme. Use the favorites view to revisit your selected photographs.
+2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
 3. Select multiple photographs to add tags, mark favorites, reveal files, or move files to trash. In a photo's details, choose JPEG or CR3 when handing it to an editor.
 4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
 5. Open the collage workspace with multiple JPEG photographs, choose a layout, drag photographs into a new order, and export a new JPEG.
@@ -107,7 +122,7 @@ npm run build:mac
 npm run build:linux
 ```
 
-Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 15 Intel, and Ubuntu 22.04 x64, then launches the packaged applications for gallery, collage-limit, SD interface, production IPC, disk-export, and recoverable SD synchronization checks using synthetic fixtures. Successful assembly produces a draft Release with packages and checksums. Push a `v` tag matching `package.json`, or manually run the workflow for an existing tag. Review the draft before publishing.
+Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 15 Intel, and Ubuntu 22.04 x64, then launches the packaged applications for gallery, collage-limit, SD interface, font settings, calendar input, date timeline, production IPC, disk-export, and recoverable SD synchronization checks using synthetic fixtures. Successful assembly produces a draft Release with packages and checksums. Push a `v` tag matching `package.json`, or manually run the workflow for an existing tag. Review the draft before publishing.
 
 ## Privacy and licenses
 

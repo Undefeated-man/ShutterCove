@@ -13,6 +13,10 @@ npm run icon
 npx electron . --demo --smoke --qa-script scripts/ui-smoke.js
 # SD 卡精品同步界面验收，仅使用合成演示数据
 npx electron . --demo --smoke --qa-script scripts/sync-ui-smoke.js
+# 小窗口字号、日历输入与时间轴验收，仅使用合成演示数据
+npx electron . --demo --smoke --compact --qa-script scripts/font-ui-smoke.js
+npx electron . --demo --smoke --compact --qa-script scripts/date-ui-smoke.js
+npx electron . --demo --smoke --compact --qa-script scripts/timeline-ui-smoke.js
 ```
 
 后端单元测试覆盖照片日期与配对、相似度排序与粒度、碰撞保护、缓存清理和路径授权；界面脚本覆盖筛选、多选、收藏、拼图和编辑。测试照片使用临时生成的合成图，不提交用户原片。
@@ -55,6 +59,28 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | Release 自动装配与公开发布 | [修正后的运行 38120190987](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38120190987) 的三个原生构建及 Release 装配全部成功；六个安装包已上传，SHA256SUMS 与 GitHub asset SHA-256 全部一致。[v1.0.0](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.0) 已公开发布。此前 Linux 包格式使用 x86_64 / amd64 架构名导致装配检查失败，已修正 |
 
 以上测试不会启动已安装的 Adobe 应用，也不会操作用户原片。合成图库界面脚本将保存接口替换为数据验收；生产 IPC 脚本另行验证临时目录内的真实 JPEG 保存。`scripts/package-smoke.cjs` 在三平台打包后的应用重复超长拼图、SD 界面、生产 IPC 和 SD 同步验收，检查实际输出尺寸、三个合成原片的 SHA-256 未变，以及一张保留、两张可恢复地移入待删的操作记录。真实机器上的首次安装与 Adobe 交接仍需独立验收；尚未记录的项目不视为通过。
+
+## v1.0.1 字号、日历与时间轴
+
+本次功能变化：默认字号放大至 120%；设置提供 100%–150% 的字号滑块，即时预览，保存后在下次启动沿用。窗口、照片像素与导出分辨率独立于字号设置。
+
+日期区间支持点击日历或直接输入；纤细时间轴在悬停或按住时展开半透明日期提示，拖动可跳到当前全部筛选结果的日期，默认按日期倒序浏览。日历已在原生 Electron 的 900 × 680 合成图库中通过 18 项断言，包含日期选择、直接输入、无效日期处理、重置与年份整数校验。
+
+时间轴源码界面在原生 Electron 的 900 × 680 合成图库中通过 19 项断言：覆盖 300 张照片的全局位置与跨分页定位、同页跳转不重绘、实际指针按下 / 移动 / 释放的日期预览与定位、点击定位、快速连续跳转保留最新目标、筛选变化取消过期跳转、150% 字号无横向溢出，以及空图库和单张照片。打包验收必须运行 `scripts/date-ui-smoke.js` 与 `scripts/timeline-ui-smoke.js`。
+
+字体界面已在原生 Electron 的 900 × 680 合成图库中通过 13 项断言，覆盖默认字号、即时预览、取消还原、保存与小窗口布局；打包验收使用 `scripts/font-ui-smoke.js`。
+
+2026-10-11，本地 macOS arm64 最终 v1.0.1 安装包构建完成，启动打包后的 `.app` 实际验证：
+
+| 检查 | 结果与范围 |
+| --- | --- |
+| 完整安装包烟雾测试 | `node scripts/package-smoke.cjs` 全部成功：2 项拼图上限、18 项 SD 界面、13 项字号、18 项日历、19 项时间轴、10 项生产 IPC、3 项临时 SD 同步，共 83 项断言 |
+| 独立完整图库界面 | 打包后的 `.app` 运行 `scripts/ui-smoke.js`，24 项断言通过，覆盖筛选、多选、标签、收藏、拼图、预览、编辑与相似搜索 |
+| 实际文件与设置 | 设置 JSON 中 `fontScale` 为 1.4；导出 JPEG 为 100 × 80；三个合成输入 SHA-256 未变；SD 同步保留一张、可恢复地移入两张，操作记录和全部原片哈希均核对一致 |
+| 应用签名与 DMG | `codesign --verify --deep --strict` 通过；`hdiutil verify` 确认 DMG 有效；采用 ad-hoc 签名，未进行 Apple 公证 |
+| 安装包脱敏 | 351 个资源与二进制检查通过，未检出被禁止的个人路径 |
+
+三平台 CI 与公开 Release 仍待实际运行结果；本地通过不能代替这些项目的验证。
 
 ## 当前边界
 

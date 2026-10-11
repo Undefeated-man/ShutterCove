@@ -58,7 +58,7 @@ async function detectEditor(editor) {
 async function saveSettings(patch = {}) {
   const next = { ...settings, editorPaths: { ...settings.editorPaths } };
   for (const key of ['libraryRoot', 'importDestination']) {
-    if (typeof patch[key] === 'string' && patch[key]) {
+    if (typeof patch[key] === 'string' && patch[key] && patch[key] !== settings[key]) {
       const resolved = await fs.realpath(patch[key]);
       if (!(await fs.stat(resolved)).isDirectory()) throw new Error('请选择一个文件夹');
       if (!approvedRoots.has(resolved)) throw new Error('请通过“选择文件夹”设置目录');
@@ -70,6 +70,10 @@ async function saveSettings(patch = {}) {
     for (const editor of ['photoshop', 'lightroom']) {
       if (typeof patch.editorPaths[editor] === 'string') next.editorPaths[editor] = patch.editorPaths[editor];
     }
+  }
+  if (Object.hasOwn(patch, 'fontScale')) {
+    if (typeof patch.fontScale !== 'number' || !Number.isFinite(patch.fontScale)) throw new Error('请选择有效的字体大小');
+    next.fontScale = Math.min(1.5, Math.max(1, patch.fontScale));
   }
   settings = next;
   await atomicJSON(settingsPath, settings);
@@ -238,8 +242,9 @@ function bindAPI() {
 async function start() {
   await app.whenReady();
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512 };
+  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2 };
   try { settings = { ...settings, ...JSON.parse(await fs.readFile(settingsPath, 'utf8')) }; } catch {}
+  settings.fontScale = typeof settings.fontScale === 'number' && Number.isFinite(settings.fontScale) ? Math.min(1.5, Math.max(1, settings.fontScale)) : 1.2;
   for (const root of [settings.libraryRoot, settings.importDestination]) if (root) approvedRoots.add(root);
   if (verifyRoot && smoke) {
     const real = await fs.realpath(verifyRoot);

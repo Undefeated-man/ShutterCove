@@ -1,6 +1,6 @@
 {
   "name": "shiguang-isle",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "拾光屿 · 摄影回忆时光机 — a local-first DSLR photo library",
   "main": "app/main.cjs",
   "author": "Shiguang Isle contributors",
@@ -27,26 +27,58 @@
     "appId": "org.shiguang.isle",
     "productName": "Shiguang Isle",
     "artifactName": "Shiguang-Isle-${version}-${os}-${arch}.${ext}",
-    "files": ["app/**/*", "renderer/**/*", "assets/**/*", "package.json", "LICENSE", "docs/architecture.md"],
+    "files": [
+      "app/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "package.json",
+      "LICENSE",
+      "docs/architecture.md"
+    ],
     "asar": true,
-    "asarUnpack": ["node_modules/sharp/**/*", "node_modules/@img/**/*", "node_modules/exiftool-vendored.pl/**/*", "node_modules/exiftool-vendored.exe/**/*"],
+    "asarUnpack": [
+      "node_modules/sharp/**/*",
+      "node_modules/@img/**/*",
+      "node_modules/exiftool-vendored.pl/**/*",
+      "node_modules/exiftool-vendored.exe/**/*"
+    ],
     "npmRebuild": false,
     "mac": {
       "category": "public.app-category.photography",
       "icon": "assets/icon.icns",
       "identity": null,
       "hardenedRuntime": false,
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "linux": {
       "executableName": "shiguang-isle",
       "category": "Graphics;Photography",
       "icon": "assets/icon.png",
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "maintainer": "Shiguang Isle contributors"
     },
     "deb": {
-      "depends": ["libgtk-3-0", "libnss3", "libasound2", "libatk1.0-0", "libatk-bridge2.0-0", "libdrm2", "libgbm1", "libxkbcommon0", "libx11-xcb1", "libxss1", "libxshmfence1", "xdg-utils", "perl"]
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libasound2",
+        "libatk1.0-0",
+        "libatk-bridge2.0-0",
+        "libdrm2",
+        "libgbm1",
+        "libxkbcommon0",
+        "libx11-xcb1",
+        "libxss1",
+        "libxshmfence1",
+        "xdg-utils",
+        "perl"
+      ]
     }
   }
 }

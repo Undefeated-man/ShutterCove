@@ -35,11 +35,11 @@ window.createDemoBridge = function () {
     return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
   }
   let photos=scenes.map((s,i)=>({id:'demo-'+i,name:s[0]+'.JPG',stem:s[0],jpegPath:'/演示相册/'+s[0]+'.JPG',rawPath:i%5===3?null:'/演示相册/'+s[0]+'.CR3',path:'/演示相册/'+s[0]+'.JPG',date:s[1],theme:s[2],tags:s[4],favorite:s[5],color:palettes[s[3]][1],colorFamily:s[3],width:6000,height:4000,camera:'Canon EOS R5',lens:'RF 24-70mm F2.8 L IS USM',size:18400000}));
-  let settings={libraryRoot:'/演示相册',importDestination:'/演示相册',cacheLimitMB:512,editorPaths:{photoshop:'自动检测',lightroom:'自动检测'}};
+  let settings={libraryRoot:'/演示相册',importDestination:'/演示相册',cacheLimitMB:512,fontScale:1.2,editorPaths:{photoshop:'自动检测',lightroom:'自动检测'}};
   const listeners=[];
   const emit=p=>listeners.forEach(fn=>fn(p));
   return {
-    isDemo:true,chooseFolder:async()=>'/演示相册',getSettings:async()=>({...settings}),saveSettings:async p=>Object.assign(settings,p),chooseEditor:async e=>settings.editorPaths[e],
+    isDemo:true,chooseFolder:async()=>'/演示相册',getSettings:async()=>({...settings}),saveSettings:async p=>Object.assign(settings,p,{fontScale:Math.max(1,Math.min(1.5,Number(p.fontScale??settings.fontScale)||1.2))}),chooseEditor:async e=>settings.editorPaths[e],
     scan:async root=>({root,photos:[...photos]}),thumbnail:async({id})=>landscape(Number(id.split('-')[1])%scenes.length),source:async({id})=>landscape(Number(id.split('-')[1])%scenes.length),
     update:async({ids,patch})=>{photos=photos.map(p=>ids.includes(p.id)?{...p,...patch,...(patch.addTags?{tags:[...new Set([...(p.tags||[]),...patch.addTags])]}:{})}:p);return photos.filter(p=>ids.includes(p.id));},
     analyzeColors:async({ids})=>{for(let i=0;i<ids.length;i++){emit({kind:'colors',done:i+1,total:ids.length,etaSeconds:0});await new Promise(r=>setTimeout(r,30));}return photos.filter(p=>ids.includes(p.id));},

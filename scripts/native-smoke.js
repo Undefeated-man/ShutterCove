@@ -21,6 +21,15 @@
   const result = await timeMachine.analyzeColors({ ids: [photo.id] });
   assert(result.photos[0].colorFamily !== 'unknown', 'Native thumbnail color analysis');
   const settings = await timeMachine.getSettings();
+  assert(settings.fontScale === 1.2, 'Larger default font scale');
+  const adjusted = await timeMachine.saveSettings({ fontScale: 1.4 });
+  assert(adjusted.fontScale === 1.4 && (await timeMachine.getSettings()).fontScale === 1.4, 'Font setting saved through production IPC');
+  const clamped = await timeMachine.saveSettings({ fontScale: 2 });
+  assert(clamped.fontScale === 1.5, 'Font scale respects the supported range');
+  let rejected = false;
+  try { await timeMachine.saveSettings({ fontScale: NaN }); } catch { rejected = true; }
+  assert(rejected, 'Invalid font scale is rejected');
+  await timeMachine.saveSettings({ fontScale: 1.4 });
   const similar = await timeMachine.similar({ referenceId: photo.id, directory: settings.libraryRoot, grid: 8, limit: 10 });
   assert(similar.photos.length > 0, 'Native on-demand cosine search');
   return { passed: checks.length, checks, originalDimensions: [image.naturalWidth, image.naturalHeight], output: saved.path };

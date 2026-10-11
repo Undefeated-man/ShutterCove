@@ -35,7 +35,7 @@ jobs:
             platform: linux
             arch: x64
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -88,7 +88,7 @@ jobs:
         timeout-minutes: 5
         run: xvfb-run -a dist/linux-unpacked/shiguang-isle --no-sandbox --demo --smoke --qa-script scripts/ui-smoke.js
       - name: Verify packaged production photo IPC and disk export
-        timeout-minutes: 15
+        timeout-minutes: 25
         run: node scripts/package-smoke.cjs
       - uses: actions/upload-artifact@v4
         with:
@@ -146,6 +146,16 @@ jobs:
           macOS 包为 ad-hoc 签名，未经过 Apple 公证。首次启动可能需要在系统设置的“隐私与安全性”中允许打开。Linux 的 Adobe 交接需改用本地编辑器。
 
           此版本由自动化构建并先保存为草稿；发布前需核对安装包和验证记录。CR3 展示使用相机嵌入预览，不提供 RAW 显影。
+
+          Shiguang Isle · A photography time machine
+
+          A local JPEG / CR3 library with removable previews; original files stay in the selected folders.
+
+          Installation: use mac-arm64.dmg on Apple Silicon, mac-x64.dmg on Intel, or AppImage / deb on Linux x64. Verify downloads with SHA256SUMS.txt.
+
+          macOS packages use ad-hoc signatures and are not Apple-notarized; first launch may require approval in System Settings → Privacy & Security. On Linux, editor handoff uses an installed local editor. CR3 display uses the camera's embedded preview rather than RAW development.
+
+          Automated builds are assembled as a draft and published after package and validation checks.
           EOF
           if gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft > existing-draft.txt 2>/dev/null; then
             if [ "$(cat existing-draft.txt)" != "true" ]; then
