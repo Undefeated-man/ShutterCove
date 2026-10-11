@@ -125,7 +125,7 @@ jobs:
           for os_name, arch, suffix in [
               ('mac', 'arm64', 'dmg'), ('mac', 'arm64', 'zip'),
               ('mac', 'x64', 'dmg'), ('mac', 'x64', 'zip'),
-              ('linux', 'x64', 'AppImage'), ('linux', 'x64', 'deb')]:
+              ('linux', 'x86_64', 'AppImage'), ('linux', 'amd64', 'deb')]:
               expected = f'packages/Shiguang-Isle-{tag}-{os_name}-{arch}.{suffix}'
               if not glob.glob(expected):
                   raise SystemExit(f'Missing release asset: {expected}')
