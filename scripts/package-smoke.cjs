@@ -93,6 +93,23 @@ async function main() {
       if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
       launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', smoke]);
     }
+    const onboardingSmoke = path.join(__dirname, 'onboarding-ui-smoke.js');
+    if (!fs.existsSync(onboardingSmoke)) throw new Error('Required first-use guide UI smoke script is missing');
+    const onboardingProfile = path.join(temporary, 'onboarding-profile');
+    fs.mkdirSync(onboardingProfile);
+    const onboardingSource = fs.readFileSync(onboardingSmoke, 'utf8');
+    let completedSettings;
+    for (const phase of ['skip', 'finish', 'restart']) {
+      const phaseScript = path.join(temporary, `onboarding-${phase}.js`);
+      fs.writeFileSync(phaseScript, `window.__qaOnboardingPhase = ${JSON.stringify(phase)};\n${onboardingSource}`);
+      launch(binary, ['--smoke', '--onboarding', '--compact', '--qa-user-data', onboardingProfile, '--qa-script', phaseScript]);
+      const persisted = JSON.parse(fs.readFileSync(path.join(onboardingProfile, 'settings.json'), 'utf8'));
+      if (persisted.onboardingCompleted !== true) throw new Error(`Guide completion was not persisted after ${phase}`);
+      if (persisted.libraryRoot || persisted.importDestination || persisted.fontScale !== 1.2) throw new Error('Guide smoke unexpectedly changed the empty library or saved font size');
+      const current = JSON.stringify(persisted);
+      if (completedSettings && current !== completedSettings) throw new Error('Guide replay or application restart changed unrelated settings');
+      completedSettings = current;
+    }
     const nativePID = launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'native-smoke.js')]);
     nativeUserData = path.join(os.tmpdir(), `shiguang-smoke-${nativePID}`);
     const settings = JSON.parse(fs.readFileSync(path.join(nativeUserData, 'settings.json'), 'utf8'));
@@ -121,7 +138,7 @@ async function main() {
       if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) throw new Error('SD smoke journal points outside its synthetic fixture');
       if (digest(file) !== original.sha256) throw new Error('SD synchronization changed a synthetic photo');
     }
-    console.log('Packaged native smoke passed: capped collage, font-size UI and persisted settings, calendar input, date timeline, filter dropdowns, copy UI, complete scan results, sticky gallery toolbar, production IPC, JPEG disk export 100 × 80, flat collision-safe JPEG and optional CR3 copies with matching hashes and unchanged originals, and recoverable SD sync retaining the selected group.');
+    console.log('Packaged native smoke passed: capped collage, font-size UI and persisted settings, calendar input, date timeline, filter dropdowns, copy UI, complete scan results, sticky gallery toolbar, first-use guide with save retry and two real persisted-profile restarts, production IPC, JPEG disk export 100 × 80, flat collision-safe JPEG and optional CR3 copies with matching hashes and unchanged originals, and recoverable SD sync retaining the selected group.');
   } finally {
     if (nativeUserData) fs.rmSync(nativeUserData, { recursive: true, force: true });
     fs.rmSync(temporary, { recursive: true, force: true });

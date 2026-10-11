@@ -30,9 +30,11 @@ const verifyIndex = process.argv.indexOf('--verify-root');
 const verifyRoot = verifyIndex >= 0 ? process.argv[verifyIndex + 1] : null;
 const outputIndex = process.argv.indexOf('--qa-output');
 const qaOutput = smoke && outputIndex >= 0 ? process.argv[outputIndex + 1] : null;
+const qaDataIndex = process.argv.indexOf('--qa-user-data');
+const qaUserData = smoke && qaDataIndex >= 0 ? process.argv[qaDataIndex + 1] : null;
 app.setName('Shiguang Isle');
 app.setPath('userData', path.join(app.getPath('appData'), 'Shiguang Isle'));
-if (smoke) app.setPath('userData', path.join(app.getPath('temp'), `shiguang-smoke-${process.pid}`));
+if (smoke) app.setPath('userData', qaUserData ? path.resolve(qaUserData) : path.join(app.getPath('temp'), `shiguang-smoke-${process.pid}`));
 
 async function atomicJSON(file, value) {
   const temp = `${file}.${process.pid}.tmp`;
@@ -76,8 +78,12 @@ async function saveSettings(patch = {}) {
     if (typeof patch.fontScale !== 'number' || !Number.isFinite(patch.fontScale)) throw new Error('请选择有效的字体大小');
     next.fontScale = Math.min(1.5, Math.max(1, patch.fontScale));
   }
+  if (Object.hasOwn(patch, 'onboardingCompleted')) {
+    if (typeof patch.onboardingCompleted !== 'boolean') throw new Error('无效的使用引导状态');
+    next.onboardingCompleted = patch.onboardingCompleted;
+  }
+  await atomicJSON(settingsPath, next);
   settings = next;
-  await atomicJSON(settingsPath, settings);
   return settings;
 }
 async function approvedFolder(folder) {
@@ -260,6 +266,8 @@ async function start() {
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
   settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2 };
   try { settings = { ...settings, ...JSON.parse(await fs.readFile(settingsPath, 'utf8')) }; } catch {}
+  // Existing libraries can revisit the guide in Settings without interrupting an upgrade.
+  settings.onboardingCompleted = typeof settings.onboardingCompleted === 'boolean' ? settings.onboardingCompleted : Boolean(settings.libraryRoot);
   settings.fontScale = typeof settings.fontScale === 'number' && Number.isFinite(settings.fontScale) ? Math.min(1.5, Math.max(1, settings.fontScale)) : 1.2;
   for (const root of [settings.libraryRoot, settings.importDestination]) if (root) approvedRoots.add(root);
   if (verifyRoot && smoke) {
@@ -294,7 +302,10 @@ async function start() {
     win = new BrowserWindow({ title: '拾光屿 · 摄影回忆时光机', width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     win.webContents.on('will-navigate', (event, url) => { if (!url.startsWith('memory-app://app/')) event.preventDefault(); });
-    win.loadURL(`memory-app://app/index.html${demo ? '?demo=1' : ''}`);
+    const query = new URLSearchParams();
+    if (demo) query.set('demo', '1');
+    if (smoke && !process.argv.includes('--onboarding')) query.set('skipOnboarding', '1');
+    win.loadURL(`memory-app://app/index.html${query.size ? '?' + query.toString() : ''}`);
     win.on('closed', () => { win = null; });
     if (smoke || screenshotPath) win.webContents.once('did-finish-load', async () => {
       try {

@@ -53,6 +53,7 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 
 | Feature | How it works |
 | --- | --- |
+| First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
 | Color organization | Analyze image colors automatically and browse within a date range |
 | Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
 | Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
@@ -97,6 +98,12 @@ SD favorite synchronization shows the keep and move lists before confirmation. O
 These screenshots use synthetic photographs, with no real portraits, private paths, or real capture information.
 
 ## Using the library
+
+A five-step guide appears on the first normal launch: a local JPEG / CR3 library; opening a folder or importing from SD; filters, favorites, and tags; editing and sharing; and reviewing SD organization before confirmation. Use ← / → to navigate. Skipping or finishing saves completion so later launches do not open it automatically; failed saves can be retried.
+
+Choose “开始浏览” (Start browsing) to close the guide, or “选择照片文件夹” (Choose photo folder) to open the folder picker. The guide explains operations without organizing photographs automatically. Existing users with a configured library are not interrupted on upgrade. Reopen it through **相册设置 → 重新查看使用引导** (Album Settings → View usage guide again).
+
+![Five-step first-use guide with synthetic JPEG / CR3 artwork and no private photographs](docs/screenshots/onboarding.png)
 
 1. Choose a photo root. The app scans recursively and identifies JPEG / CR3 pairs using names, dates, and directory relationships while retaining the original file locations.
 2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
