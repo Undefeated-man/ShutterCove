@@ -34,7 +34,18 @@ Download the package for your computer from [GitHub Releases](https://github.com
 | Linux x64 | `linux-x86_64.AppImage` | Make the file executable, then run it |
 | Debian / Ubuntu x64 | `linux-amd64.deb` | Open it in your software installer, or use `sudo apt install ./package-name.deb` |
 
-The macOS release packages use ad-hoc signing. They have not been signed with an Apple Developer ID certificate or notarized by Apple. macOS may block the first launch; verify the download source and `SHA256SUMS.txt`, then allow it through System Settings → Privacy & Security if necessary. ZIP packages provide the same application in a portable archive.
+### First launch on macOS: Apple cannot verify the app
+
+**Current Mac packages are ad-hoc signed, without a Developer ID certificate or Apple notarization. Gatekeeper may therefore block the first launch.** This does not mean Apple has verified the app's safety.
+
+1. Download the matching architecture from this repository's [official Release](https://github.com/Undefeated-man/shiguang-isle/releases). Compare its SHA-256 with `SHA256SUMS.txt` from the **same version**.
+2. Open the DMG and drag **Shiguang Isle.app** into **Applications**. For ZIP packages, extract the app and move it into Applications.
+3. Try opening the installed app once. If blocked, go to **System Settings → Privacy & Security → Security**, find its message, and choose **Open Anyway**.
+4. Confirm **Open** in the next prompt and authenticate if requested. macOS saves an exception for this app; later launches usually work directly.
+
+If the button is absent, try opening the app in Applications again, then revisit that setting. On a managed Mac, contact your administrator. If the warning says **“will damage your computer” or “is damaged,”** stop using it, download and verify a fresh copy, or report the issue; those warnings must not automatically be attributed to missing notarization. Keep Gatekeeper enabled and use the per-app system approval.
+
+See the [bilingual Mac installation guide](docs/mac-install.md) and [Apple's official guidance](https://support.apple.com/en-us/102445).
 
 Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom have no official Linux desktop editions; use the editor settings to select an executable installed on your machine.
 

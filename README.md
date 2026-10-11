@@ -32,7 +32,18 @@
 | Linux x64 | `linux-x86_64.AppImage` | 添加可执行权限后运行 |
 | Debian / Ubuntu x64 | `linux-amd64.deb` | 用软件安装器打开，或 `sudo apt install ./文件名.deb` |
 
-macOS 发布包使用 ad-hoc 签名，尚未使用 Apple Developer 证书签名或进行公证。系统可能阻止首次启动；核对来源与 `SHA256SUMS.txt` 后，可在系统设置 → 隐私与安全性中选择允许打开。ZIP 包提供同一个应用的便携分发形式。
+### macOS 首次打开：Apple 无法确认安全性
+
+**当前 Mac 包使用 ad-hoc 签名，没有 Developer ID 证书，也未经过 Apple 公证，因此首次启动可能被 Gatekeeper 阻止。** 这不等于 Apple 已确认软件安全。
+
+1. 从本仓库的 [正式 Release](https://github.com/Undefeated-man/shiguang-isle/releases) 下载匹配架构的包，并与**同一版本**的 `SHA256SUMS.txt` 核对 SHA-256。
+2. 打开 DMG，将 **Shiguang Isle.app** 拖入 **Applications（应用程序）**；ZIP 包先解压，再移入应用程序。
+3. 尝试打开已安装的 App 一次。被阻止后，进入 **系统设置 → 隐私与安全性 → 安全性**，找到它的提示并点 **“仍要打开”**。
+4. 在再次出现的提示中点 **“打开”**，按需认证。系统会为这个 App 保存例外，以后通常可直接打开。
+
+没有“仍要打开”按钮时，重新尝试打开 Applications 中的 App，再查看该设置；受管理的电脑请联系管理员。如果提示**“将损坏你的电脑”或“已损坏”**，先停止使用，重新下载并核验，或向项目报告；不同提示不能一律归因于未公证。保持 Gatekeeper 开启，使用单个 App 的系统允许流程。
+
+详见 [中英文 Mac 安装指南](docs/mac-install.md) 与 [Apple 官方说明](https://support.apple.com/zh-cn/102445)。
 
 Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官方 Linux 桌面版；在设置里指定本机安装的编辑器即可交接文件。
 
