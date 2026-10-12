@@ -1,6 +1,8 @@
-# Shiguang Isle · 拾光屿
+# Shiguang Isle: RAW Photo Organizer & Creative Studio
 
 **Language:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+
+**拾光屿：专为 RAW 摄影打造的整理与创作相册 — 精选照片，制作拼图海报与 GIF 动图。**
 
 > **지원 언어:** 현재 앱 인터페이스는 **영어와 간체 중국어 두 언어**를 지원합니다. 새로 설치하면 영어로 시작하며, 첫 실행에서 언어를 선택할 수 있습니다. 설정의 “Interface language / 界面语言”에서 즉시 전환할 수 있고 선택이 저장됩니다. 일본어와 한국어 문서는 사용 설명의 번역입니다. 앞으로 수요에 따라 앱의 지원 언어를 추가할 예정입니다. 본문에는 중국어 버튼 이름도 한국어 뜻과 함께 표시합니다.
 

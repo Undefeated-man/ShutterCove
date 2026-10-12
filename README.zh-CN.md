@@ -1,6 +1,8 @@
-# Shiguang Isle · 拾光屿
+# Shiguang Isle: RAW Photo Organizer & Creative Studio
 
 **Language:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
+
+**拾光屿：专为 RAW 摄影打造的整理与创作相册 — 精选照片，制作拼图海报与 GIF 动图。**
 
 ## English
 
