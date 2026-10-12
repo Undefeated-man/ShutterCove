@@ -65,7 +65,7 @@ body {
   width: 100%;
   min-width: 0;
   font: inherit;
-  font-size: min(1em, 25cqw);
+  font-size: min(1em, 24cqw);
   /* CJK fallback fonts need room for their taller ascent and descent. */
   line-height: 1.5;
   letter-spacing: inherit;
