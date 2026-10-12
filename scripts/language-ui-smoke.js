@@ -7,6 +7,7 @@
   if(phase.startsWith('fresh-')){
     await wait(()=>document.querySelector('.language-welcome'),'first launch language chooser');
     const initial=await App.api.getSettings();assert(initial.language==='en'&&initial.languageChosen===false,'fresh default is English without prior language choice');
+    assert(document.querySelector('.language-eyebrow').textContent==='SHUTTER COVE','first language chooser uses Shutter Cove branding');
     assert(document.documentElement.lang==='en','fresh document starts in English');assert(!document.querySelector('.onboarding-backdrop'),'language chooser precedes onboarding');assert(!App.state.settingsReady,'gallery initialization waits for choice');
     assert(document.activeElement.id==='first-language-en','English choice has default keyboard focus');
     document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert(!!document.querySelector('.language-welcome'),'Escape cannot bypass required language choice');

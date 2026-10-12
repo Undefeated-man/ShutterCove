@@ -41,7 +41,7 @@ const outputIndex = process.argv.indexOf('--qa-output');
 const qaOutput = smoke && outputIndex >= 0 ? process.argv[outputIndex + 1] : null;
 const qaDataIndex = process.argv.indexOf('--qa-user-data');
 const qaUserData = smoke && qaDataIndex >= 0 ? process.argv[qaDataIndex + 1] : null;
-app.setName('Shiguang Isle');
+app.setName('Shutter Cove');
 app.setPath('userData', path.join(app.getPath('appData'), 'Shiguang Isle'));
 if (smoke) app.setPath('userData', qaUserData ? path.resolve(qaUserData) : path.join(app.getPath('temp'), `shiguang-smoke-${process.pid}`));
 const ownsInstance = !app.isPackaged || smoke || app.requestSingleInstanceLock();
@@ -334,8 +334,9 @@ function bindAPI() {
   });
 }
 function setApplicationMenu() {
+  app.setName(nativeMessage('拾光屿', settings.language));
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    ...(process.platform === 'darwin' ? [{ label: '拾光屿', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
+    ...(process.platform === 'darwin' ? [{ label: nativeMessage('拾光屿', settings.language), submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
     { label: nativeMessage('编辑', settings.language), submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: nativeMessage('窗口', settings.language), submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }] }
   ]));

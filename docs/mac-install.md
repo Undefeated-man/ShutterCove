@@ -10,7 +10,7 @@
 
 ### 先确认下载与校验
 
-只从 [Undefeated-man/shiguang-isle 的正式 Releases](https://github.com/Undefeated-man/shiguang-isle/releases) 下载。Apple Silicon 选 `mac-arm64.dmg`，Intel 选 `mac-x64.dmg`；ZIP 提供同一个应用。校验表必须来自同一版本，不能混用旧版文件。
+只从 [Undefeated-man/ShutterCove 的正式 Releases](https://github.com/Undefeated-man/ShutterCove/releases) 下载。Apple Silicon 选 `mac-arm64.dmg`，Intel 选 `mac-x64.dmg`；ZIP 提供同一个应用。校验表必须来自同一版本，不能混用旧版文件。
 
 终端校验示例使用下载文件夹和 v1.0.3 Apple Silicon 包；下载其他版本或 Intel 包时，替换文件名：
 
@@ -33,17 +33,17 @@ shasum -a 256 Shiguang-Isle-1.0.3-mac-arm64.dmg
 ### 没有按钮，或提示不同？
 
 - 没有“仍要打开”：确认打开的是 Applications 内的 **Shiguang Isle.app**，重新尝试打开一次，再查看设置。管理设备的安全策略可能限制操作，请联系管理员。
-- 提示“将损坏你的电脑”或“已损坏”：先停止使用。重新从正式 Release 下载并核验，或 [报告问题](https://github.com/Undefeated-man/shiguang-isle/issues)，附 macOS 版本、包版本与提示原文；不要附私人路径、照片或账户信息。不同警告可能涉及不同原因，不能保证按同一流程解除。[Apple 对不同警告的说明](https://support.apple.com/zh-cn/102445)
+- 提示“将损坏你的电脑”或“已损坏”：先停止使用。重新从正式 Release 下载并核验，或 [报告问题](https://github.com/Undefeated-man/ShutterCove/issues)，附 macOS 版本、包版本与提示原文；不要附私人路径、照片或账户信息。不同警告可能涉及不同原因，不能保证按同一流程解除。[Apple 对不同警告的说明](https://support.apple.com/zh-cn/102445)
 
 ## English
 
 ### Why does macOS show a warning?
 
-Current Shiguang Isle Mac releases use ad-hoc signatures, without an Apple Developer ID certificate or Apple notarization. macOS may block the first launch because it cannot verify the developer or check for malicious software. Apple has not endorsed the app's safety. Verify the source and integrity before deciding whether to allow it. [Apple guidance](https://support.apple.com/en-us/102445)
+Current Shutter Cove Mac releases use ad-hoc signatures, without an Apple Developer ID certificate or Apple notarization. macOS may block the first launch because it cannot verify the developer or check for malicious software. Apple has not endorsed the app's safety. Verify the source and integrity before deciding whether to allow it. [Apple guidance](https://support.apple.com/en-us/102445)
 
 ### Verify the download
 
-Use this repository's [official Releases](https://github.com/Undefeated-man/shiguang-isle/releases). Choose `mac-arm64.dmg` for Apple Silicon or `mac-x64.dmg` for Intel; ZIP contains the same app. Download `SHA256SUMS.txt` from that exact version.
+Use this repository's [official Releases](https://github.com/Undefeated-man/ShutterCove/releases). Choose `mac-arm64.dmg` for Apple Silicon or `mac-x64.dmg` for Intel; ZIP contains the same app. Download `SHA256SUMS.txt` from that exact version.
 
 Example for a v1.0.3 Apple Silicon download; substitute the actual filename for other versions or Intel:
 
@@ -61,4 +61,4 @@ Compare the 64-character hexadecimal result with the matching filename in the ma
 3. Open **System Settings → Privacy & Security → Security**, find this app's message, and choose **Open Anyway**.
 4. Confirm **Open** and authenticate if requested.
 
-macOS remembers this app-specific exception. Keep Gatekeeper enabled. If the button is absent, try the installed app again and revisit Settings; contact your administrator on a managed Mac. For **“will damage your computer” or “is damaged”**, stop using it, redownload and verify, or [report the warning](https://github.com/Undefeated-man/shiguang-isle/issues) without private data. Different warnings may have different causes. [Apple warning guidance](https://support.apple.com/en-us/102445)
+macOS remembers this app-specific exception. Keep Gatekeeper enabled. If the button is absent, try the installed app again and revisit Settings; contact your administrator on a managed Mac. For **“will damage your computer” or “is damaged”**, stop using it, redownload and verify, or [report the warning](https://github.com/Undefeated-man/ShutterCove/issues) without private data. Different warnings may have different causes. [Apple warning guidance](https://support.apple.com/en-us/102445)

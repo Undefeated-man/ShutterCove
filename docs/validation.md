@@ -62,8 +62,8 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | 源码 SD 卡同步 IPC | 3 项断言通过；仅操作临时合成文件夹，没有操作真实 SD 卡 |
 | `npm run privacy` | 当前源文件扫描通过；并在隔离的临时 Git 仓库验证干净源码通过，模拟密钥、个人路径、已跟踪 RAW、PNG 元数据均被阻止 |
 | `npm run icon` | 成功生成 1024 px PNG 与 macOS ICNS，已查看图标 |
-| GitHub Actions 三平台安装包 | [运行 38119864948](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38119864948) 的 macOS arm64、macOS x64 与 Linux x64 构建、后端测试、隐私检查、安装包界面测试及完整生产烟雾测试均成功 |
-| Release 自动装配与公开发布 | [修正后的运行 38120190987](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38120190987) 的三个原生构建及 Release 装配全部成功；六个安装包已上传，SHA256SUMS 与 GitHub asset SHA-256 全部一致。[v1.0.0](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.0) 已公开发布。此前 Linux 包格式使用 x86_64 / amd64 架构名导致装配检查失败，已修正 |
+| GitHub Actions 三平台安装包 | [运行 38119864948](https://github.com/Undefeated-man/ShutterCove/actions/runs/38119864948) 的 macOS arm64、macOS x64 与 Linux x64 构建、后端测试、隐私检查、安装包界面测试及完整生产烟雾测试均成功 |
+| Release 自动装配与公开发布 | [修正后的运行 38120190987](https://github.com/Undefeated-man/ShutterCove/actions/runs/38120190987) 的三个原生构建及 Release 装配全部成功；六个安装包已上传，SHA256SUMS 与 GitHub asset SHA-256 全部一致。[v1.0.0](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.0) 已公开发布。此前 Linux 包格式使用 x86_64 / amd64 架构名导致装配检查失败，已修正 |
 
 以上测试不会启动已安装的 Adobe 应用，也不会操作用户原片。合成图库界面脚本将保存接口替换为数据验收；生产 IPC 脚本另行验证临时目录内的真实 JPEG 保存。`scripts/package-smoke.cjs` 在三平台打包后的应用重复超长拼图、SD 界面、生产 IPC 和 SD 同步验收，检查实际输出尺寸、三个合成原片的 SHA-256 未变，以及一张保留、两张可恢复地移入待删的操作记录。真实机器上的首次安装与 Adobe 交接仍需独立验收；尚未记录的项目不视为通过。
 
@@ -87,7 +87,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | 应用签名与 DMG | `codesign --verify --deep --strict` 通过；`hdiutil verify` 确认 DMG 有效；采用 ad-hoc 签名，未进行 Apple 公证 |
 | 安装包脱敏 | 351 个资源与二进制检查通过，未检出被禁止的个人路径 |
 
-三平台 CI 与公开发布已完成：[运行 38121682190](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38121682190) 的 macOS arm64、macOS x64、Linux x64 构建及安装包验收、Release 装配四个任务全部成功。[v1.0.1](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.1) 已公开发布，包含两个 DMG、两个 ZIP、AppImage、deb 和 SHA256SUMS.txt；六个包的 GitHub asset SHA-256 与校验表全部一致。
+三平台 CI 与公开发布已完成：[运行 38121682190](https://github.com/Undefeated-man/ShutterCove/actions/runs/38121682190) 的 macOS arm64、macOS x64、Linux x64 构建及安装包验收、Release 装配四个任务全部成功。[v1.0.1](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.1) 已公开发布，包含两个 DMG、两个 ZIP、AppImage、deb 和 SHA256SUMS.txt；六个包的 GitHub asset SHA-256 与校验表全部一致。
 
 本机最终应用已使用实际图库核对日历选择、手动日期输入及时间条跨分页跳转，恢复默认日期倒序浏览。首次通过系统启动服务启动时曾遇到目录读取等待；终止该测试进程并重新启动后正常加载，未更改系统权限设置，也未改动用户原片。本记录不将该等待归因于尚未证实的系统原因。
 
@@ -116,7 +116,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 
 本机正常应用已实际核对：扫描完成后的全部照片、RAW 和精品与整理后的基线一致；精品搜索与 RAW 配对显示正常；跨目录选片的复制窗口默认只选 JPEG。原生选择器在临时目录中新建空文件夹并返回真实路径，随后复制按钮可用；取消复制没有改动私人原片。验收后恢复全部照片及日期倒序浏览。该记录不包含私人照片数量、名称或路径。
 
-三平台 CI 与草稿装配已完成：[运行 38144050635](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38144050635) 的 macOS arm64、macOS x64、Linux x64 构建与安装包验收，以及 Release 装配四个任务全部成功。
+三平台 CI 与草稿装配已完成：[运行 38144050635](https://github.com/Undefeated-man/ShutterCove/actions/runs/38144050635) 的 macOS arm64、macOS x64、Linux x64 构建与安装包验收，以及 Release 装配四个任务全部成功。
 
 2026-10-11，只读核对草稿中的六个安装包和 `SHA256SUMS.txt`。全部资产已上传、大小非零，安装包名称集合与预期完全一致；下载的 606 字节校验表包含六个不重复条目，每项均与 GitHub asset SHA-256 一致。此步骤没有下载安装包，核对的是 GitHub 上传资产的摘要与校验表。
 
@@ -129,7 +129,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | `Shiguang-Isle-1.0.2-linux-x86_64.AppImage` | 141993624 | 一致 |
 | `Shiguang-Isle-1.0.2-linux-amd64.deb` | 112588620 | 一致 |
 
-[v1.0.2](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.2) 已公开发布，包含上述六个安装包及 `SHA256SUMS.txt`。发布前核对草稿资产，发布后再次确认 Release 非草稿、中英文说明与合成界面截图均已保存。
+[v1.0.2](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.2) 已公开发布，包含上述六个安装包及 `SHA256SUMS.txt`。发布前核对草稿资产，发布后再次确认 Release 非草稿、中英文说明与合成界面截图均已保存。
 
 ## v1.0.3 固定图库工具栏
 
@@ -151,7 +151,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 
 本次打包脱敏同时覆盖整个 `.app` 的物理 framework 文件，比 v1.0.2 记录包含更广的物理文件范围，文件总数不能直接比较。本机正常图库已通过鼠标操作核对：深滚动时工具栏固定，多选开关可用，日历和排序菜单打开及 Esc 关闭后保持同一照片位置。验收后恢复全部照片、日期倒序与无选择状态。
 
-三平台 CI 与草稿装配已完成：[运行 38148076016](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38148076016) 的 macOS arm64、macOS x64、Linux x64 构建与两组安装包验收，以及 Release 装配四个任务全部成功。
+三平台 CI 与草稿装配已完成：[运行 38148076016](https://github.com/Undefeated-man/ShutterCove/actions/runs/38148076016) 的 macOS arm64、macOS x64、Linux x64 构建与两组安装包验收，以及 Release 装配四个任务全部成功。
 
 2026-10-11，只读核对草稿的七个已上传资产：六个安装包名称符合预期、大小非零，以及 606 字节的 `SHA256SUMS.txt`。校验表的六个不重复条目与全部安装包的 GitHub asset SHA-256 逐项一致，校验表本身也与其 asset 摘要一致。只下载校验表，没有重新下载安装包。
 
@@ -164,7 +164,7 @@ GitHub Actions 运行这些检查并分别在 Mac arm64、Mac x64、Linux x64 �
 | `Shiguang-Isle-1.0.3-linux-x86_64.AppImage` | 141993482 | 一致 |
 | `Shiguang-Isle-1.0.3-linux-amd64.deb` | 112589532 | 一致 |
 
-[v1.0.3](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.3) 已公开发布。发布后再次确认 Release 不是草稿或预发布，包含上述六个安装包及校验表，中英文说明与合成界面截图均已保存。
+[v1.0.3](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.3) 已公开发布。发布后再次确认 Release 不是草稿或预发布，包含上述六个安装包及校验表，中英文说明与合成界面截图均已保存。
 
 ## v1.0.4 首次使用引导
 
@@ -212,7 +212,7 @@ v1.0.4 打包验收接入 `scripts/onboarding-ui-smoke.js`，使用同一个临�
 
 脱敏分类计数不与采用其他规则的旧版横向比较。CI 单步 46 分钟、构建任务 60 分钟。已有 v1.0.4 本地结果不作为 v1.0.5 的最终包证明。
 
-[三平台 CI 运行 38153762129](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38153762129) 第 2 次尝试整体成功，构建提交为 `ae087024b4a35b7677480dd9cc1661f8ff1c1c16`：macOS arm64、macOS x64、Linux x64 与草稿 Release 装配均成功。两个 Mac 任务首轮通过；Linux 首轮在时间轴 UI 测试的 “Glass timeline expands during scrubbing” 断言失败，当时使用固定 220 ms 等待。在同一个不可变标签上重跑 Linux 后完整通过。现有证据支持怀疑动画等待时序不稳定，尚未证明应用存在竞态。随后 main 分支独立维护了测试等待方式，19 项正向与 1 项负向检查通过；此维护不修改该标签的应用，也不计入本地 555 项或标签 CI 结果。
+[三平台 CI 运行 38153762129](https://github.com/Undefeated-man/ShutterCove/actions/runs/38153762129) 第 2 次尝试整体成功，构建提交为 `ae087024b4a35b7677480dd9cc1661f8ff1c1c16`：macOS arm64、macOS x64、Linux x64 与草稿 Release 装配均成功。两个 Mac 任务首轮通过；Linux 首轮在时间轴 UI 测试的 “Glass timeline expands during scrubbing” 断言失败，当时使用固定 220 ms 等待。在同一个不可变标签上重跑 Linux 后完整通过。现有证据支持怀疑动画等待时序不稳定，尚未证明应用存在竞态。随后 main 分支独立维护了测试等待方式，19 项正向与 1 项负向检查通过；此维护不修改该标签的应用，也不计入本地 555 项或标签 CI 结果。
 
 三个成功平台任务的完整日志已核对：各十六次应用启动、555 项断言（独立图库 24 项 + 安装包十五次启动 531 项），均输出 `Packaged native smoke passed` 并确认实际文件结果，无 QA 错误。macOS arm64 首轮任务 `114512376064`、macOS x64 首轮任务 `114512375989`、Linux 重跑任务 `114513680335`。
 
@@ -227,7 +227,7 @@ v1.0.4 打包验收接入 `scripts/onboarding-ui-smoke.js`，使用同一个临�
 | Shiguang-Isle-1.0.5-mac-x64.dmg | 151665306 | `b4891a2552d0f35d93d4bd3dfbf62f43aa7903772fe8bbdf958021d1f1818f60` |
 | Shiguang-Isle-1.0.5-mac-x64.zip | 151623907 | `606e9a385a27c912f4e97eeabae809c042ce53733d10c29234926bd2759eff10` |
 
-2026-10-12，[v1.0.5](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.5) 已公开发布。发布后再次确认非草稿、非预发布，六个安装包与校验表完整，中英文说明与合成界面截图已保存；资产摘要及发布正文与本地记录一致。
+2026-10-12，[v1.0.5](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.5) 已公开发布。发布后再次确认非草稿、非预发布，六个安装包与校验表完整，中英文说明与合成界面截图已保存；资产摘要及发布正文与本地记录一致。
 
 ## v1.0.6 详情缩放与平移
 
@@ -253,7 +253,7 @@ v1.0.4 打包验收接入 `scripts/onboarding-ui-smoke.js`，使用同一个临�
 
 本地最终包验收已完成。CI 单步 49 分钟、构建任务 65 分钟。此前 v1.0.5 结果不作为此版本的最终包验收证明。
 
-[三平台 CI 运行 38157899742](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38157899742) 的构建提交为 `c88ae7754347414ae55aeff28e0bfe68785fdcb0`。三个平台任务均首次成功，完整日志中的十七个 QA 结果已解析：独立图库 24 项与十六次启动 1,198 项，合计各 1,222 项；每条 passed 数均与 checks 长度一致，没有 QA 错误。各平台后端 19 项与 71 个公开文件脱敏检查也通过。
+[三平台 CI 运行 38157899742](https://github.com/Undefeated-man/ShutterCove/actions/runs/38157899742) 的构建提交为 `c88ae7754347414ae55aeff28e0bfe68785fdcb0`。三个平台任务均首次成功，完整日志中的十七个 QA 结果已解析：独立图库 24 项与十六次启动 1,198 项，合计各 1,222 项；每条 passed 数均与 checks 长度一致，没有 QA 错误。各平台后端 19 项与 71 个公开文件脱敏检查也通过。
 
 | 平台 | Job ID | 包回归断言 | 实际磁盘结果 |
 | --- | --- | ---: | --- |
@@ -274,7 +274,7 @@ v1.0.4 打包验收接入 `scripts/onboarding-ui-smoke.js`，使用同一个临�
 | Shiguang-Isle-1.0.6-mac-x64.dmg | 151677859 | `40acfa618841564f44a37b268cfc1e143349f619c83a190e9f3cc240364cb0b3` |
 | Shiguang-Isle-1.0.6-mac-x64.zip | 151627029 | `f4bec9c8b999edd0aaf083ab28c243a4d5b28ab3faa6eadb7eafc40c5d781d28` |
 
-2026-10-12，[v1.0.6](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.6) 已公开发布。发布后再次确认非草稿、非预发布，六个安装包及校验表完整，中英文发行正文与本地文件一致，资产 SHA-256 与校验表仍一致；合成详情缩放截图已包含在说明中。
+2026-10-12，[v1.0.6](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.6) 已公开发布。发布后再次确认非草稿、非预发布，六个安装包及校验表完整，中英文发行正文与本地文件一致，资产 SHA-256 与校验表仍一致；合成详情缩放截图已包含在说明中。
 
 2026-10-12，一台 Apple Silicon Mac 的正式安装与更新已实际验收：旧版优雅退出，仅设置及相册元数据做私有备份；Applications 内安装 1.0.6 后正常重启，旧设置深度相等、已有相册元数据逐项一致。展开构建副本在核对保留 ZIP 的核心文件 SHA-256 后移除，旧安装卷卸载，原有安装归档保留，废纸篓未改动。Spotlight 按应用标识只返回正式版本一项，按 bundle ID 启动无歧义；Finder“这台 Mac”搜索应用名称并限制种类为应用程序时仅显示一项，双击正常启动。生产详情实际显示 JPEG 键盘放大至 125%，按 0 恢复 100%。此项为一次本机维护验收，不表示软件自动清理其他应用副本。
 
@@ -302,7 +302,7 @@ v1.0.7 的 Mac arm64 CI 在更新提醒的滚动保持断言失败。隔离复�
 
 更新清理的独立完整 App 事务复验在真实 Electron Node runtime 执行：原位替换后新 runtime 能启动并读取真实 ASAR，旧包、stage 和 work 均清除，设置及相册记录哈希一致。启动后成功清理兼容逻辑还实际恢复了前一次本机成功升级的残留；运行的正式 App、设置及相册资料保持不变。此阶段的替换验收使用本地构建包，不声称从 GitHub 下载安装。
 
-[v1.0.8 三平台 CI 运行 38165584174](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38165584174) 的构建提交为 `6dab827b00b19e10722e6d6b7bbd1ed5b92d98b9`，四个任务全部成功。完整日志逐项核对如下：
+[v1.0.8 三平台 CI 运行 38165584174](https://github.com/Undefeated-man/ShutterCove/actions/runs/38165584174) 的构建提交为 `6dab827b00b19e10722e6d6b7bbd1ed5b92d98b9`，四个任务全部成功。完整日志逐项核对如下：
 
 | 平台 | Job ID | 单元测试 | 包与图库断言 | 实际磁盘结果 |
 | --- | --- | ---: | ---: | --- |
@@ -312,7 +312,7 @@ v1.0.7 的 Mac arm64 CI 在更新提醒的滚动保持断言失败。隔离复�
 
 每个平台均包含 19 条 QA 结果（完整包 18 次启动 1,410 项，加独立图库 24 项），每条 `passed` 与 `checks.length` 一致；86 个公开文件脱敏通过，无 QA 错误。最终磁盘验收标记只在核对实际 JPEG、复制及原片 SHA-256、设置与引导持久化、SD 日志后输出。草稿装配任务 `114548389395` 成功。
 
-2026-10-12，[v1.0.8](https://github.com/Undefeated-man/shiguang-isle/releases/tag/v1.0.8) 已公开发布并设为 latest。发布前后均核对六个安装包与校验表共七个资产：全部上传完成、大小非零、文件名及 SHA-256 与 GitHub 资产 digest 一致，606 字节校验表自身 digest 也一致。中英文发布正文与本地文件一致，包含合成界面截图；未发布 v1.0.7 草稿。
+2026-10-12，[v1.0.8](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.0.8) 已公开发布并设为 latest。发布前后均核对六个安装包与校验表共七个资产：全部上传完成、大小非零、文件名及 SHA-256 与 GitHub 资产 digest 一致，606 字节校验表自身 digest 也一致。中英文发布正文与本地文件一致，包含合成界面截图；未发布 v1.0.7 草稿。
 
 本机最终验收通过正式 App 内的真实界面完成：在已安装的 v1.0.7 中点击“检查更新”，从官方 GitHub 检出 v1.0.8，再点击“一键更新并重启”。应用实际下载并校验 138.4 MiB 的 arm64 ZIP、替换原安装路径并自动重启。更新后设置界面显示 v1.0.8，再次检查显示“已经是最新版本”。这一步使用公开发行资产，未注入本地下载地址。
 
@@ -330,7 +330,7 @@ v1.0.7 的 Mac arm64 CI 在更新提醒的滚动保持断言失败。隔离复�
 
 本地 Mac arm64 安装包严格签名与 DMG 完整性通过；包内扫描 1,415 文件（563 文本 / 852 二进制，含 803 ASAR 条目），38 个第一方文件与当前源码一致，无私人资料或密钥发现。完整本地安装包回归最终通过：23 次启动、1,553 项断言，独立图库再通过 24 项，合计 1,577 项。实际磁盘 JPEG / GIF 与各自预览的 SHA-256 完全一致；GIF 为两帧、160 × 100、每帧 320ms、无限循环。原片哈希、跨目录复制、设置及引导持久化、SD 可恢复日志均核对通过。全屏安装包测试使用合成演示画面，但直接调用生产 IPC，真实进入 / 退出 Mac 系统全屏 11 项；初次验收启动参数未带演示模式导致测试前置超时，修正参数后重跑全部包验收成功。三平台 CI 与正式更新结果完成后追加。
 
-[v1.1.0 三平台 CI 38195577915](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38195577915) 对应提交 `904d50892039472c3b15e5c8acb60861ae020edd`，三平台构建与草稿装配均成功。Mac arm64（`114637342498`）与 Intel（`114637342690`）各 1,577 项包与图库断言；Linux（`114637342601`）共 1,566 项，只少对应 Mac 原生系统全屏的 11 项，模拟全屏 UI 55 项在所有平台都通过。各平台 Node 80 项、108 个公开文件脱敏通过，每条 QA 的 passed 与 checks 长度相等；JPEG / GIF 落盘字节、帧数 / 时长 / 循环、原片哈希及 SD 日志在最终磁盘标记前全部核对。草稿装配 `114638442080` 成功。
+[v1.1.0 三平台 CI 38195577915](https://github.com/Undefeated-man/ShutterCove/actions/runs/38195577915) 对应提交 `904d50892039472c3b15e5c8acb60861ae020edd`，三平台构建与草稿装配均成功。Mac arm64（`114637342498`）与 Intel（`114637342690`）各 1,577 项包与图库断言；Linux（`114637342601`）共 1,566 项，只少对应 Mac 原生系统全屏的 11 项，模拟全屏 UI 55 项在所有平台都通过。各平台 Node 80 项、108 个公开文件脱敏通过，每条 QA 的 passed 与 checks 长度相等；JPEG / GIF 落盘字节、帧数 / 时长 / 循环、原片哈希及 SD 日志在最终磁盘标记前全部核对。草稿装配 `114638442080` 成功。
 
 2026-10-12，v1.1.0 已公开发布为 latest，六个安装包及 606 字节 SHA256SUMS 共七个资产均完整、上传完成且大小非零。发布前后校验表自身与六项安装包 digest 均匹配 GitHub 记录，中英文正文与本地文件一致，含三张合成截图。
 
@@ -360,8 +360,20 @@ Reproduce the English UI checks with `--demo --smoke --qa-script` and the script
 
 Published v1.2.0 acceptance:
 
-- [GitHub Actions run 38198882865](https://github.com/Undefeated-man/shiguang-isle/actions/runs/38198882865) completed successfully on Mac arm64, Mac x64, and Linux x64, followed by successful release assembly. Mac builds each passed 31 production launches and 1,735 assertions, plus the separate 24-assertion gallery test; Linux passed 30 production launches and 1,724 assertions plus that gallery test. The five language-profile launches are included in these totals rather than counted twice.
+- [GitHub Actions run 38198882865](https://github.com/Undefeated-man/ShutterCove/actions/runs/38198882865) completed successfully on Mac arm64, Mac x64, and Linux x64, followed by successful release assembly. Mac builds each passed 31 production launches and 1,735 assertions, plus the separate 24-assertion gallery test; Linux passed 30 production launches and 1,724 assertions plus that gallery test. The five language-profile launches are included in these totals rather than counted twice.
 - All six installation packages and the checksum manifest were verified. Every manifest digest matched GitHub's corresponding asset digest, and the published bilingual notes matched the release-notes source.
 - The installed local Mac app was updated in place using the official arm64 ZIP and the production updater / helper. The machine's anonymous GitHub API was rate-limited, so the official ZIP and manifest were fetched through the authenticated GitHub CLI and supplied as a bounded stream to the production verification and installation path. This verifies installation and rollback safeguards, rather than claiming a successful GUI network check under the rate limit.
 - The new app acknowledged real startup. Its plist, executable, and ASAR matched the official ZIP, and strict native signature verification passed. Library metadata was byte-identical; existing preferences were unchanged except for the two new language fields.
 - The real desktop app retained Chinese, then switched to English and back through the settings buttons. The saved choice is Chinese. Favorites and photograph counts were unchanged. Spotlight returned exactly one application, and the updater removed its temporary application copies and pending files.
+
+## v1.2.1 repository and collage validation
+
+Source validation on 2026-10-12:
+
+- All **86** backend and lifecycle tests passed. Release selection accepts the new official `Undefeated-man/ShutterCove` path and rejects foreign-owner and legacy-path asset URLs.
+- Creative collage checks passed **58** assertions in both normal and compact windows, with existing collage regressions passing **150** in each. Checks cover width-based sizing, no upscaling, complete bottom content, the 24,000-pixel side and 48-megapixel limits, actual-size viewing, direct original-to-output rendering, one JPEG encoding, and identical preview / saved bytes.
+- English creative studios passed **36** assertions in both window sizes, including all new width controls, scroll instructions, and language switching without changing encoded output. English gallery passed **60**; language-profile validation passed **67** checks across five real app launches.
+- The new repository's anonymous stable-release API was exercised through the production transfer function and returned the current published release with canonical asset addresses.
+- The **133** publishable files passed the privacy scan. Three changed / added screenshots were inspected and contain only generated scenery and synthetic metadata. The five README guides and current installation / update / creative documentation use the new repository; 157 local links and 95 repository links passed documentation checks.
+
+Packaged release and installed-app acceptance will be appended after those operations complete.

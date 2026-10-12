@@ -23,7 +23,7 @@ async function fixture(t) {
 }
 function release(version = '1.0.7', filename = `Shiguang-Isle-${version}-mac-arm64.zip`, bytes = Buffer.from('payload')) {
   const sums = Buffer.from(`${digest(bytes)}  ${filename}\n`);
-  const asset = (name, data) => ({ name, state: 'uploaded', size: data.length, digest: `sha256:${digest(data)}`, browser_download_url: `https://github.com/Undefeated-man/shiguang-isle/releases/download/v${version}/${encodeURIComponent(name)}` });
+  const asset = (name, data) => ({ name, state: 'uploaded', size: data.length, digest: `sha256:${digest(data)}`, browser_download_url: `https://github.com/Undefeated-man/ShutterCove/releases/download/v${version}/${encodeURIComponent(name)}` });
   return { tag_name: `v${version}`, draft: false, prerelease: false, assets: [asset(filename, bytes), asset('SHA256SUMS.txt', sums)], bytes, sums };
 }
 function requestFixture(body, { statusCode = 200, headers = {}, never = false } = {}) {
@@ -96,6 +96,7 @@ test('release selection binds stable version, architecture, exact filename and r
   for (const patch of [{ draft: true }, { prerelease: true }, { tag_name: 'v1.0.7-beta' }]) assert.throws(() => core.selectRelease({ ...release(), ...patch }, '1.0.6', 'darwin', 'arm64'));
   assert.throws(() => core.selectRelease(release(), '1.0.6', 'darwin', 'x64'));
   const bad = release(); bad.assets[0].browser_download_url = bad.assets[0].browser_download_url.replace('Undefeated-man', 'attacker'); assert.throws(() => core.selectRelease(bad, '1.0.6', 'darwin', 'arm64'));
+  const previousRepository = release(); previousRepository.assets[0].browser_download_url = previousRepository.assets[0].browser_download_url.replace('/ShutterCove/', '/shiguang-isle/'); assert.throws(() => core.selectRelease(previousRepository, '1.0.6', 'darwin', 'arm64'));
   assert.equal(core.selectRelease(release('1.0.7', 'Shiguang-Isle-1.0.7-linux-x86_64.AppImage'), '1.0.6', 'linux', 'x64').asset.name.endsWith('x86_64.AppImage'), true);
   assert.equal(core.selectRelease(release('1.0.7', 'Shiguang-Isle-1.0.7-linux-amd64.deb'), '1.0.6', 'linux', 'x64', 'deb').asset.name.endsWith('amd64.deb'), true);
 });

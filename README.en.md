@@ -46,9 +46,11 @@ All screenshots use synthetic artwork, with no private photographs, real portrai
 
 ## Installation
 
-**Installer names:** Shutter Cove is the new English brand for 拾光屿. Current releases and the app interface still use the earlier name `Shiguang Isle`; package filenames start with `Shiguang-Isle-`. They are the same app.
+**Installer names:** Shutter Cove is the English brand for 拾光屿, used in the English interface from v1.2.1. For compatibility, package filenames still start with `Shiguang-Isle-` and the Mac package contains `Shiguang Isle.app`. They are the same app.
 
-Download the package for your computer from [GitHub Releases](https://github.com/Undefeated-man/shiguang-isle/releases). Filenames start with `Shiguang-Isle-` followed by the version; the table shows their platform suffixes.
+**Official repository:** [Undefeated-man/ShutterCove](https://github.com/Undefeated-man/ShutterCove). Version 1.2.1 points update checks and downloads to this address. Existing installations retain their app identity, installation path, favorites, tags, and settings.
+
+Download the package for your computer from [GitHub Releases](https://github.com/Undefeated-man/ShutterCove/releases). Filenames start with `Shiguang-Isle-` followed by the version; the table shows their platform suffixes.
 
 | Computer | Package suffix | Installation |
 | --- | --- | --- |
@@ -61,7 +63,7 @@ Download the package for your computer from [GitHub Releases](https://github.com
 
 **Current Mac packages are ad-hoc signed, without a Developer ID certificate or Apple notarization. Gatekeeper may therefore block the first launch.** This does not mean Apple has verified the app's safety.
 
-1. Download the matching architecture from this repository's [official Release](https://github.com/Undefeated-man/shiguang-isle/releases). Compare its SHA-256 with `SHA256SUMS.txt` from the **same version**.
+1. Download the matching architecture from this repository's [official Release](https://github.com/Undefeated-man/ShutterCove/releases). Compare its SHA-256 with `SHA256SUMS.txt` from the **same version**.
 2. Open the DMG and drag **Shiguang Isle.app** into **Applications**. For ZIP packages, extract the app and move it into Applications.
 3. Try opening the installed app once. If blocked, go to **System Settings → Privacy & Security → Security**, find its message, and choose **Open Anyway**.
 4. Confirm **Open** in the next prompt and authenticate if requested. macOS saves an exception for this app; later launches usually work directly.
@@ -95,7 +97,7 @@ On first launch, choose **English** or **Chinese** before the five-step guide. S
 | Similar photographs | Choose a directory and compare average-pooled RGB pixels using cosine similarity; adjustable granularity, estimated time, progress, and cancellation |
 | Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace, film, original-ratio magazine, and wooden-board layouts; posters support 1–12 photos per row, defaulting to 2, adjustable title size, and new JPEG export |
 | Per-photo composition | Select a photograph and adjust its scale and position within a cell, choosing cover or contain; composition follows the photograph when reordered, independently of canvas zoom |
-| Controlled share compression | Process originals individually and encode the final JPEG with adjustable maximum edge and quality; preview and save use the same encoded bytes while preserving originals |
+| Controlled share compression | Set the final image width and JPEG quality; scale the complete layout proportionally, draw originals directly to the output canvas, and preview / save the same encoded bytes while preserving originals |
 | GIF and meme creation | Scroll through a filmstrip and drag to reorder, add text or bubbles per frame, set size, palette, global frame delay, and looping; preview an encoded GIF or save a static meme frame |
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
@@ -131,7 +133,11 @@ The original-ratio magazine layout keeps complete photographs in their original 
 
 ![Wooden display board: movable, rotated, resized, and overlapping synthetic photographs](docs/screenshots/collage-board.png)
 
-Enable proactive share compression, set the maximum edge and JPEG quality, and inspect the encoded result, dimensions, and file size. Preview decoding and saving use the same JPEG bytes. Composition or layout changes regenerate the result; processing preserves originals and creates no intermediate copies in photo folders. An anonymous **3000 × 8364 → 516 × 1440** sample supports a **1440-pixel / quality-80** reference preset only. It does not establish a universal WeChat rule or guarantee avoidance of further compression. Shrinking a tall collage reduces detail in each photograph; WYSIWYG refers to this app's exported file.
+Enable proactive share compression and set the **final image width** and JPEG quality. Width presets are **1,440 px** (default) and **2,560 px**, with a custom range of **480–8,000 px**; output never enlarges beyond the uncompressed export width. The complete layout scales proportionally, keeping its full height without stretching. For example, a 3000 × 8364 layout at 1440-pixel width becomes approximately 1440 × 4015 rather than 516 × 1440. Safety limits of 24,000 pixels per side and 48 megapixels may reduce the actual width further, with an explicit size notice. Originals are drawn directly to the final canvas and JPEG is encoded once, avoiding an extra per-photo resize. Preview decoding and saving use the same JPEG bytes; changes regenerate the result, and no intermediate copies are left in photo folders. The anonymous **3000 × 8364 → 516 × 1440** sample does not establish a universal WeChat rule. More output pixels can retain more detail, but subsequent processing is still possible; WYSIWYG refers to this app's exported file.
+
+JPEG quality defaults to **90%**. Share previews start in **Fit to width**, letting you scroll normally through the full-height result. Use **Fit to window** for an overview, **Fit to width** to return, or Alt / Option + scroll to zoom into details.
+
+![Share preview: a full-height collage shown at its fitted width, using synthetic photographs](docs/screenshots/share-width-preview.png)
 
 Select photographs with JPEGs and open GIF / meme creation. Scroll through the filmstrip, drag thumbnails to reorder, and add or drag text and bubbles on the current frame. Configure output scale, palette size, global frame delay, and looping, then generate the actual GIF preview and save the same result; a single photograph can also become a static meme. CR3-only photographs require a JPEG export first. Encoding provides progress and cancellation. GIF supports at most 256 colors, so photographic gradients may show banding.
 

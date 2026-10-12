@@ -5,7 +5,7 @@
   const wait=async fn=>{for(let i=0;i<1500;i++){if(fn())return;await pause(20);}throw new Error('Collage composition timeout: '+fn);};
   const paint=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
   await wait(()=>window.App?.api.isDemo&&App.state.photos.length&&!App.state.scanning);
-  const api=App.api,originals={source:api.source,thumbnail:api.thumbnail,save:api.saveImage},saved=[];
+  const api=App.api,originals={source:api.source,thumbnail:api.thumbnail,save:api.saveImage,draw:CanvasRenderingContext2D.prototype.drawImage,encode:HTMLCanvasElement.prototype.toDataURL},saved=[];
   const sizes=[[1800,900],[600,1200],[1500,750],[600,600]],sources=new Map(),thumbs=new Map();
   const colors=[[230,38,32],[32,184,58],[25,64,228]],photos=sizes.map(([w,h],i)=>({...App.state.photos[i],id:'composition-'+i,name:'Synthetic-'+i+'.JPG',jpegPath:'/synthetic/'+i+'.JPG',rawPath:null,width:w,height:h}));
   for(let i=0;i<sizes.length;i++){
@@ -67,9 +67,21 @@
     // affect the exported image, not merely a DOM outline.
     change('collage-photo-angle',0,'input');const p=point(.49*1000,.25*.76*1000);drag(p,point(.3*1000,.34*.76*1000));el('collage-front').click();const foreground=await capture();el('collage-back').click();const background=await capture();assert(foreground.dataUrl!==background.dataUrl,'Changing board layers changes overlapping photographs in the actual JPEG');
     change('collage-template','poster');change('collage-width',3000);change('collage-title-size',81);
-    delay=35;toggle('collage-share',true);await wait(()=>el('collage-share-status').textContent.includes('实际 JPEG 成品'));await paint();
-    assert(el('collage-share-quality').value==='80'&&el('collage-share-side').value==='1440','The provided 1440px / Q80 sample is the explicit default reference');
-    result=await capture();const shared=await decode(result.dataUrl),visible=el('collage-canvas');assert(Math.max(shared.width,shared.height)===1440,'Sharing constrains the final long edge to 1440px');
+    delay=35;const originalDraw=CanvasRenderingContext2D.prototype.drawImage,originalEncode=HTMLCanvasElement.prototype.toDataURL,directDraws=[],encodes=[];
+    CanvasRenderingContext2D.prototype.drawImage=function(source,...args){if([...sources.values()].includes(source?.src))directDraws.push({width:this.canvas.width,height:this.canvas.height,smoothing:this.imageSmoothingQuality});return originalDraw.call(this,source,...args);};
+    HTMLCanvasElement.prototype.toDataURL=function(type,quality){if(type==='image/jpeg')encodes.push({width:this.width,height:this.height,quality});return originalEncode.call(this,type,quality);};
+    toggle('collage-share',true);await wait(()=>el('collage-share-status').textContent.includes('实际 JPEG 成品'));await paint();
+    assert(el('collage-share-quality').value==='90'&&el('collage-share-side').value==='1440','Sharing defaults to a 1440px final width and clarity-first JPEG quality 90');
+    result=await capture();const shared=await decode(result.dataUrl),visible=el('collage-canvas');assert(shared.width===1440&&shared.height>1440,'Sharing constrains width to 1440px while retaining the complete taller composition');
+    assert(directDraws.length===photos.length&&directDraws.every(draw=>draw.width===1440&&draw.height===shared.height&&draw.smoothing==='high'),'Each full original is sampled directly into the final-size canvas once, with high quality smoothing',directDraws);
+    assert(encodes.length===1&&encodes[0].width===1440&&encodes[0].quality===.90,'Sharing encodes one final JPEG and cached save reuses it',encodes);
+    CanvasRenderingContext2D.prototype.drawImage=originalDraw;HTMLCanvasElement.prototype.toDataURL=originalEncode;
+    const sharingFrame=el('collage-preview'),sharingBox=sharingFrame.getBoundingClientRect(),shownBox=el('collage-canvas').getBoundingClientRect();
+    assert(sharingFrame.dataset.fitMode==='width'&&Math.abs(shownBox.width-(sharingBox.width-26))<3,'Sharing initially fills the preview width instead of squeezing a tall image to fit its height',[sharingBox.width,shownBox.width]);
+    const scrollY=+sharingFrame.dataset.panY,wheel=new WheelEvent('wheel',{deltaY:90,bubbles:true,cancelable:true});sharingFrame.dispatchEvent(wheel);
+    assert(wheel.defaultPrevented&&+sharingFrame.dataset.panY<scrollY,'Ordinary wheel scrolls through a full-width sharing preview without changing output pixels');
+    el('collage-fit').click();assert(+sharingFrame.dataset.zoom===1&&sharingFrame.dataset.fitMode==='window','Fit to window remains available for a complete composition overview');
+    el('collage-width-fit').click();assert(sharingFrame.dataset.fitMode==='width'&&Math.abs(el('collage-canvas').getBoundingClientRect().width-shownBox.width)<2,'Fit to width restores clear, scrollable viewing');
     assert(visible.width===shared.width&&visible.height===shared.height,'Sharing displays the decoded final JPEG at its actual pixel size');
     const expected=await pixels(result.dataUrl),current=visible.getContext('2d').getImageData(0,0,visible.width,visible.height).data,finalPixels=expected.getContext('2d').getImageData(0,0,expected.width,expected.height).data;
     assert(current.every((v,i)=>v===finalPixels[i]),'Sharing preview pixels exactly match decoding the same bytes handed to saveImage');
@@ -78,10 +90,21 @@
     const old=result.dataUrl;change('collage-title','最新标题必须出现在成品','input');change('collage-share-quality',63,'input');
     assert(el('collage-share-status').textContent.includes('正在生成'),'A changed composition invalidates the previous compressed preview');
     result=await capture();assert(result.dataUrl!==old&&result.preserveEncoding,'Immediate save waits for the newest title and quality, then preserves those exact bytes');
-    change('collage-share-side',2560);result=await capture();const clearer=await decode(result.dataUrl);assert(Math.max(clearer.width,clearer.height)===2560,'A clearer custom sharing size changes the actual encoded dimensions');
+    change('collage-share-side',2560);result=await capture();const clearer=await decode(result.dataUrl);assert(clearer.width===2560&&clearer.height>2560,'A clearer sharing preset changes output width while preserving proportional height');
+    assert(Math.abs(clearer.width/clearer.height-shared.width/shared.height)<.001,'Sharing width changes preserve the poster aspect ratio instead of stretching its axes independently');
+    change('collage-width',800);result=await capture();const smallShare=await decode(result.dataUrl);assert(smallShare.width===800,'A 2560px sharing preset never enlarges a smaller 800px export');
+    change('collage-width',3000);
     const beforeClose=saved.length;change('collage-title','关闭时取消重建','input');el('collage-export').click();App.closeModal();await pause(400);assert(saved.length===beforeClose,'Closing during original reads cancels export without saving stale data');
     assert(!document.querySelector('.collage-studio'),'Closing releases the composition workbench');
+    delay=0;await Studio.collage(Array.from({length:90},()=>photos[3]));change('collage-template','vertical');change('collage-gap',0,'input');change('collage-width',3000);change('collage-share-side',480);toggle('collage-share',true);
+    assert(el('collage-status').dataset.safetyLimited==='true'&&el('collage-status').textContent.includes('24,000')&&el('collage-status').textContent.includes('实际宽度'),'Very tall width-budgeted exports immediately explain the safety reduction');
+    result=await capture();const tall=await decode(result.dataUrl);assert(tall.height===24000&&tall.width===267,'Very tall sharing exports retain a safe 24000px complete height and proportional width',[tall.width,tall.height]);
+    const bottom=document.createElement('canvas');bottom.width=bottom.height=10;bottom.getContext('2d').drawImage(tall,tall.width/2-5,tall.height-30,10,10,0,0,10,10);assert(closeColor(pixel(bottom,5,5),[150,74,192]),'The last photograph remains present at the bottom of a safety-limited long image');bottom.width=bottom.height=1;el('collage-pixels').click();await wait(()=>Math.abs(el('collage-canvas').getBoundingClientRect().width-tall.width)<1.5);assert(true,'Actual-size viewing reaches one CSS pixel per output pixel even for a 24000px tall image');App.closeModal();
+    await Studio.collage(photos);change('collage-template','poster');change('collage-width',16000);change('collage-share-side',8000);toggle('collage-share',true);
+    assert(el('collage-status').dataset.safetyLimited==='true','A width-budgeted poster that exceeds 48 megapixels reports its limit before generating');
+    result=await capture();const capped=await decode(result.dataUrl);assert(capped.width*capped.height<=48000000&&capped.width<8000&&capped.height<=24000,'A real large JPEG stays below the 48-megapixel canvas limit through proportional reduction',[capped.width,capped.height]);
+    assert(el('collage-canvas').width===capped.width&&el('collage-canvas').height===capped.height,'Even a safety-reduced preview uses the actual exported JPEG dimensions');App.closeModal();
     const previousThumbnail=api.thumbnail;api.thumbnail=async args=>{await pause(60);return previousThumbnail(args);};const pending=Studio.collage(photos);await pause(10);const other=App.modal({title:'Later synthetic dialog',body:'Keep this dialog visible.'});await pending;assert(other.isConnected&&!document.querySelector('.collage-studio'),'A late thumbnail batch cannot replace a newer user dialog');App.closeModal();api.thumbnail=previousThumbnail;
     return{syntheticOnly:true,passed:checks.length,checks};
-  }finally{App.closeModal();api.source=originals.source;api.thumbnail=originals.thumbnail;api.saveImage=originals.save;}
+  }finally{CanvasRenderingContext2D.prototype.drawImage=originals.draw;HTMLCanvasElement.prototype.toDataURL=originals.encode;App.closeModal();api.source=originals.source;api.thumbnail=originals.thumbnail;api.saveImage=originals.save;}
 })();

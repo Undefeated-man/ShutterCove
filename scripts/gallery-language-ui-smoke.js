@@ -17,6 +17,8 @@
   try{
     await language('en');
     assert(document.documentElement.lang==='en','Document locale follows English');
+    assert(document.title==='Shutter Cove · Photography Time Machine','English document title uses Shutter Cove');
+    assert(document.querySelector('.brand strong').childNodes[0].textContent==='Shutter Cove'&&document.querySelector('.brand span').textContent==='SHUTTER COVE','English gallery branding uses Shutter Cove');
     for(const id of ['breadcrumb-view','view-title','view-description','select-mode','choose-library','import-button','settings-button','reset-filters','hero-stats','gallery-meta-text'])control(id);
     assert(el('result-count').textContent==='16 photos','Dynamic photo count is English');
     assert(el('search').placeholder==='Search photos, themes, or tags…','Search placeholder is English');

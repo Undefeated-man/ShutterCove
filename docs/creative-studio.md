@@ -10,11 +10,17 @@
 
 ### 主动分享压缩与成品预览
 
-打开“主动压缩图片大小”后，先从原片处理每张照片，再合成并编码最终 JPEG，界面展示解码后的真实成品，保存时写入同一份编码字节。处理只使用内存，不覆盖原片，也不在照片目录生成中间副本。修改布局后需要重新生成，完成后才可导出。
+打开“主动压缩图片大小 · 分享预览”，用**最终成图宽度**而不是长边高度控制尺寸。默认宽度为 1,440 px，清晰档为 2,560 px，自定义可设 480–8,000 px；不会放大超过未压缩的导出宽度。整幅布局等比缩放、保留完整高度，不拉伸照片，也不会因设置高度上限而截掉纵向内容。例如 3000 × 8364 的成图按宽度 1440 输出，约为 1440 × 4015；按长边 1440 则仅有 516 × 1440，每张小照片分到的像素明显更少。
 
-用户提供的一组匿名长图样本，从 3000 × 8364 / 2,796,430 字节变为 516 × 1440 / 86,184 字节。收到的 JPEG 量化表与 libjpeg 质量 80 的表一致；这能支持一个长边 1440、质量 80 的参考档位，不能推导出微信在所有版本与发送方式下的固定算法。长图被整体缩小后，每张小照片获得的像素也减少。预先压缩无法保证绕过再次压缩，更不会恢复已经失去的细节。
+原片逐张直接绘制到最终尺寸画布，使用高质量图像平滑，再统一进行一次 JPEG 编码；不先对每张照片生成缩小副本。界面展示解码后的真实成品，保存写入同一份编码字节。处理只使用内存，不覆盖原片，也不在照片目录生成中间副本。修改布局或构图后重新生成，完成后才可导出。
 
-可以设置目标长边和 JPEG 质量，并查看像素、文件大小及压缩成品。这里的“所见即所得”指本应用导出的文件；微信再次处理后的效果仍需要实际发送验证。需要保留更多细节时，选择更清晰的尺寸，或另行发送照片原文件。
+每边最多 24,000 px、总面积最多 4,800 万像素的资源限制仍然生效；过长的排版可能因此输出得比目标宽度小，界面会显示实际尺寸和限制原因。安全缩放仍保持比例与完整排版。宽度压缩不会改变所选模板和格子原本的裁剪方式；需要完整保留单张照片时，选择“完整放入格子”或原比例海报。
+
+“最终宽度（px）”控制导出文件，JPEG 品质默认 90%。分享预览默认“适合宽度”，在预览区使用普通滚轮上下浏览长图，不把整条海报压在一屏内。点击“适合窗口”总览，再点击“适合宽度”恢复；Alt / Option + 滚轮继续缩放，放大后可拖动平移。显示缩放不改变导出像素。
+
+用户提供的一组匿名长图样本，从 3000 × 8364 / 2,796,430 字节变为 516 × 1440 / 86,184 字节，收到的 JPEG 量化表与 libjpeg 质量 80 的表一致。它说明这一组长图经过了明显的整体缩小，不能推导出微信在所有版本和发送方式下的固定算法，更不能证明微信仅压缩横向。成品宽度预算用于由你控制本应用的输出，不模拟微信的全部处理规则。
+
+调整成品宽度与 JPEG 品质后，查看实际像素、文件大小及编码预览。保留更多成品像素、减少额外采样有助于保留细节，但预先压缩无法保证绕过再次压缩，更不会恢复已失去的细节。“所见即所得”指本应用导出的文件；微信再次处理后的效果仍需要实际发送验证。需要更高细节时，选择较大的宽度，或另行发送照片原文件。
 
 ### GIF 与表情包
 
@@ -36,11 +42,17 @@ The original-ratio magazine layout keeps each photograph's aspect ratio, with ba
 
 ### Controlled share compression and encoded previews
 
-Enable proactive compression to process each original, compose the result, and encode the final JPEG. The preview displays that encoded file after decoding, and saving writes the same bytes. Intermediate processing stays in memory and does not overwrite originals or create copies in photo folders. Layout changes regenerate the result before export.
+Enable proactive share compression and control the **final image width**, rather than limiting a tall collage by its height. Width defaults to 1,440 px, with a 2,560-pixel preset and a custom range of 480–8,000 px; the result never enlarges beyond the uncompressed export width. The entire layout scales proportionally and keeps its full height, without stretching photographs or cutting off vertical content. For example, a 3000 × 8364 layout at 1440-pixel width becomes approximately 1440 × 4015; a 1440-pixel maximum-edge budget would instead produce only 516 × 1440, leaving fewer pixels per photograph.
 
-One anonymous user-supplied long-image pair changed from 3000 × 8364 / 2,796,430 bytes to 516 × 1440 / 86,184 bytes. The received JPEG's quantization tables match libjpeg quality 80. This supports a 1440-pixel / quality-80 reference preset, not a universal WeChat algorithm. Shrinking a tall collage reduces the pixels available to each photograph. Precompression cannot guarantee avoidance of further processing or restore lost detail.
+Originals are drawn one at a time directly to the final-sized canvas with high-quality image smoothing, followed by one final JPEG encoding. There is no preliminary per-photo resize. The preview displays that encoded file after decoding, and saving writes the same bytes. Intermediate processing stays in memory and does not overwrite originals or create copies in photo folders. Layout or composition changes regenerate the result before export.
 
-Set the maximum edge and JPEG quality, inspect dimensions and file size, and preview the encoded result. WYSIWYG refers to this app's exported file; subsequent processing by WeChat still requires a real send test. Choose larger dimensions or send original files separately when more detail is needed.
+Resource limits remain 24,000 pixels per side and 48 megapixels in total. Very long layouts can therefore produce a width below the requested budget; the interface reports the actual dimensions and the limiting reason. Safety scaling still preserves the complete layout and its proportions. Width compression does not change a template's existing cell cropping: choose contain or the original-ratio poster to keep an individual photograph complete.
+
+Final width (px) controls the exported file, and JPEG quality defaults to 90%. Share previews start in Fit to width, so ordinary scrolling within the preview browses the full-height image instead of squeezing the whole poster into one screen. Use Fit to window for an overview and Fit to width to return. Alt / Option + scroll still zooms, with dragging to pan an enlarged view. Display zoom does not change export pixels.
+
+One anonymous user-supplied long-image pair changed from 3000 × 8364 / 2,796,430 bytes to 516 × 1440 / 86,184 bytes. Its received JPEG quantization tables match libjpeg quality 80. This pair demonstrates substantial overall downscaling, but establishes neither a universal WeChat algorithm nor a rule that WeChat compresses only horizontally. The width budget gives you control over this app's output rather than simulating all WeChat processing.
+
+Adjust final width and JPEG quality, inspect the actual dimensions and file size, and preview the encoded result. Retaining more output pixels and avoiding an extra resize can preserve more detail, but precompression cannot guarantee avoidance of further processing or restore lost detail. WYSIWYG refers to this app's exported file; subsequent processing by WeChat still requires a real send test. Choose a larger width or send original files separately when more detail is needed.
 
 ### GIF and meme creation
 

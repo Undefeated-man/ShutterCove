@@ -4,6 +4,8 @@
 
 v1.0.8 起，打开 **相册设置 → 软件更新**，可查看当前版本、检查新版，以及下载并安装更新。更早版本需要先手动安装 v1.0.8 或更新版本，之后才能使用应用内更新。
 
+**仓库迁移：** 官方仓库现为 [Undefeated-man/ShutterCove](https://github.com/Undefeated-man/ShutterCove)，v1.2.1 起使用新地址检查和下载更新。v1.2.0 及更早版本的更新器限制在旧仓库地址，重命名后可能无法检查或下载；请从新仓库的正式 Release 下载 v1.2.1 或更新版本，退出旧 App，并在原安装路径替换。Mac 保留原应用名称，AppImage 替换原文件；deb 用系统安装器升级。同一系统用户和应用标识继续使用原有收藏、标签与设置。安装包仍使用 `Shiguang-Isle-` 文件名前缀，Mac 包内仍为 `Shiguang Isle.app`。
+
 默认自动检查正式新版，有新版时显示提醒。检查不会自动安装，也不会打断照片编辑；可以关闭自动检查，随时手动检查。预发布及草稿版本不参与自动更新。
 
 Mac 和 AppImage 的“一键更新并重启”会下载与你的系统、架构匹配的安装包，核对官方校验表与 GitHub 文件摘要，再安装。请先保存当前设置或正在编辑的作品；关闭更新界面可将已下载的更新留待稍后安装。deb 使用“下载并打开安装器”，完成系统安装后手动重新打开应用。
@@ -17,13 +19,15 @@ Mac 和 AppImage 的“一键更新并重启”会下载与你的系统、架构
 
 收藏、标签、主题和设置继续使用原有应用资料。更新不复制原片或预览缓存；Mac / AppImage 原位安装前仅备份设置与相册元数据。原位替换在隐藏的更新工作目录内准备，成功后清理临时文件，不将新版作为另一个可搜索的 App 留下。下载或校验失败时保留当前版本；替换失败时尝试恢复旧版本并明确报告结果。deb 的安装与恢复由系统包管理器负责。
 
-检查和下载只连接固定的 [官方 GitHub 仓库](https://github.com/Undefeated-man/shiguang-isle/releases) 及其文件服务，不发送照片、标签、收藏或相册路径。GitHub 会像其他 HTTPS 请求一样接收网络连接信息，例如 IP 地址。
+检查和下载只连接固定的 [官方 GitHub 仓库](https://github.com/Undefeated-man/ShutterCove/releases) 及其文件服务，不发送照片、标签、收藏或相册路径。GitHub 会像其他 HTTPS 请求一样接收网络连接信息，例如 IP 地址。
 
 Mac 包仍使用 ad-hoc 签名，没有 Developer ID 或 Apple 公证。更新功能不改变系统安全设置；如果系统阻止新版打开，请按 [Mac 安装指南](mac-install.md) 处理单个 App 的允许流程。
 
 ## English
 
 From v1.0.8, **Settings → Software update** shows the current version, checks for releases, and downloads and installs updates. Earlier versions require one manual installation of v1.0.8 or later before in-app updates become available.
+
+**Repository migration:** The official repository is now [Undefeated-man/ShutterCove](https://github.com/Undefeated-man/ShutterCove). Version 1.2.1 and later check and download from the new address. Updaters in v1.2.0 and earlier restrict requests to the old repository, so checks or downloads may fail after the rename. Download v1.2.1 or later from the new repository's official release, quit the older app, and replace it at its existing installation path. Retain the installed Mac app name, replace the existing AppImage file, or upgrade deb through the system installer. The same system user and application identity continue using existing favorites, tags, and settings. Package filenames still begin with `Shiguang-Isle-`, and the Mac package still contains `Shiguang Isle.app`.
 
 Automatic checks are enabled by default and display a reminder for newer stable releases. Checks do not install updates or interrupt photo editing. You can turn them off and check manually at any time. Drafts and prereleases are excluded.
 
@@ -38,7 +42,7 @@ For Mac and AppImage, the update-and-restart action downloads the package matchi
 
 Favorites, tags, themes, and settings continue using existing application data. Updates do not copy photographs or the preview cache; only settings and library metadata are backed up before in-place Mac / AppImage installation. Replacement is prepared in hidden update work directories. Temporary files are cleaned after success without leaving a second searchable app. Download or verification failures leave the installed version in place. Failed replacement attempts restore the older version where possible and report the outcome. The system package manager handles deb installation and recovery.
 
-Checks and downloads contact only the fixed [official GitHub repository](https://github.com/Undefeated-man/shiguang-isle/releases) and its file services. They do not send photographs, tags, favorites, or library paths. As with other HTTPS requests, GitHub receives network connection information such as your IP address.
+Checks and downloads contact only the fixed [official GitHub repository](https://github.com/Undefeated-man/ShutterCove/releases) and its file services. They do not send photographs, tags, favorites, or library paths. As with other HTTPS requests, GitHub receives network connection information such as your IP address.
 
 Mac packages remain ad-hoc signed, without a Developer ID or Apple notarization. Updates do not change system security settings. If macOS blocks a newer version, follow the per-app approval process in the [Mac installation guide](mac-install.md).
 
