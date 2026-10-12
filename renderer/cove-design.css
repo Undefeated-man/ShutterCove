@@ -63,7 +63,7 @@ html[lang^="zh"] .brand strong {
 }
 html[lang^="zh"] .brand strong span {
   width: max-content;
-  max-width: 100%;
+  max-width: none;
   margin-top: 7px;
   font-size: calc(9px * var(--font-scale));
   letter-spacing: .1em;

@@ -56,6 +56,7 @@
           { opacity: 1, transform: 'translateY(-2px) scale(1.002)', offset: .68 },
           { opacity: 1, transform: 'translateY(0) scale(1)', offset: 1 }
         ], { duration: 540, delay, easing: 'cubic-bezier(.2,.7,.22,1)', fill: 'backwards' });
+        animation.id = 'gallery-spring';
         entrances.set(node, animation);
         animation.finished.catch(() => {}).then(() => {
           if (entrances.get(node) !== animation) return;

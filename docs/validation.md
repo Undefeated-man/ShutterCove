@@ -387,7 +387,7 @@ Published v1.2.1 acceptance:
 Collage previews are encoded in memory. Closing the studio clears the pending composition, stops queued regeneration, releases the canvas and image references, and discards the intermediate JPEG; confirming a save destination is the step that writes a finished photograph. Shared thumbnail / CR3 previews remain reusable in the bounded preview cache and can be cleared in Settings. This cache limit describes the application's preview directory, rather than all caches maintained by Electron.
 
 
-## v1.3.0 color, motion, layout, and Chinese name validation
+## v1.3.1 color, motion, layout, and Chinese name validation
 
 Source validation on 2026-10-12:
 
@@ -400,3 +400,7 @@ Source validation on 2026-10-12:
 - Public gallery and custom-color screenshots were visually inspected and contain generated scenery and synthetic metadata only. No private originals or portraits were published.
 
 The packaged release runner includes the motion suite in both window sizes and both system motion preferences, plus the normal and compact layout suite. Release and local installation acceptance will be recorded after they finish.
+
+The first v1.3.0 CI candidate was withheld: Mac arm64 exposed a cyclic percentage constraint in the brand subtitle, and Linux exposed motion checks counting independent hover transitions. The subtitle now participates in intrinsic wordmark sizing; motion checks identify the gallery entrance separately and check actual settled button scale. No v1.3.0 release was published.
+
+The repaired local Mac arm64 production package passed the complete packaged runner, including real disk exports, preserved synthetic originals, recovery journals, settings persistence, native fullscreen, normal / compact motion and layout, and reduced motion. Remote platform and official-install acceptance are still pending.

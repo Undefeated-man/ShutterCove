@@ -14,7 +14,7 @@
   const originalSource = App.api.source;
   const pointer = (button, type, id = 991) => button.dispatchEvent(new PointerEvent(type, { bubbles: true, button: 0, pointerId: id }));
   const cards = () => [...grid.querySelectorAll('.photo-card')];
-  const activeEntrance = node => node.getAnimations().filter(animation => ['running', 'pending'].includes(animation.playState));
+  const activeEntrance = node => node.getAnimations().filter(animation => animation.id === 'gallery-spring' && ['running', 'pending'].includes(animation.playState));
   try {
     App.closeModal();
     document.querySelector('[data-view="all"]').click();
@@ -34,7 +34,7 @@
       pointer(button, 'pointerdown'); await pause(60);
       assert(getComputedStyle(button).scale === 'none' || Number(getComputedStyle(button).scale) === 1, 'Reduced motion keeps pressed buttons at their natural scale');
       pointer(button, 'pointerup');
-      assert(!button.getAnimations().length, 'Reduced motion skips release overshoot');
+      assert(motion().diagnostics().buttons === 0, 'Reduced motion skips release overshoot');
       App.state.photos = original; App.render(); await paint();
       const card = cards().find(node => node.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom);
       card.click(); await wait(() => document.querySelector('.photo-detail'));
@@ -66,17 +66,18 @@
     for (let i = 0; i < 12; i++) { await pause(16); maximumScale = Math.max(maximumScale, parseFloat(getComputedStyle(select).scale) || 1); }
     assert(maximumScale > 1, 'Release overshoots gently before settling', { maximumScale });
     await pause(200);
-    assert(select.getAnimations().length === 0 && !select.classList.contains('motion-button-pressed'), 'Button release removes animated scale and pressed depth');
+    await wait(() => motion().diagnostics().buttons === 0);
+    assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed'), 'Button release removes animated scale and pressed depth');
     const disabled = document.createElement('button'); disabled.disabled = true; document.body.append(disabled);
     pointer(disabled, 'pointerdown');
     assert(!disabled.getAnimations().length && !disabled.classList.contains('motion-button-pressed'), 'Disabled buttons do not enter a press animation');
     disabled.remove();
     select.focus(); select.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })); await pause(120);
     assert(Math.abs(Number(getComputedStyle(select).scale) - .96) < .002, 'Keyboard activation receives the same physical press feedback');
-    select.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true })); await pause(380);
-    assert(!select.getAnimations().length && cards().length === before, 'Keyboard spring settles without preventing gallery interaction');
+    select.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true })); await wait(() => motion().diagnostics().buttons === 0);
+    assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed') && cards().length === before, 'Keyboard spring settles without preventing gallery interaction');
     pointer(select, 'pointerdown'); select.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 991 }));
-    assert(!select.getAnimations().length && !select.classList.contains('motion-button-pressed'), 'Canceled pointer gestures clear press state immediately');
+    assert(motion().diagnostics().buttons === 0 && !select.classList.contains('motion-button-pressed'), 'Canceled pointer gestures clear press state immediately');
     App.state.photos = original; App.state.selectionMode = false; App.render();
     const first = cards().find(node => node.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom && node.getBoundingClientRect().bottom > scroll.getBoundingClientRect().top);
     await wait(() => first.querySelector('img').naturalWidth > 0); await pause(280);

@@ -17,7 +17,7 @@
       const brand = document.querySelector('.brand strong'), sidebar = document.querySelector('.sidebar');
       assert(bounds(), language + ' gallery ' + font + ' has no horizontal overflow');
       assert(contained(brand, sidebar), language + ' wordmark ' + font + ' remains inside sidebar');
-      assert(brand.scrollWidth <= brand.clientWidth + 1 || language === 'en', language + ' wordmark ' + font + ' does not clip');
+      assert(brand.scrollWidth <= brand.clientWidth + 1 || language === 'en', language + ' wordmark ' + font + ' does not clip', {scrollWidth:brand.scrollWidth,clientWidth:brand.clientWidth,rect:brand.getBoundingClientRect().toJSON(),font:getComputedStyle(brand).font,subtitle:brand.querySelector('span').getBoundingClientRect().toJSON()});
       if (language === 'zh-CN') {
         const word = brand.childNodes[0], charBounds = i => { const r = document.createRange(); r.setStart(word, i); r.setEnd(word, i + 1); return r.getBoundingClientRect(); };
         assert(word.textContent === '时光杂货店', 'Updated Chinese wordmark');
