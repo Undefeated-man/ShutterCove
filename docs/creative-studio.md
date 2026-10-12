@@ -14,6 +14,8 @@
 
 原片逐张直接绘制到最终尺寸画布，使用高质量图像平滑，再统一进行一次 JPEG 编码；不先对每张照片生成缩小副本。界面展示解码后的真实成品，保存写入同一份编码字节。处理只使用内存，不覆盖原片，也不在照片目录生成中间副本。修改布局或构图后重新生成，完成后才可导出。
 
+放弃拼图并关闭窗口时，会丢弃中间 JPEG、取消后续重建并释放画布与图片引用，由系统回收内存。取消保存对话框也不会写入成品。浏览用的共享缩略图与 CR3 预览会保留供下次复用，默认缓存上限为 512 MB，超过后淘汰旧预览；可在设置里点击“清理预览缓存”。
+
 每边最多 24,000 px、总面积最多 4,800 万像素的资源限制仍然生效；过长的排版可能因此输出得比目标宽度小，界面会显示实际尺寸和限制原因。安全缩放仍保持比例与完整排版。宽度压缩不会改变所选模板和格子原本的裁剪方式；需要完整保留单张照片时，选择“完整放入格子”或原比例海报。
 
 “最终宽度（px）”控制导出文件，JPEG 品质默认 90%。分享预览默认“适合宽度”，在预览区使用普通滚轮上下浏览长图，不把整条海报压在一屏内。点击“适合窗口”总览，再点击“适合宽度”恢复；Alt / Option + 滚轮继续缩放，放大后可拖动平移。显示缩放不改变导出像素。
@@ -45,6 +47,8 @@ The original-ratio magazine layout keeps each photograph's aspect ratio, with ba
 Enable proactive share compression and control the **final image width**, rather than limiting a tall collage by its height. Width defaults to 1,440 px, with a 2,560-pixel preset and a custom range of 480–8,000 px; the result never enlarges beyond the uncompressed export width. The entire layout scales proportionally and keeps its full height, without stretching photographs or cutting off vertical content. For example, a 3000 × 8364 layout at 1440-pixel width becomes approximately 1440 × 4015; a 1440-pixel maximum-edge budget would instead produce only 516 × 1440, leaving fewer pixels per photograph.
 
 Originals are drawn one at a time directly to the final-sized canvas with high-quality image smoothing, followed by one final JPEG encoding. There is no preliminary per-photo resize. The preview displays that encoded file after decoding, and saving writes the same bytes. Intermediate processing stays in memory and does not overwrite originals or create copies in photo folders. Layout or composition changes regenerate the result before export.
+
+Closing an abandoned collage discards its intermediate JPEG, cancels queued regeneration, and releases canvas and image references for memory reclamation. Canceling the save dialog also writes no finished file. Shared thumbnails and CR3 previews remain reusable, with a default 512 MB preview-cache limit and automatic eviction of older previews; use Clear preview cache in Settings to remove them.
 
 Resource limits remain 24,000 pixels per side and 48 megapixels in total. Very long layouts can therefore produce a width below the requested budget; the interface reports the actual dimensions and the limiting reason. Safety scaling still preserves the complete layout and its proportions. Width compression does not change a template's existing cell cropping: choose contain or the original-ratio poster to keep an individual photograph complete.
 
