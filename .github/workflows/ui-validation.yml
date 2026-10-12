@@ -54,6 +54,15 @@ jobs:
             if [ "$size" = compact ]; then flags+=(--compact); fi
             xvfb-run -a node_modules/.bin/electron . --no-sandbox --demo --smoke "${flags[@]}" --qa-script scripts/ambient-motion-ui-smoke.js > "ui-validation-output/motion-$size.log" 2>&1
           done
+      - name: Build unpacked Linux app for motion validation
+        run: npx electron-builder --linux --x64 --dir --publish never
+      - name: Check packaged motion timing
+        run: |
+          for size in normal compact; do
+            flags=()
+            if [ "$size" = compact ]; then flags+=(--compact); fi
+            xvfb-run -a dist/linux-unpacked/shiguang-isle --no-sandbox --demo --smoke "${flags[@]}" --qa-script scripts/ambient-motion-ui-smoke.js > "ui-validation-output/packaged-motion-$size.log" 2>&1
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

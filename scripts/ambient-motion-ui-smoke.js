@@ -39,6 +39,44 @@
       throw new Error(label + ': ' + error.message + ' ' + JSON.stringify(buttonState(button, animation)));
     } finally { clearTimeout(timeout); }
   };
+  const animationFor = (node, property) => node?.getAnimations().find(animation =>
+    animation.effect?.getKeyframes().some(frame => Object.prototype.hasOwnProperty.call(frame, property)));
+  const motionState = (node, animation) => {
+    const modal = document.querySelector('.photo-detail'), picture = node?.querySelector('img');
+    return { connected: !!node?.isConnected, box: node?.isConnected ? rectangle(node) : null,
+      picture: picture ? { box: rectangle(picture), natural: [picture.naturalWidth, picture.naturalHeight] } : null,
+      animation: animationState(animation), animations: node?.getAnimations().map(animationState),
+      modal: modal ? { box: rectangle(modal), animations: modal.getAnimations().map(animationState) } : null,
+      focus: document.hasFocus(), visibility: document.visibilityState, timelineTime: document.timeline.currentTime,
+      diagnostics: motion().diagnostics() };
+  };
+  const animationPromise = async (promise, node, animation, label) => {
+    let timeout;
+    try {
+      await Promise.race([promise, new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('animation timeline timed out')), 10000);
+      })]);
+    } catch (error) { throw new Error(label + ': ' + error.message + ' ' + JSON.stringify(motionState(node, animation))); }
+    finally { clearTimeout(timeout); }
+  };
+  const animationPhase = animation => {
+    const timing = animation?.effect?.getTiming();
+    return animation?.currentTime === null || !Number(timing?.duration) ? null
+      : (Number(animation.currentTime) - Number(timing.delay || 0)) / Number(timing.duration);
+  };
+  const waitPhase = async (node, animation, minimum, label) => {
+    if (!animation) throw new Error(label + ': missing animation ' + JSON.stringify(motionState(node)));
+    await animationPromise(animation.ready, node, animation, label + ' ready');
+    for (let attempt = 0; attempt < 500; attempt++) {
+      const phase = animationPhase(animation);
+      if (!node.isConnected || ['idle', 'finished'].includes(animation.playState) || phase >= .9) {
+        throw new Error(label + ': missed active animation phase ' + JSON.stringify(motionState(node, animation)));
+      }
+      if (!animation.pending && animation.playState === 'running' && phase !== null && phase >= minimum) return motionState(node, animation);
+      await pause(20);
+    }
+    throw new Error(label + ': no active frame ' + JSON.stringify(motionState(node, animation)));
+  };
   const detachedButtons = async () => {
     let modal = App.modal({ title: 'Motion lifecycle QA', body: '<p>Synthetic modal</p>' });
     let close = modal.querySelector('.modal-close');
@@ -94,11 +132,14 @@
     const delays = batch.map(node => Number(node.dataset.motionDelay));
     assert(new Set(delays).size >= 2 && Math.max(...delays) <= 288, 'Cascade has distinct stagger delays, bounded to 288 ms', delays);
     const entering = batch.find(node => Number(node.dataset.motionDelay) === 0) || batch[0];
-    await pause(65);
-    assert(getComputedStyle(entering).transform !== 'none', 'Gallery card has a real upward transform while entering');
+    const galleryAnimations = batch.map(node => ({ node, animation: activeEntrance(node)[0] }));
+    const entrance = activeEntrance(entering)[0];
+    const enteringState = await waitPhase(entering, entrance, .12, 'Gallery entrance frame');
+    assert(getComputedStyle(entering).transform !== 'none', 'Gallery card has a real upward transform while entering', enteringState);
     const pending = cards().filter(node => node.classList.contains('motion-await'));
     assert(pending.length > 0 && pending.every(node => !activeEntrance(node).length), 'Offscreen cards wait for visibility without starting animations');
-    await pause(830);
+    await Promise.all(galleryAnimations.map(({ node, animation }) =>
+      animationPromise(animation.finished, node, animation, 'Gallery entrance completion')));
     assert(batch.every(node => !activeEntrance(node).length && !node.style.willChange), 'Entrance completion removes animations and temporary compositing hints');
     App.render(); await paint();
     assert(cards().filter(node => batch.some(old => old.dataset.id === node.dataset.id)).every(node => !activeEntrance(node).length), 'Metadata or selection rerenders do not replay already seen cards');
@@ -142,18 +183,28 @@
     await detachedButtons();
     App.state.photos = original; App.state.selectionMode = false; App.render();
     const first = cards().find(node => node.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom && node.getBoundingClientRect().bottom > scroll.getBoundingClientRect().top);
-    await wait(() => first.querySelector('img').naturalWidth > 0); await pause(280);
+    await wait(() => first.querySelector('img').naturalWidth > 0);
+    await Promise.all(activeEntrance(first).map(animation => animationPromise(animation.finished, first, animation, 'Source card entrance completion')));
     const source = rectangle(first.querySelector('.photo-image'));
-    App.api.source = async (...args) => { await pause(145); return originalSource(...args); };
+    App.api.source = async (...args) => {
+      const modal = document.querySelector('.photo-detail'), animation = animationFor(modal, 'transform');
+      await waitPhase(modal, animation, .14, 'Late original loads during detail entrance');
+      return originalSource(...args);
+    };
     first.click();
     await wait(() => document.querySelector('.motion-photo-layer[data-direction="open"]'));
-    const flying = document.querySelector('.motion-photo-layer'), early = rectangle(flying);
-    assert(Math.abs(early.width - source.width) < source.width * .45, 'Shared photo starts near the clicked card geometry', { source, early });
+    const flying = document.querySelector('.motion-photo-layer'), flight = animationFor(flying, 'width');
+    // fill: 'both' paints the real starting geometry even before the timeline
+    // starts. Capture it now; waiting for running can skip this first frame.
+    const early = rectangle(flying), earlyState = motionState(flying, flight);
+    assert(Math.abs(early.width - source.width) < source.width * .45, 'Shared photo starts near the clicked card geometry', { source, early, state: earlyState });
     assert(getComputedStyle(flying).pointerEvents === 'none' && flying.getAttribute('aria-hidden') === 'true', 'Shared copy is decorative and never intercepts input');
-    const copy = flying.querySelector('img'), aspect = copy.naturalWidth / copy.naturalHeight;
-    await pause(140);
+    const copy = flying.querySelector('img');
+    const middleState = await waitPhase(flying, flight, .32, 'Shared photo middle frame');
     const middle = rectangle(flying), picture = rectangle(copy);
-    assert(Math.abs(middle.width - early.width) > 2 || Math.abs(middle.y - early.y) > 2, 'Shared photo moves and scales continuously during the transition', { early, middle });
+    await wait(() => copy.naturalWidth > 0 && copy.naturalHeight > 0);
+    const aspect = copy.naturalWidth / copy.naturalHeight;
+    assert(Math.abs(middle.width - early.width) > 2 || Math.abs(middle.y - early.y) > 2, 'Shared photo moves and scales continuously during the transition', { early, middle, earlyState, middleState });
     assert(Math.abs(picture.width / picture.height - aspect) < .01, 'Photo keeps its aspect ratio while cover crop expands to contain', { picture, aspect });
     assert(document.querySelector('.photo-detail').getAnimations().length > 0, 'Detail container scales smoothly alongside the shared image');
     await wait(() => [...document.querySelectorAll('.photo-detail .preview-frame img')].every(image => image.naturalWidth > 0));
@@ -197,7 +248,9 @@
     assert(!document.querySelector('.photo-detail'), 'Reverse animation never delays logical modal closure');
     await wait(() => !motion().diagnostics().shared);
     assert(layers().length === 0, 'Reverse transition clears all image, backdrop, and container layers');
-    first.click(); await paint(); await pause(75);
+    first.click(); await wait(() => document.querySelector('.motion-photo-layer[data-direction="open"]'));
+    const closingFlight = document.querySelector('.motion-photo-layer');
+    await waitPhase(closingFlight, animationFor(closingFlight, 'width'), .18, 'Pointer close during active entrance');
     const openingCopy = document.querySelector('.motion-photo-layer'), openingBox = rectangle(openingCopy), openingModal = rectangle(document.querySelector('.photo-detail'));
     const close = document.querySelector('.photo-detail .modal-close');
     pointer(close, 'pointerdown');
@@ -209,7 +262,9 @@
     assert(Math.abs(reverseShell.x - openingModal.x) < 4 && Math.abs(reverseShell.width - openingModal.width) < 4,
       'Mid-entrance close preserves the current detail container scale', { openingModal, reverseShell });
     await wait(() => !motion().diagnostics().shared);
-    first.click(); await paint(); await pause(75);
+    first.click(); await wait(() => document.querySelector('.motion-photo-layer[data-direction="open"]'));
+    const escapingFlight = document.querySelector('.motion-photo-layer');
+    await waitPhase(escapingFlight, animationFor(escapingFlight, 'width'), .18, 'Escape close during active entrance');
     const escapeCopy = document.querySelector('.motion-photo-layer'), escapeBox = rectangle(escapeCopy);
     document.querySelector('.photo-detail .modal-close').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     const escapeReverse = rectangle(document.querySelector('.motion-photo-layer'));
