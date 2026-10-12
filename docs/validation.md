@@ -387,7 +387,7 @@ Published v1.2.1 acceptance:
 Collage previews are encoded in memory. Closing the studio clears the pending composition, stops queued regeneration, releases the canvas and image references, and discards the intermediate JPEG; confirming a save destination is the step that writes a finished photograph. Shared thumbnail / CR3 previews remain reusable in the bounded preview cache and can be cleared in Settings. This cache limit describes the application's preview directory, rather than all caches maintained by Electron.
 
 
-## v1.3.4 color, motion, layout, and Chinese name validation
+## v1.3.5 color, motion, layout, and Chinese name validation
 
 Source validation on 2026-10-13:
 
@@ -410,3 +410,5 @@ The v1.3.2 build was cancelled before publication after visual review exposed ov
 The final local Mac arm64 v1.3.3 package passed all 37 launches and 2,121 independent assertions (2,115 per-launch checks plus six independent language-profile checks). Native strict signature verification passed; the package privacy audit checked 1,427 files, including 816 ASAR entries, and verified 51 first-party files against source with no findings. The temporary expanded local build was removed after validation.
 
 The v1.3.3 Linux candidate was withheld after a test incorrectly required wrapping within a fixed 107-pixel budget, even though its actual font metrics permitted the complete name on one line. This is a test portability issue rather than clipping. v1.3.4 keeps the same product renderer and verifies both allowed layouts at fixed widths, plus forced 2 + 3 wrapping using each platform's measured word widths. The Linux validation environment also checks that a Chinese-capable system font is installed.
+
+Both v1.3.4 Mac packages passed; Linux with Noto CJK exposed a genuine vertical typography difference. Loading the same official font in an isolated local fixture reproduced it: at 27px type, a 36.45px line box placed the first character 2px above the title boundary. Raising only the wordmark line-height to 1.5 contains the glyphs. Four source runs (normal / compact, system / Noto CJK fonts) each passed 121 unchanged-strict geometry assertions. A dedicated Linux renderer workflow now validates layout before release packaging. v1.3.4 was not published.

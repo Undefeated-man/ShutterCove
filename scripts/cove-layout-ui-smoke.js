@@ -23,6 +23,12 @@
     const box = parent.getBoundingClientRect();
     return textRects(node).every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1);
   };
+  const textGeometry = node => ({
+    box: node.getBoundingClientRect().toJSON(),
+    font: getComputedStyle(node).font,
+    scrollWidth: node.scrollWidth, clientWidth: node.clientWidth,
+    characters: textRects(node).map((rect, index) => ({ character: node.textContent.replace(/\s/g, '')[index], rect: rect.toJSON() }))
+  });
   for (const language of ['zh-CN', 'en']) {
     I18n.setLanguage(language);
     for (const font of [1.2, 1.5]) {
@@ -35,7 +41,7 @@
       assert(bounds(), language + ' gallery ' + font + ' has no horizontal overflow');
       assert(contained(brand, sidebar), language + ' wordmark ' + font + ' remains inside sidebar');
       const title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');
-      assert(brand.scrollWidth <= brand.clientWidth + 1 && title.scrollWidth <= title.clientWidth + 1 && caption.scrollWidth <= caption.clientWidth + 1, language + ' wordmark ' + font + ' does not clip', {scrollWidth:brand.scrollWidth,clientWidth:brand.clientWidth,rect:brand.getBoundingClientRect().toJSON(),font:getComputedStyle(brand).font,subtitle:caption.getBoundingClientRect().toJSON()});
+      assert(brand.scrollWidth <= brand.clientWidth + 1 && title.scrollWidth <= title.clientWidth + 1 && caption.scrollWidth <= caption.clientWidth + 1 && textContained(title, title) && textContained(caption, caption), language + ' wordmark ' + font + ' does not clip', {brand:brand.getBoundingClientRect().toJSON(),title:textGeometry(title),caption:textGeometry(caption)});
       if (language === 'zh-CN') {
         assert(title.textContent === '时光杂货店', 'Updated Chinese wordmark');
         const tops = textRects(title).map(rect => rect.top);
@@ -67,7 +73,7 @@
     for (const font of [1.2, 1.5]) {
       App.applyFontScale(font); copy.style.maxWidth = budget + 'px'; await paint();
       const brand = copy.querySelector('strong'), title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');
-      assert(copy.clientWidth <= budget && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, brand) && textContained(caption, brand), language + ' real text fits ' + budget + ' px with persistent scrollbar at ' + font, {brand:brand.getBoundingClientRect().toJSON(),scrollWidth:brand.scrollWidth,titleFont:getComputedStyle(title).font,captionFont:getComputedStyle(caption).font});
+      assert(copy.clientWidth <= budget && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, brand) && textContained(caption, brand), language + ' real text fits ' + budget + ' px with persistent scrollbar at ' + font, {brand:brand.getBoundingClientRect().toJSON(),scrollWidth:brand.scrollWidth,title:textGeometry(title),caption:textGeometry(caption)});
       if (language === 'zh-CN') {
         const tops = textRects(title).map(rect => rect.top);
         const oneLine = tops.every(top => Math.abs(top - tops[0]) < 1);
@@ -90,7 +96,7 @@
     // a container-unit font fallback could shrink glyphs as the budget shrinks.
     const priorTitleWidth = title.style.width;
     title.style.width = budget + 'px'; await paint();
-    assert(title.clientWidth <= budget && title.scrollWidth <= title.clientWidth + 1 && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, title) && textContained(caption, brand), 'Measured narrow title and caption remain unclipped at ' + font, {budget, scrollWidth:title.scrollWidth, clientWidth:title.clientWidth});
+    assert(title.clientWidth <= budget && title.scrollWidth <= title.clientWidth + 1 && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, title) && textContained(caption, brand), 'Measured narrow title and caption remain unclipped at ' + font, {budget,brand:brand.getBoundingClientRect().toJSON(),title:textGeometry(title),caption:textGeometry(caption)});
     const tops = textRects(title).map(rect => rect.top);
     assert(tops.length === 5 && Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1), 'Measured narrow Chinese title actually breaks only 时光 / 杂货店 at ' + font, {budget, tops});
     title.style.width = priorTitleWidth;

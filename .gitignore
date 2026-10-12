@@ -12,3 +12,4 @@ local-data/
 *.JPG
 *.jpeg
 *.JPEG
+ui-validation-output/
