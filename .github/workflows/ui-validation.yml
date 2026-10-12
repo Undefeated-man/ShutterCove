@@ -1,0 +1,63 @@
+name: Validate renderer layout
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'renderer/**'
+      - 'scripts/cove-layout-ui-smoke.js'
+      - 'scripts/ambient-motion-ui-smoke.js'
+      - '.github/workflows/ui-validation.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renderer-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux Chinese fonts and renderer
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Ensure Chinese font coverage
+        run: |
+          if [ -z "$(fc-list :lang=zh family)" ]; then
+            sudo apt-get update
+            sudo apt-get install -y fonts-noto-cjk
+          fi
+          test -n "$(fc-list :lang=zh family)"
+          fc-match 'Noto Sans CJK SC'
+      - run: npm ci
+      - name: Check real renderer geometry
+        run: |
+          mkdir -p ui-validation-output
+          for size in normal compact; do
+            flags=()
+            if [ "$size" = compact ]; then flags+=(--compact); fi
+            xvfb-run -a node_modules/.bin/electron . --no-sandbox --demo --smoke "${flags[@]}" --qa-script scripts/cove-layout-ui-smoke.js --screenshot "ui-validation-output/layout-$size.png" > "ui-validation-output/layout-$size.log" 2>&1
+          done
+      - name: Check motion cleanup
+        run: |
+          for size in normal compact; do
+            flags=()
+            if [ "$size" = compact ]; then flags+=(--compact); fi
+            xvfb-run -a node_modules/.bin/electron . --no-sandbox --demo --smoke "${flags[@]}" --qa-script scripts/ambient-motion-ui-smoke.js > "ui-validation-output/motion-$size.log" 2>&1
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-renderer-validation
+          path: ui-validation-output
+          if-no-files-found: ignore
+          retention-days: 7
