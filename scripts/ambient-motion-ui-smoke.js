@@ -3,7 +3,7 @@
   const checks = [], pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const paint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   const assert = (ok, label, detail) => { if (!ok) throw new Error(label + (detail ? ' ' + JSON.stringify(detail) : '')); checks.push(label); };
-  const wait = async predicate => { for (let i = 0; i < 500; i++) { if (predicate()) return; await pause(20); } throw new Error('Motion UI timed out: ' + predicate); };
+  const wait = async predicate => { for (let i = 0; i < 500; i++) { if (predicate()) return; await pause(20); } throw new Error('Motion UI timed out: ' + predicate + ' ' + JSON.stringify(window.AmbientMotion?.diagnostics?.())); };
   const $ = id => document.getElementById(id), motion = () => window.AmbientMotion;
   const layers = () => document.querySelectorAll('.motion-photo-layer,.motion-backdrop-layer,.motion-detail-shell');
   const rectangle = node => { const r = node.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; };
@@ -15,6 +15,28 @@
   const pointer = (button, type, id = 991) => button.dispatchEvent(new PointerEvent(type, { bubbles: true, button: 0, pointerId: id }));
   const cards = () => [...grid.querySelectorAll('.photo-card')];
   const activeEntrance = node => node.getAnimations().filter(animation => animation.id === 'gallery-spring' && ['running', 'pending'].includes(animation.playState));
+  const buttonsSettled = () => !motion().diagnostics().buttons && !motion().diagnostics().presses;
+  const detachedButtons = async () => {
+    let modal = App.modal({ title: 'Motion lifecycle QA', body: '<p>Synthetic modal</p>' });
+    let close = modal.querySelector('.modal-close');
+    pointer(close, 'pointerdown', 988);
+    const held = close.getAnimations().find(animation => animation.id === 'button-press');
+    App.closeModal({ replacement: true });
+    await wait(buttonsSettled);
+    assert(!close.isConnected && !close.classList.contains('motion-button-pressed') && (!held || held.playState === 'idle') && !motion().diagnostics().buttonObserver,
+      'Closing a modal while its button is held clears pointer references, animation, and DOM observer');
+    document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, button: 0, pointerId: 988 }));
+    assert(buttonsSettled(), 'A removed held button cannot create a later release animation');
+    modal = App.modal({ title: 'Motion lifecycle QA', body: '<p>Synthetic modal</p>' });
+    close = modal.querySelector('.modal-close');
+    pointer(close, 'pointerdown', 989); pointer(close, 'pointerup', 989);
+    const releasing = close.getAnimations().find(animation => animation.id === 'button-release');
+    assert(motion().reduced() || releasing?.playState === 'running', 'Normal-motion close button has a real release spring before its click removes the modal');
+    close.click();
+    await wait(buttonsSettled);
+    assert(!close.isConnected && (!releasing || releasing.playState === 'idle') && !motion().diagnostics().buttonObserver,
+      'Removing a releasing button cancels its timeline and drops all retained DOM references');
+  };
   try {
     App.closeModal();
     document.querySelector('[data-view="all"]').click();
@@ -35,6 +57,7 @@
       assert(getComputedStyle(button).scale === 'none' || Number(getComputedStyle(button).scale) === 1, 'Reduced motion keeps pressed buttons at their natural scale');
       pointer(button, 'pointerup');
       assert(motion().diagnostics().buttons === 0, 'Reduced motion skips release overshoot');
+      await detachedButtons();
       App.state.photos = original; App.render(); await paint();
       const card = cards().find(node => node.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom);
       card.click(); await wait(() => document.querySelector('.photo-detail'));
@@ -65,8 +88,7 @@
     let maximumScale = 0;
     for (let i = 0; i < 12; i++) { await pause(16); maximumScale = Math.max(maximumScale, parseFloat(getComputedStyle(select).scale) || 1); }
     assert(maximumScale > 1, 'Release overshoots gently before settling', { maximumScale });
-    await pause(200);
-    await wait(() => motion().diagnostics().buttons === 0);
+    await wait(buttonsSettled);
     assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed'), 'Button release removes animated scale and pressed depth');
     const disabled = document.createElement('button'); disabled.disabled = true; document.body.append(disabled);
     pointer(disabled, 'pointerdown');
@@ -74,10 +96,11 @@
     disabled.remove();
     select.focus(); select.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })); await pause(120);
     assert(Math.abs(Number(getComputedStyle(select).scale) - .96) < .002, 'Keyboard activation receives the same physical press feedback');
-    select.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true })); await wait(() => motion().diagnostics().buttons === 0);
+    select.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true })); await wait(buttonsSettled);
     assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed') && cards().length === before, 'Keyboard spring settles without preventing gallery interaction');
     pointer(select, 'pointerdown'); select.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 991 }));
     assert(motion().diagnostics().buttons === 0 && !select.classList.contains('motion-button-pressed'), 'Canceled pointer gestures clear press state immediately');
+    await detachedButtons();
     App.state.photos = original; App.state.selectionMode = false; App.render();
     const first = cards().find(node => node.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom && node.getBoundingClientRect().bottom > scroll.getBoundingClientRect().top);
     await wait(() => first.querySelector('img').naturalWidth > 0); await pause(280);
@@ -161,14 +184,14 @@
     responsive.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, altKey: true, deltaY: -200, clientX: responsive.getBoundingClientRect().x + 35, clientY: responsive.getBoundingClientRect().y + 35 }));
     assert(layers().length === 0, 'Detail interaction cancels the temporary shared overlay immediately');
     await wait(() => responsive.querySelector('img').naturalWidth > 0);
-    App.closeModal(); await pause(350); first.click(); await paint();
+    App.closeModal(); await wait(() => !motion().diagnostics().shared); first.click(); await paint();
     window.dispatchEvent(new Event('resize'));
     assert(layers().length === 0, 'Window resize safely cancels shared geometry');
-    App.closeModal(); await pause(350); first.click(); await paint();
+    App.closeModal(); await wait(() => !motion().diagnostics().shared); first.click(); await paint();
     $('inspect-next').click(); await paint();
     assert(document.querySelectorAll('.photo-detail').length === 1 && document.querySelectorAll('.motion-photo-layer').length <= 1, 'Adjacent navigation replaces the detail without leaving stale layers');
-    App.closeModal(); await pause(350);
-    assert(layers().length === 0 && !motion().diagnostics().buttons, 'Final cleanup leaves no retained motion layers or button animations');
+    App.closeModal(); await wait(() => !motion().diagnostics().shared && buttonsSettled());
+    assert(layers().length === 0 && buttonsSettled() && !motion().diagnostics().buttonObserver, 'Final cleanup leaves no retained motion layers or button animations', motion().diagnostics());
     return { reduced: false, passed: checks.length, checks };
   } finally {
     App.api.source = originalSource;

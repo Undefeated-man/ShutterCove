@@ -10,6 +10,19 @@
   assert([...document.styleSheets].some(s => s.href?.endsWith('/cove-design.css')), 'Refined design stylesheet loaded');
   const bounds = () => document.documentElement.scrollWidth <= innerWidth + 1 && el('main-scroll').scrollWidth <= el('main-scroll').clientWidth + 1;
   const contained = (node, parent) => { const a = node.getBoundingClientRect(), b = parent.getBoundingClientRect(); return a.left >= b.left - 1 && a.right <= b.right + 1; };
+  const textRects = node => {
+    const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT), rects = []; let text;
+    while ((text = walker.nextNode())) for (let index = 0; index < text.length; index++) {
+      if (/\s/.test(text.data[index])) continue;
+      const range = document.createRange(); range.setStart(text, index); range.setEnd(text, index + 1);
+      rects.push(range.getBoundingClientRect());
+    }
+    return rects;
+  };
+  const textContained = (node, parent) => {
+    const box = parent.getBoundingClientRect();
+    return textRects(node).every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1 && rect.top >= box.top - 1 && rect.bottom <= box.bottom + 1);
+  };
   for (const language of ['zh-CN', 'en']) {
     I18n.setLanguage(language);
     for (const font of [1.2, 1.5]) {
@@ -17,11 +30,11 @@
       const brand = document.querySelector('.brand strong'), sidebar = document.querySelector('.sidebar');
       assert(bounds(), language + ' gallery ' + font + ' has no horizontal overflow');
       assert(contained(brand, sidebar), language + ' wordmark ' + font + ' remains inside sidebar');
-      assert(brand.scrollWidth <= brand.clientWidth + 1 || language === 'en', language + ' wordmark ' + font + ' does not clip', {scrollWidth:brand.scrollWidth,clientWidth:brand.clientWidth,rect:brand.getBoundingClientRect().toJSON(),font:getComputedStyle(brand).font,subtitle:brand.querySelector('span').getBoundingClientRect().toJSON()});
+      const title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');
+      assert(brand.scrollWidth <= brand.clientWidth + 1 && title.scrollWidth <= title.clientWidth + 1 && caption.scrollWidth <= caption.clientWidth + 1, language + ' wordmark ' + font + ' does not clip', {scrollWidth:brand.scrollWidth,clientWidth:brand.clientWidth,rect:brand.getBoundingClientRect().toJSON(),font:getComputedStyle(brand).font,subtitle:caption.getBoundingClientRect().toJSON()});
       if (language === 'zh-CN') {
-        const word = brand.childNodes[0], charBounds = i => { const r = document.createRange(); r.setStart(word, i); r.setEnd(word, i + 1); return r.getBoundingClientRect(); };
-        assert(word.textContent === '时光杂货店', 'Updated Chinese wordmark');
-        const tops = Array.from({ length: 5 }, (_, i) => charBounds(i).top);
+        assert(title.textContent === '时光杂货店', 'Updated Chinese wordmark');
+        const tops = textRects(title).map(rect => rect.top);
         const onOneLine = tops.every(top => Math.abs(top - tops[0]) < 1);
         const twoThenThree = Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1);
         assert(onOneLine || twoThenThree, 'Chinese wordmark is one line or exactly 时光 / 杂货店 at ' + font, tops);
@@ -40,6 +53,29 @@
       App.closeModal();
     }
   }
+  // Reproduce the CI's 107 px title budget independently of window size.
+  // Persistent sidebars consume different scrollbar widths across macOS/Linux.
+  const sidebar = document.querySelector('.sidebar'), copy = document.querySelector('.brand-copy');
+  const priorOverflow = sidebar.style.overflowY, priorMaxWidth = copy.style.maxWidth;
+  sidebar.style.overflowY = 'scroll';
+  for (const budget of [107, 96]) for (const language of ['zh-CN', 'en']) {
+    I18n.setLanguage(language);
+    for (const font of [1.2, 1.5]) {
+      App.applyFontScale(font); copy.style.maxWidth = budget + 'px'; await paint();
+      const brand = copy.querySelector('strong'), title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');
+      assert(copy.clientWidth <= budget && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, brand) && textContained(caption, brand), language + ' real text fits ' + budget + ' px with persistent scrollbar at ' + font, {brand:brand.getBoundingClientRect().toJSON(),scrollWidth:brand.scrollWidth,titleFont:getComputedStyle(title).font,captionFont:getComputedStyle(caption).font});
+      if (language === 'zh-CN') {
+        const tops = textRects(title).map(rect => rect.top);
+        assert(tops.length === 5 && Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1), 'Forced narrow Chinese title breaks only 时光 / 杂货店 at ' + budget + ' px and ' + font, tops);
+      } else assert(title.textContent === 'Shutter Cove', 'English title survives narrow Chinese/English switching');
+    }
+  }
+  copy.style.maxWidth = priorMaxWidth; sidebar.style.overflowY = priorOverflow;
+  const settledTitle = copy.querySelector('.brand-title'); let titleMutations = 0;
+  const settleObserver = new MutationObserver(records => { titleMutations += records.length; });
+  settleObserver.observe(settledTitle, { childList: true, characterData: true, subtree: true });
+  await pause(60); titleMutations = 0; await pause(220); settleObserver.disconnect();
+  assert(titleMutations === 0, 'Brand formatting and localization settle without a mutation loop');
   for (const language of ['zh-CN', 'en']) {
     I18n.setLanguage(language);
     for (const font of [1.2, 1.5]) {

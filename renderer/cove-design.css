@@ -48,26 +48,48 @@ body {
 
 .brand { align-items: center; }
 .brand-icon { flex-shrink: 0; }
-.brand > div:last-child { flex: 1; min-width: 0; }
-.brand strong { color: #30463a; line-height: 1.2; }
-.brand strong span { color: #7e9076; }
-html[lang^="zh"] .brand strong {
+.brand > div:last-child { flex: 1; min-width: 0; container-type: inline-size; }
+.brand strong {
   display: block;
-  width: max-content;
-  max-width: 100%;
+  width: 100%;
+  min-width: 0;
+  color: #30463a;
   font-size: calc(18px * var(--font-scale));
   font-weight: 600;
   letter-spacing: .045em;
   line-height: 1.35;
+  white-space: normal;
+}
+.brand-title {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  font: inherit;
+  font-size: min(1em, 25cqw);
+  letter-spacing: inherit;
+  white-space: normal;
+}
+html[lang^="zh"] .brand-title { font-size: min(1em, 30cqw); }
+/* These indivisible words allow exactly the requested 2 + 3 character break.
+   Real line fitting handles font metrics and persistent scrollbar differences. */
+.brand-word {
+  display: inline-block;
+  font: inherit;
+  letter-spacing: inherit;
   white-space: nowrap;
 }
-html[lang^="zh"] .brand strong span {
-  width: max-content;
-  max-width: none;
+.brand strong .brand-caption {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  color: #7e9076;
   margin-top: 7px;
   font-size: calc(9px * var(--font-scale));
+  font-weight: 500;
   letter-spacing: .1em;
   line-height: 1.5;
+  white-space: normal;
+  word-break: normal;
 }
 .sidebar-caption { color: #788770; }
 .nav-label { color: #809077; }
@@ -415,7 +437,7 @@ html[lang^="zh"] .brand strong span {
   .selection-bar { border-radius: 13px; }
   .inspector-aside { border-left: 0; padding-left: 0; }
   .sidebar { width: 65px; }
-  html[lang^="zh"] .brand strong { display: none; }
+  .brand strong { display: none; }
 }
 
 @media (prefers-contrast: more) {

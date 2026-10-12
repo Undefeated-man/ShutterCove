@@ -6,7 +6,7 @@
   const entrances = new Map();
   const presses = new Map();
   const springs = new Map();
-  let galleryObserver = null, galleryNodes = [], shared = null;
+  let galleryObserver = null, galleryNodes = [], shared = null, buttonObserver = null;
   const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
   const rect = node => {
     const r = node.getBoundingClientRect();
@@ -71,39 +71,65 @@
     });
   }
   const buttonFor = target => target instanceof Element ? target.closest('button') : null;
+  function watchButtons() {
+    if (!springs.size && !presses.size) {
+      buttonObserver?.disconnect(); buttonObserver = null;
+      return;
+    }
+    if (buttonObserver) return;
+    // Chromium can stop advancing a detached element's animation timeline.
+    // Release its animation and held-pointer references when the DOM removes it,
+    // rather than relying on animation.finished to resolve after modal closure.
+    buttonObserver = new MutationObserver(() => {
+      for (const [key, button] of presses) if (!button.isConnected) {
+        presses.delete(key); button.classList.remove('motion-button-pressed');
+      }
+      for (const [button, animation] of springs) if (!button.isConnected) {
+        springs.delete(button); animation.cancel(); button.classList.remove('motion-button-pressed');
+      }
+      watchButtons();
+    });
+    buttonObserver.observe(document.documentElement, { childList: true, subtree: true });
+  }
   function cancelSpring(button) {
     springs.get(button)?.cancel(); springs.delete(button);
   }
   function press(button) {
-    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return false;
+    if (!button?.isConnected || button.disabled || button.getAttribute('aria-disabled') === 'true') return false;
     const current = getComputedStyle(button).scale;
     cancelSpring(button);
     button.classList.add('motion-button-pressed');
     if (!reduced()) {
       const animation = button.animate([{ scale: current === 'none' ? '1' : current }, { scale: '.96' }],
         { duration: 100, easing: 'cubic-bezier(.2,.75,.3,1)', fill: 'forwards' });
+      animation.id = 'button-press';
       springs.set(button, animation);
     }
     return true;
   }
   function release(button, canceled = false) {
     if (!button) return;
-    const current = getComputedStyle(button).scale;
+    const current = button.isConnected ? getComputedStyle(button).scale : 'none';
     cancelSpring(button); button.classList.remove('motion-button-pressed');
-    if (reduced() || canceled || !button.isConnected || button.disabled) return;
+    if (reduced() || canceled || !button.isConnected || button.disabled) { watchButtons(); return; }
     const animation = button.animate([
       { scale: current === 'none' ? '.96' : current, offset: 0 },
       { scale: '1.018', offset: .42 },
       { scale: '.998', offset: .76 },
       { scale: '1', offset: 1 }
     ], { duration: 350, easing: 'cubic-bezier(.2,.65,.25,1)' });
+    animation.id = 'button-release';
     springs.set(button, animation);
-    animation.finished.catch(() => {}).then(() => { if (springs.get(button) === animation) springs.delete(button); });
+    watchButtons();
+    animation.finished.catch(() => {}).then(() => {
+      if (springs.get(button) === animation) springs.delete(button);
+      watchButtons();
+    });
   }
   document.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     const button = buttonFor(event.target);
-    if (press(button)) presses.set('p' + event.pointerId, button);
+    if (press(button)) { presses.set('p' + event.pointerId, button); watchButtons(); }
   }, true);
   const endPointer = event => {
     const key = 'p' + event.pointerId, button = presses.get(key);
@@ -114,7 +140,7 @@
   document.addEventListener('keydown', event => {
     if (!['Enter', ' '].includes(event.key) || event.repeat) return;
     const button = buttonFor(event.target);
-    if (press(button)) presses.set('k' + event.key, button);
+    if (press(button)) { presses.set('k' + event.key, button); watchButtons(); }
   }, true);
   document.addEventListener('keyup', event => {
     const key = 'k' + event.key, button = presses.get(key);
@@ -125,6 +151,7 @@
     presses.clear();
     for (const [button, animation] of springs) { animation.cancel(); button.classList.remove('motion-button-pressed'); }
     springs.clear();
+    watchButtons();
   }
   window.addEventListener('blur', cancelButtons);
   function cancelShared() {
@@ -283,5 +310,6 @@
   });
   window.addEventListener('pagehide', () => { clearEntrances(); cancelShared(); cancelButtons(); });
   window.AmbientMotion = { gallery, capturePhoto, openPhoto, closePhoto, cancelShared, reduced,
-    diagnostics: () => ({ reduced: reduced(), entrances: entrances.size, seen: seen.size, buttons: springs.size, shared: !!shared }) };
+    diagnostics: () => ({ reduced: reduced(), entrances: entrances.size, seen: seen.size, buttons: springs.size,
+      presses: presses.size, buttonObserver: !!buttonObserver, shared: !!shared }) };
 })();
