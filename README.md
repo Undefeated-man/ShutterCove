@@ -1,179 +1,205 @@
-# 拾光屿 · 摄影回忆时光机
+# Shiguang Isle · 拾光屿
 
-[简体中文](README.md) · [English](README.en.md)
+**Language:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-**专为拍摄 RAW 的单反与微单摄影用户量身定制的本地相册。**
+## English
 
-拾光屿（Shiguang Isle）围绕相机摄影的整理流程设计：从 SD 卡导入、RAW / JPEG 配对浏览、精选整理，到修图交接与作品导出，让成千上万次快门更容易找、选、用。支持 macOS 与 Linux；**当前支持 JPEG 与 Canon CR3，RAW 支持目前限于 CR3。**
+**A local desktop photo library built specifically for DSLR and mirrorless photographers who shoot RAW.**
 
-- **一张照片，RAW / JPEG 一起管理。** 对应文件配对浏览，选片时同时查看 JPEG 与 CR3 预览；在 macOS 上一键交给 Photoshop / Lightroom，Linux 可配置本机编辑器。
-- **轻量预览，减少等待和存储负担。** 缩略图按需加载、预读，预览缓存有容量上限且可清理；浏览不额外复制整份原片。
+Shiguang Isle follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
+
+- **Keep RAW and JPEG together.** Browse matching files as a pair, inspect details with zoom and fullscreen, and open either format in Photoshop / Lightroom on Mac or a configured local editor on Linux.
+- **Browse quickly without duplicating originals.** On-demand thumbnails, nearby-photo prefetching, and a bounded, removable preview cache keep the library light while originals stay in their folders.
+- **Find and curate your best photographs.** Filter by date, color, theme, and tags; collect favorites, tag in batches, and search similar photographs on demand without building a vector database first.
+- **Make collages and posters with control over composition.** Zoom and move each photograph within its cell, preserve original aspect ratios in a magazine poster, or freely position, resize, rotate, and overlap full photographs on a wooden board. Set title size, arrange the story, and preview the actual encoded share JPEG before saving the same result.
+- **Create GIF stories and memes.** Scroll a filmstrip, drag frames to reorder, and add movable speech bubbles or text to each photograph. Choose output scale, palette, frame timing, and looping; preview a real encoded GIF, or save one frame as a static PNG meme.
+- **Organize from SD card to delivery.** Import by capture date and gather selections across folders into one destination, optionally including CR3. Favorite synchronization first moves other JPEG / CR3 files on the chosen SD card into a recoverable pending-deletion folder for review.
+
+*Give every captured moment a small island to return to.*
+
+## 简体中文
+
+**专为拍摄 RAW 的单反与微单摄影用户量身定制的本地桌面相册。**
+
+拾光屿围绕相机摄影的完整流程设计：从 SD 卡导入、RAW / JPEG 配对浏览、精选整理和修图交接，到拼图海报与光影动图，让照片更容易找、选、用。支持 macOS 与 Linux；**当前支持 JPEG 与 Canon CR3，RAW 支持目前限于 CR3。**
+
+- **一张照片，RAW / JPEG 一起管理。** 配对浏览、放大查看细节与全屏看图；Mac 可交给 Photoshop / Lightroom，Linux 可配置本机编辑器。
+- **轻量预览，减少等待和存储负担。** 缩略图按需加载、预读，缓存有上限且可清理；原片留在原目录，浏览不额外复制完整照片。
 - **从一堆照片中找出值得留下的作品。** 按日期、色系、主题和标签筛选，收藏精品、批量加标签；相似照片按需计算，无需预先建立向量库。
-- **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨文件夹选片后一键复制到指定目录，可选携带 CR3；精品同步先将所选 SD 卡中未选的 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
+- **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号可调，分享压缩展示实际编码成品，预览与保存一致。
+- **GIF 与表情包，让回忆一帧一帧流动。** 滚轮浏览电影胶片、拖拽换序，逐帧添加可移动的对话气泡与文字；设置尺寸、色彩数、时长和循环，预览真实 GIF，也可保存单帧 PNG 表情包。
+- **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
 
 *把一次快门，留成一座可以重返的小岛。*
 
-![拾光屿相册界面：合成风景示例，不含私人照片](docs/screenshots/gallery.png)
+**The app supports English and Simplified Chinese.** A fresh installation starts in English and asks you to choose a language before the usage guide. Existing Chinese profiles stay in Chinese after an upgrade. Switch instantly in **Settings → Interface language**; your choice is remembered. Japanese and Korean guides are documentation translations; their interface languages may be added according to demand.
 
-截图使用程序生成的合成风景，不含真人肖像、用户原片、私人路径或真实拍摄元数据。没有真人面部需要模糊处理。
+**App 当前支持英文与简体中文。** 全新安装默认英文，首次打开先选择语言，再进入使用引导；已有中文用户升级后保留中文。在**设置 → 界面语言**可一键切换并记住选择。日文和韩文页面为使用说明翻译，后续根据需求增加界面语言。
 
-![可拖拽换序的留白海报拼图](docs/screenshots/collage.png)
+![Photo gallery / 相册浏览：synthetic landscapes only / 仅合成风景](docs/screenshots/gallery-en.png)
 
-拼图截图同样仅使用合成照片。
+![GIF and meme studio / GIF 与表情包工作台：synthetic artwork only / 仅合成画面](docs/screenshots/motion-studio.png)
 
-## 安装
+All screenshots use synthetic artwork, with no private photographs, real portraits, personal paths, or real capture metadata. 所有截图使用合成画面，不含私人原片、真人肖像、个人路径或真实拍摄信息。
 
-在 [GitHub Releases](https://github.com/Undefeated-man/shiguang-isle/releases) 下载与你的电脑匹配的安装包。
+## Installation
 
-| 电脑 | 文件 | 安装方式 |
+Download the package for your computer from [GitHub Releases](https://github.com/Undefeated-man/shiguang-isle/releases). Filenames start with `Shiguang-Isle-` followed by the version; the table shows their platform suffixes.
+
+| Computer | Package suffix | Installation |
 | --- | --- | --- |
-| Apple Silicon Mac | `mac-arm64.dmg` | 打开后拖进 Applications |
-| Intel Mac | `mac-x64.dmg` | 打开后拖进 Applications |
-| Linux x64 | `linux-x86_64.AppImage` | 添加可执行权限后运行 |
-| Debian / Ubuntu x64 | `linux-amd64.deb` | 用软件安装器打开，或 `sudo apt install ./文件名.deb` |
+| Apple Silicon Mac | `mac-arm64.dmg` | Open the disk image and drag the app into Applications |
+| Intel Mac | `mac-x64.dmg` | Open the disk image and drag the app into Applications |
+| Linux x64 | `linux-x86_64.AppImage` | Make the file executable, then run it |
+| Debian / Ubuntu x64 | `linux-amd64.deb` | Open it in your software installer, or use `sudo apt install ./package-name.deb` |
 
-### macOS 首次打开：Apple 无法确认安全性
+### First launch on macOS: Apple cannot verify the app
 
-**当前 Mac 包使用 ad-hoc 签名，没有 Developer ID 证书，也未经过 Apple 公证，因此首次启动可能被 Gatekeeper 阻止。** 这不等于 Apple 已确认软件安全。
+**Current Mac packages are ad-hoc signed, without a Developer ID certificate or Apple notarization. Gatekeeper may therefore block the first launch.** This does not mean Apple has verified the app's safety.
 
-1. 从本仓库的 [正式 Release](https://github.com/Undefeated-man/shiguang-isle/releases) 下载匹配架构的包，并与**同一版本**的 `SHA256SUMS.txt` 核对 SHA-256。
-2. 打开 DMG，将 **Shiguang Isle.app** 拖入 **Applications（应用程序）**；ZIP 包先解压，再移入应用程序。
-3. 尝试打开已安装的 App 一次。被阻止后，进入 **系统设置 → 隐私与安全性 → 安全性**，找到它的提示并点 **“仍要打开”**。
-4. 在再次出现的提示中点 **“打开”**，按需认证。系统会为这个 App 保存例外，以后通常可直接打开。
+1. Download the matching architecture from this repository's [official Release](https://github.com/Undefeated-man/shiguang-isle/releases). Compare its SHA-256 with `SHA256SUMS.txt` from the **same version**.
+2. Open the DMG and drag **Shiguang Isle.app** into **Applications**. For ZIP packages, extract the app and move it into Applications.
+3. Try opening the installed app once. If blocked, go to **System Settings → Privacy & Security → Security**, find its message, and choose **Open Anyway**.
+4. Confirm **Open** in the next prompt and authenticate if requested. macOS saves an exception for this app; later launches usually work directly.
 
-没有“仍要打开”按钮时，重新尝试打开 Applications 中的 App，再查看该设置；受管理的电脑请联系管理员。如果提示**“将损坏你的电脑”或“已损坏”**，先停止使用，重新下载并核验，或向项目报告；不同提示不能一律归因于未公证。保持 Gatekeeper 开启，使用单个 App 的系统允许流程。
+If the button is absent, try opening the app in Applications again, then revisit that setting. On a managed Mac, contact your administrator. If the warning says **“will damage your computer” or “is damaged,”** stop using it, download and verify a fresh copy, or report the issue; those warnings must not automatically be attributed to missing notarization. Keep Gatekeeper enabled and use the per-app system approval.
 
-详见 [中英文 Mac 安装指南](docs/mac-install.md) 与 [Apple 官方说明](https://support.apple.com/zh-cn/102445)。
+See the [bilingual Mac installation guide](docs/mac-install.md) and [Apple's official guidance](https://support.apple.com/en-us/102445).
 
-Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官方 Linux 桌面版；在设置里指定本机安装的编辑器即可交接文件。
+Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom have no official Linux desktop editions; use the editor settings to select an executable installed on your machine.
 
-更新 Mac 版时，先退出正在运行的旧版，再将新版 App 拖入 Applications 并选择替换，从 Applications 启动新版。保持使用同一个 macOS 用户及相同应用标识，原有相册设置、标签与收藏会继续使用本机的应用资料，不需要重新复制照片。更新包同样应核对同版校验表，系统提示需要时按上面的单应用允许流程操作。
+To update on Mac, quit the running older version, drag the new app into Applications, choose Replace, and launch the new copy from Applications. Keep the same macOS account and application identifier to continue using existing local settings, tags, and favorites without copying photographs again. Verify the new package against its same-version checksums; follow the per-app approval steps above if macOS requests them again.
 
-从 v1.0.8 起，可在 **相册设置 → 软件更新** 查看当前版本、手动检查或下载更新；更早版本需先手动安装 v1.0.8 或更新版本一次。默认自动检查新版，仅提醒、不自动安装。Mac / AppImage 可点击“一键更新并重启”，下载校验后沿用原安装位置及本机资料。Mac 需安装在可写的 Applications，不能直接在 DMG 或构建目录中原位更新；AppImage 需位于可写位置。Linux deb 使用“下载并打开安装器”，由系统完成认证与安装，之后手动重新打开应用。详见 [更新说明](docs/updates.md)。
+Starting with v1.0.8, **Settings → Software update** shows the installed version and offers manual checks and downloads; earlier versions need one manual installation of v1.0.8 or later. Automatic checks are on by default and only notify; installation requires your click. For Mac / AppImage, the update-and-restart action verifies downloads and retains the existing installation path and local data. Mac apps need a writable Applications location; they cannot update in place from a disk image or build folder. AppImages also need a writable location. The Linux deb action downloads and opens the system package installer for authentication and installation; reopen the app manually afterward. See the [update guide](docs/updates.md).
 
-## 功能
+On first launch, choose **English** or **Chinese** before the five-step guide. Switch instantly in **Settings > Interface language**; your choice is remembered after restarting. Existing Chinese profiles retain Chinese after an upgrade, along with their library, favorites, tags, and settings.
 
-| 功能 | 支持方式 |
+![First-launch language choice: synthetic screenshot](docs/screenshots/language-welcome.png)
+
+## Features
+
+| Feature | How it works |
 | --- | --- |
-| 首次使用引导 | 五步介绍相册、选片与整理；跳过或完成后保存状态，可在设置中重新查看 |
-| 检查与安装更新 | 设置里手动检查，默认自动检查并提醒；Mac 正式安装与可写 AppImage 支持下载校验后原位替换及重启，保留收藏、标签和设置 |
-| 详情缩放与平移 | 按住 Option / Alt 滚轮缩放，放大后拖拽查看；点“适合窗口”或双击复位，最大 16 倍相对缩放 |
-| 详情系统全屏 | 点击“全屏”或按 F 进入系统全屏，切换 JPEG / CR3 预览并左右看图；Esc 先退出全屏，再次按下关闭详情 |
-| 色系整理 | 自动分析画面颜色，并结合日期区间浏览 |
-| 日期与主题搜索 | 点击日历或直接输入日期来限制区间、搜索主题名称；主题可为单张或多张照片手动设置 |
-| 日期时间轴 | 纤细时间轴悬停或按住时展开半透明日期提示，拖动快速跳到当前全部筛选结果中的相应日期；默认按日期倒序浏览 |
-| 相似照片 | 选择目录，按不同粒度的像素平均池化计算余弦相似度；按需计算，带时间估计、进度与取消 |
-| 拼图与海报 | 上下、左右、四宫格、九宫格、留白、胶片、原比例杂志与木质展示板；海报每行张数可设 1–12，默认 2，标题字号可调整，存为新 JPEG |
-| 单张拼图构图 | 点选照片，调整格内缩放与位置，选择填满或完整放入；构图随照片换序保留，画布缩放独立控制 |
-| 主动分享压缩 | 逐张处理原片后生成真实 JPEG 成品，长边与品质可调；预览与保存使用同一份编码字节，原片保留 |
-| GIF 与表情包 | 胶片滚轮选帧、拖拽换序，每帧可加文字或气泡；设置尺寸、色彩数、统一帧时长与循环，预览真实编码 GIF，或保存单帧表情包 |
-| 精品收藏 | 收藏喜欢的照片，在精品视图中单独浏览 |
-| 单张与批量标签 | 每张照片可单独设置，也可多选后一键添加 |
-| 全局筛选 | 全部、精品、色彩、相似和拼图选片视图共用日期、色系、主题与标签条件 |
-| 固定图库工具栏 | 滚动照片时，筛选、多选与排序栏保持在顶部；日历和菜单交互后返回焦点时保持当前位置 |
-| 毛玻璃下拉菜单 | 与日历统一的鼠尾草绿样式，最多显示六项，滚动边缘轻微渐隐；长列表可搜索，支持方向键选择、Enter 确认与 Esc 关闭 |
-| 自适应窗口与字号 | 窗口可以调整大小；设置中的字号滑块即时预览并持久保存，默认 120%，可在 100%–150% 间调整 |
-| 简单修图 | 裁剪、旋转、水平 / 垂直镜像、矩形 / 椭圆马赛克；覆盖 JPEG 或另存为 |
-| SD 卡导入 | 复制新照片到指定回忆根目录，选择已有或新主题，按拍摄日期归档并跳过重复内容 |
-| 批量选择与删除 | 多选、范围选取与筛选结果全选；确认后移入系统废纸篓 |
-| 批量复制到文件夹 | 选择已有或新建目标文件夹，跨子目录平铺汇集 JPEG，可勾选同时复制 CR3（默认关闭）；重名自动唯一改名，JPEG / CR3 共用名称，带进度、取消与结果 |
-| SD 卡精品同步 | 预览精品或当前选择的保留清单，其余 JPEG / CR3 移入可恢复的 `待删` 批次并保存操作记录 |
+| Interface language | English and Simplified Chinese; first-launch language choice and instant switching in Settings, remembered across restarts |
+| First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
+| Update checks and installation | Check manually in Settings or receive automatic reminders; installed Mac apps and writable AppImages can download, verify, replace themselves in place, and restart while preserving favorites, tags, and settings |
+| Detail zoom and pan | Hold Option / Alt while scrolling to zoom, then drag to pan; choose Fit to window or double-click to reset, with up to 16× relative zoom |
+| Native fullscreen details | Click Fullscreen or press F, switch between JPEG / CR3 previews, and browse adjacent photographs; Esc leaves fullscreen first, then closes details |
+| Color organization | Analyze image colors automatically and browse within a date range |
+| Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
+| Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
+| Similar photographs | Choose a directory and compare average-pooled RGB pixels using cosine similarity; adjustable granularity, estimated time, progress, and cancellation |
+| Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace, film, original-ratio magazine, and wooden-board layouts; posters support 1–12 photos per row, defaulting to 2, adjustable title size, and new JPEG export |
+| Per-photo composition | Select a photograph and adjust its scale and position within a cell, choosing cover or contain; composition follows the photograph when reordered, independently of canvas zoom |
+| Controlled share compression | Process originals individually and encode the final JPEG with adjustable maximum edge and quality; preview and save use the same encoded bytes while preserving originals |
+| GIF and meme creation | Scroll through a filmstrip and drag to reorder, add text or bubbles per frame, set size, palette, global frame delay, and looping; preview an encoded GIF or save a static meme frame |
+| Favorites | Mark favorite photographs and browse them in a dedicated view |
+| Individual and batch tags | Edit tags on one photograph or add tags to a selection |
+| Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
+| Sticky gallery toolbar | Filtering, selection, and sorting controls stay at the top; returning focus after calendar or menu interactions preserves the scroll position |
+| Frosted-glass dropdowns | Sage styling matches the calendar; show up to six options with subtle scroll-edge fades, searchable long lists, arrow-key selection, Enter to confirm, and Esc to close |
+| Responsive window and font size | Resize the window; a persistent font-size slider in Settings previews changes immediately, defaults to 120%, and supports 100%–150% |
+| Simple editing | Crop, rotate, mirror horizontally or vertically, and apply rectangular or elliptical pixel mosaics; overwrite a JPEG or save a new file |
+| SD card import | Copy new photographs into a chosen memories root, use an existing or new theme, organize by capture date, and skip duplicate content |
+| Batch selection and deletion | Multi-select, range selection, and select all filtered results; move files to the system trash after confirmation |
+| Copy a selection to a folder | Choose an existing folder or create one in the picker, then collect JPEGs from different subfolders into one flat destination; optionally include CR3 (off by default), with unique collision names shared by each pair, progress, cancellation, and results |
+| Favorite synchronization to SD | Preview files to keep from favorites or the current selection, then move other JPEG / CR3 files into a recoverable `待删` batch with a journal |
 
-JPEG 与对应 CR3 在同一个详情视图中上下配对显示，两种文件均提供 Photoshop、Lightroom 和系统打开按钮。大尺寸横图、竖图及宽幅图按比例完整适配预览框，预览区随窗口高度调整；详情可滚动查看下方 CR3 预览及编辑器按钮，上一张 / 下一张按钮始终可用。缩略图按需缓存和预读，浏览不复制完整原片。
+Photo details display JPEG and its corresponding CR3 preview together, stacked in the same detail view. Each format has Photoshop, Lightroom, and system-open buttons. Large landscape, portrait, and panoramic photographs fit completely within the preview frame while preserving their aspect ratio; the frame adapts to the window height. Scroll the detail view to reach the lower CR3 preview and editor buttons, while previous / next controls stay available. Browsing creates lightweight cached previews rather than full original copies.
 
-![JPEG / CR3 双预览与编辑器入口：仅使用合成风景](docs/screenshots/paired-preview.png)
+![Paired JPEG / CR3 previews and editor handoff using synthetic landscapes](docs/screenshots/paired-preview.png)
 
-双预览截图使用合成照片和示例资料，不含真人或私人拍摄信息。
+The paired-preview screenshot uses generated photographs and sample metadata, with no real people or private capture information.
 
-查看详情时，按住 **Option（Mac）/ Alt** 使用滚轮放大或缩小，放大后按住图片拖拽平移；普通滚轮仍用于滚动详情。点击“适合窗口”或双击图片恢复整张适配；预览获得焦点时可按 + / − 缩放、按 0 复位。**100% 表示相对于适合窗口大小的缩放，并非原图像素 1:1**；最大为适合窗口大小的 16 倍。JPEG 与 CR3 预览独立缩放，切换照片或调整预览区域大小时恢复适配。CR3 缩放的是相机内嵌预览，不是 RAW 显影，预览清晰度取决于内嵌图像。
+In photo details, hold **Option (Mac) / Alt** while scrolling to zoom in or out, then drag the enlarged image to pan; ordinary scrolling still scrolls the detail view. Choose “适合窗口” (Fit to window) or double-click the image to reset. With the preview focused, use + / − to zoom and 0 to reset. **100% is relative to the fitted view, not a 1:1 original-pixel scale**; the maximum is 16 times the fitted size. JPEG and CR3 previews zoom independently; changing photographs or resizing the preview area restores the fitted view. CR3 zoom uses the camera's embedded preview rather than RAW development, so clarity depends on that preview's resolution.
 
-点击预览旁的“全屏”或按 **F**，进入系统全屏看图；可切换 JPEG / CR3 预览、按 ← / → 看相邻照片，并继续缩放和平移。**Esc** 先返回详情，再按一次关闭详情；关闭详情恢复进入前的窗口全屏状态。
+Click Fullscreen beside a preview or press **F** to enter the operating system's fullscreen mode. Switch between JPEG / CR3 previews, use ← / → for adjacent photographs, and keep zooming and panning. **Esc** returns to details first; press it again to close details. Closing restores the window's prior fullscreen state.
 
-![详情独立缩放：合成 JPEG 放大至 223%，CR3 内嵌预览保持适配](docs/screenshots/detail-zoom.png)
+![Independent detail zoom: synthetic JPEG at 223%, with the CR3 embedded preview still fitted](docs/screenshots/detail-zoom.png)
 
-![拼图缩放与海报每行张数：合成示例](docs/screenshots/collage-zoom.png)
+![Collage preview zoom and photos-per-row controls using synthetic photographs](docs/screenshots/collage-zoom.png)
 
-“调整构图”用于单张照片：先点选，再拖动格内画面、调整缩放，或选择“完整放入格子”。缩略图拖拽换序时，构图跟着照片移动。Alt / Option + 滚轮控制整个画布预览；放大画布后，普通拖动平移画布，**Shift + 拖动**调整所选照片。
+Choose “调整构图” (Adjust composition), select a photograph, and drag within its cell, change its scale, or choose contain to keep it complete. Reordering thumbnails keeps the composition attached to the photograph. Alt / Option + scroll zooms the whole canvas; when zoomed, ordinary dragging pans the canvas and **Shift + drag** adjusts the selected photograph.
 
-“原比例海报 · 光影杂志”完整保留每张照片的比例，标题有独立区域。“木质展示板 · 贴住回忆”可拖动整张照片、调整尺寸和角度、置顶或置底并叠放。标题字号按导出宽度下的像素设置，成品缩小时一同缩放。
+The original-ratio magazine layout keeps complete photographs in their original proportions with a separate title area. On the wooden display board, move full photographs, resize or rotate them, and change their stacking order with overlap allowed. Title size is specified in pixels at the export width and scales with a smaller output.
 
-![原比例杂志海报：完整照片与独立标题区，合成示例](docs/screenshots/collage-magazine.png)
+![Original-ratio magazine: complete photographs and a separate title area, using synthetic images](docs/screenshots/collage-magazine.png)
 
-![木质展示板：完整照片可移动、旋转、调整尺寸与叠放，合成示例](docs/screenshots/collage-board.png)
+![Wooden display board: movable, rotated, resized, and overlapping synthetic photographs](docs/screenshots/collage-board.png)
 
-打开“主动压缩图片大小 · 分享预览”，设置目标长边和 JPEG 品质，查看实际编码后的像素、文件大小与成品。预览解码与保存使用同一份 JPEG 字节；修改构图或布局后需重新生成，处理不覆盖原片，也不在照片目录留下中间副本。匿名样本的 **3000 × 8364 → 516 × 1440** 仅支持长边 **1440 / 品质 80** 的参考档位，不能代表微信的固定规则，也不能保证免于再次压缩。长图整体缩小会减少每张照片的细节；这里的所见即所得只针对本应用导出的文件。
+Enable proactive share compression, set the maximum edge and JPEG quality, and inspect the encoded result, dimensions, and file size. Preview decoding and saving use the same JPEG bytes. Composition or layout changes regenerate the result; processing preserves originals and creates no intermediate copies in photo folders. An anonymous **3000 × 8364 → 516 × 1440** sample supports a **1440-pixel / quality-80** reference preset only. It does not establish a universal WeChat rule or guarantee avoidance of further compression. Shrinking a tall collage reduces detail in each photograph; WYSIWYG refers to this app's exported file.
 
-多选带 JPEG 的照片，打开“GIF / 表情包”：滚轮浏览胶片，拖动缩略图换序，为当前帧添加并拖动文字或气泡。设置尺寸比例、色彩数、统一帧时长与循环后，生成真实 GIF 预览再保存同一份成品；单张也可保存为静态表情包。仅有 CR3 的照片需先导出 JPEG。编码提供进度与取消，GIF 最多 256 色，摄影渐变可能出现色带。
+Select photographs with JPEGs and open GIF / meme creation. Scroll through the filmstrip, drag thumbnails to reorder, and add or drag text and bubbles on the current frame. Configure output scale, palette size, global frame delay, and looping, then generate the actual GIF preview and save the same result; a single photograph can also become a static meme. CR3-only photographs require a JPEG export first. Encoding provides progress and cancellation. GIF supports at most 256 colors, so photographic gradients may show banding.
 
-![GIF 与表情包创作台：胶片排序与文字气泡编辑，可生成真实 GIF 预览，合成示例](docs/screenshots/motion-studio.png)
+![GIF and meme studio: filmstrip ordering and text-bubble editing, with encoded preview generation using synthetic images](docs/screenshots/motion-studio.png)
 
-详见 [光影创作台中英文说明](docs/creative-studio.md)。以上创作界面使用合成照片，不含真人或私人资料。
+See the [bilingual creative-studio guide](docs/creative-studio.md). These creative views contain synthetic photographs with no real people or private data.
 
-![检查更新与新版提醒：演示状态，无私人资料](docs/screenshots/update-settings.png)
+![Update checks and version reminders: demonstration states without private data](docs/screenshots/update-settings.png)
 
-![字体设置：更大的默认字号，调整时即时预览](docs/screenshots/font-settings.png)
+![Font settings: larger defaults and an immediate preview](docs/screenshots/font-settings.png)
 
-日历可以点击选日，也可以直接输入日期；侧边时间轴以半透明日期提示帮助快速定位当前筛选结果。
+Pick a date from the calendar or type it directly. The slim timeline expands a translucent date badge to help you jump through the current filtered results.
 
-![日历筛选：点击选择日期或直接输入](docs/screenshots/calendar.png)
+![Calendar filtering with clickable dates and direct date input](docs/screenshots/calendar.png)
 
-![纤细时间轴：展开日期提示并快速跳转](docs/screenshots/timeline.png)
+![Slim timeline with an expanded date badge for quick navigation](docs/screenshots/timeline.png)
 
-![滚动后的固定图库工具栏：筛选、多选与排序始终可用，仅使用合成风景](docs/screenshots/sticky-toolbar.png)
+![Sticky gallery controls after scrolling: filtering, selection, and sorting using synthetic landscapes](docs/screenshots/sticky-toolbar.png)
 
-![毛玻璃筛选菜单：六项滚动与轻微边缘淡化](docs/screenshots/dropdown.png)
+![Frosted-glass filters with six-row scrolling and subtle edge fades](docs/screenshots/dropdown.png)
 
-![批量复制：默认只复制 JPEG，可选对应 CR3，支持选择或新建目标文件夹](docs/screenshots/copy.png)
+![Batch folder copy: JPEG by default, optional CR3, and a target folder picker with new-folder support](docs/screenshots/copy.png)
 
-SD 卡精品同步先展示保留与待移走清单，确认后将其余照片移入可恢复的 `待删` 批次。截图仅展示合成预览，没有执行移动，也没有访问真实 SD 卡。
+SD favorite synchronization shows the keep and move lists before confirmation. Other photographs move into a recoverable `待删` batch. This screenshot shows only a synthetic preview; no move was executed and no real SD card was accessed.
 
-![SD 卡精品同步：先核对保留清单和待移走清单](docs/screenshots/sd-sync.png)
+![SD favorite synchronization preview with keep and move lists](docs/screenshots/sd-sync.png)
 
-以上截图均使用合成照片，不含真人肖像、私人路径或真实拍摄信息。
+These screenshots use synthetic photographs, with no real portraits, private paths, or real capture information.
 
-## 用法
+## Using the library
 
-首次正常启动会自动显示五步引导，依次介绍：本地 JPEG / CR3 相册、打开已有相册或从 SD 卡导入、筛选与精品标签、修图和分享，以及先预览再确认的 SD 卡整理。← / → 可切换步骤；跳过或完成后保存状态，下次启动不再自动弹出，保存失败时可重试。
+A five-step guide appears on the first normal launch: a local JPEG / CR3 library; opening a folder or importing from SD; filters, favorites, and tags; editing and sharing; and reviewing SD organization before confirmation. Use ← / → to navigate. Skipping or finishing saves completion so later launches do not open it automatically; failed saves can be retried.
 
-最后点“开始浏览”关闭引导，或点“选择照片文件夹”打开相册选择器。引导本身只介绍操作，不自动整理照片。已配置相册的旧版用户升级时无需重新走引导；随时可从 **相册设置 → 重新查看使用引导** 打开。
+Choose “开始浏览” (Start browsing) to close the guide, or “选择照片文件夹” (Choose photo folder) to open the folder picker. The guide explains operations without organizing photographs automatically. Existing users with a configured library are not interrupted on upgrade. Reopen it through **相册设置 → 重新查看使用引导** (Album Settings → View usage guide again).
 
-![首次使用五步引导：合成 JPEG / CR3 画面，无私人照片](docs/screenshots/onboarding.png)
+![Five-step first-use guide with synthetic JPEG / CR3 artwork and no private photographs](docs/screenshots/onboarding.png)
 
-1. 选择照片根目录。相册递归读取照片，以文件名和目录关系识别 JPEG / CR3 配对，保留原文件位置。
-2. 用日期区间、颜色、标签、主题筛选；日期可点击日历选择或直接输入。通过侧边纤细时间轴快速定位日期，悬停或按住时显示更大的半透明日期提示；时间轴覆盖当前全部筛选结果，默认日期倒序。收藏照片后可单独浏览精品。
-3. 批量选择后可添加标签、收藏、复制到文件夹或移入废纸篓。推荐用“复制到文件夹”汇集不同子目录中的照片，可以选择已有目标目录或在选择器中新建文件夹：默认只复制 JPEG，可勾选同时复制对应 CR3，原片保留；重名时自动改名且两种格式共用名称。界面显示进度、可取消，并列出成功、跳过或失败结果。仅有 RAW 的照片默认跳过，勾选 CR3 后可复制。单张照片仍可在文件管理器中显示，或选择 JPEG / CR3 交给编辑器。
-4. 进入相似搜索，选择一张参考照片与搜索目录，再设置池化粒度；结果可继续按日期等条件筛选。计算只在本次搜索发生，界面显示预计时间与进度。
-5. 选择多张照片打开拼图，选择布局并逐张调整构图；留白、胶片和原比例杂志海报可设置每行 1–12 张，默认 2 张。木质展示板可自由摆放照片、调整角度和叠放次序。缩略图拖拽换序；需要在画布上交换照片时选择“画布换位”。Alt / Option 滚轮放大预览，普通拖动平移画布，Shift + 拖动调整照片；点“适合窗口”恢复。分享压缩开启后，查看实际 JPEG 成品再存为新照片。
-6. 进入编辑，可裁剪、旋转、镜像并用矩形或圆形区域做马赛克。保存时选择覆盖 JPEG 或另存为；画布导出不保留原 EXIF，CR3 原片不参加覆盖编辑。
-7. 从 SD 卡或其他目录导入到自己指定的回忆根目录，选择原有主题或新建主题。导入读取拍摄日期归档，并跳过已经存在的内容。
-8. 将精品收藏或当前选择与 SD 卡同步：先预览保留与待移走的文件，再确认把其余 JPEG / CR3 移入 SD 卡的 `待删` 批次目录。保留相对路径与操作记录，可恢复；匹配为空、存在歧义或预览后文件发生变化时停止执行。
-9. 多选带 JPEG 的照片打开“GIF / 表情包”，滚轮查看帧、拖拽换序并逐帧加文字；生成压缩后的真实动图预览再保存，或将当前帧另存为静态表情包。
+1. Choose a photo root. The app scans recursively and identifies JPEG / CR3 pairs using names, dates, and directory relationships while retaining the original file locations.
+2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
+3. Select multiple photographs to add tags, mark favorites, copy to a folder, or move files to trash. Use “Copy to folder” to collect photographs from different subfolders, choosing an existing destination or creating a folder in the picker. JPEGs are copied by default, and you can include corresponding CR3 files. Originals remain in place; collisions receive unique names shared by each JPEG / CR3 pair. Review progress and copied, skipped, or failed results, and cancel when needed. RAW-only photographs are skipped unless CR3 copying is enabled. A single photograph can still be revealed in the file manager or handed to an editor as JPEG or CR3.
+4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
+5. Open the collage workspace, choose a layout, and adjust photographs individually. Whitespace, film, and original-ratio magazine posters support 1–12 photos per row, defaulting to 2. Move photographs, adjust angles, and change stacking order on the wooden display board. Drag thumbnails to reorder or choose canvas swapping for direct exchanges. Alt / Option scrolling zooms the preview; ordinary dragging pans the canvas and Shift + drag adjusts a photograph. Fit to window resets the view. With share compression enabled, inspect the encoded JPEG result before saving a new photograph.
+6. Use the editor to crop, rotate, mirror, or add rectangular and elliptical mosaics. Choose overwrite or save-as. Canvas exports do not retain the original EXIF; editing does not overwrite CR3 files.
+7. Import from an SD card or another directory into your chosen memories root. Pick an existing theme or create one. Files are copied, sorted by capture date, and checked for duplicates; source files remain available.
+8. Synchronize favorites or the current selection to an SD card. Review the keep and move lists first. Other photographs move into a `待删` batch on that card with their relative paths and a journal. Empty matches, ambiguity, or files changing after preview stop execution.
+9. Select photographs with JPEGs and open GIF / meme creation. Scroll through frames, drag to reorder, and add text per frame. Generate an encoded preview before saving the GIF, or save the current frame as a static meme.
 
-SD 同步的移动操作保留文件内容，不立即释放卡内空间。可以打开本次待删目录，按记录恢复到原位置；确认不需要后再自行处理待删文件。
+Moving files into `待删` preserves their contents and does not immediately free card space. Open the batch directory to review or restore files to their recorded original locations; remove pending files yourself when you decide they are no longer needed.
 
-各浏览视图共用日期、颜色、主题与标签限制。主题和标签是手动设置的本地资料，不会调用云端模型。色系按照缩小后的图像像素统计归类，适合找暖色、青蓝、绿色等画面；它不理解地点或故事内容。
+Themes and tags are manually assigned local metadata. Color families are derived from image pixels and help find warm, blue, green, or similar visual tones; they do not identify locations or interpret a photograph's story.
 
-图库滚动时，筛选、多选和排序工具栏保持在顶部，无需返回页面开头即可调整条件、改变顺序或操作已选照片。工具栏高度随窗口与字号调整，照片定位为工具栏预留空间。打开、关闭日历或菜单以及确认选项后，返回焦点保持当前滚动位置；弹窗以外的 Tab 导航仍保留正常的焦点滚动行为。
+Filter and sort dropdowns support mouse and keyboard use. Long lists show up to six options at a time and support scrolling or option search. Use ↑ / ↓ to move, Enter to confirm, and Esc to close. Subtle blurred edges indicate more scrollable content.
 
-筛选和排序下拉菜单可用鼠标或键盘操作。长列表最多显示六项，可滚动或搜索选项；按 ↑ / ↓ 移动，Enter 确认，Esc 关闭。菜单边缘以轻微虚化提示还有可滚动的内容。
+CR3 display uses the camera's embedded preview rather than full RAW development. Photoshop normally delegates RAW handling to Adobe Camera Raw. Lightroom may show an import dialog depending on its installed version; the app hands over the file and does not complete Adobe catalog imports automatically.
 
-CR3 显示的是相机写入的嵌入预览，不是 RAW 显影结果。交给 Photoshop 会由 Adobe Camera Raw 处理；交给 Lightroom 后是否显示导入对话框由安装的 Adobe 版本决定，拾光屿不会代替 Adobe 完成目录导入。
+Vertical and horizontal collages have no fixed photograph-count limit. To control memory, canvases are limited to a **24,000 px** long edge and **48 million pixels**. Larger results are scaled proportionally. Simple editing follows the same limit for unusually large originals; use your professional editor for full-resolution development beyond it.
 
-横向和纵向拼图不设照片张数的固定限制。为控制内存，画布长边上限为 **24,000 px**、总面积上限为 **4,800 万像素**；超出时等比缩小。超高像素原片的简单编辑也遵守此上限，保留完整分辨率的精修请交给专业编辑器。
+GIF supports **2–80 frames**, up to **1,600 px** per side, **24 million pixels** across all frames, and **24 MB** of encoded data. The interface scales dimensions to fit the pixel budget and reports remaining limit errors. A single photograph can be saved as a static meme. These resource limits do not describe another app's sending restrictions.
 
-GIF 支持 **2–80 帧**，单边最多 **1,600 px**、所有帧合计最多 **2,400 万像素**，编码文件最多 **24 MB**；界面会按预算缩小尺寸，仍超限时提示调整。静态表情包支持单张照片。以上容量边界不代表其他应用的发送限制。
+The gallery's filtering, selection, and sorting toolbar stays at the top as you scroll. Adjust conditions, change the order, or act on selected photographs without returning to the beginning. Its height adapts to the window and font size, and photo navigation reserves space beneath it. Returning focus after opening or closing the calendar or a menu, or confirming an option, preserves the current scroll position.
 
-## 速度与存储
+## Performance and storage
 
-缩略图按需生成，优先处理视野内的照片，并可以预热附近照片。扫描过程中分批显示已读到的照片，后续扫描复用文件信息缓存。RAW 尽量使用内嵌预览，避免每次都解码整张原片。缓存上限为 **512 MB**，通过最近使用顺序清理，且可手动清空。不会为浏览创建完整原片副本。
+Thumbnails are generated on demand, with visible and nearby photographs prioritized. Scans deliver early batches to the gallery and reuse cached file metadata on subsequent scans. RAW previews use embedded images where available. The preview cache is capped at **512 MB**, evicts less recently used entries, and can be cleared manually. Browsing does not create full-resolution original copies.
 
-数据库、收藏、标签、主题、设置与可清理缓存保存在操作系统的应用数据目录（Electron `userData`）。首次扫描大型相册仍需要读取文件信息；损坏、没有嵌入预览或暂时无法访问的 RAW 会显示错误状态，其他照片仍可浏览。
+Local records, favorites, tags, themes, settings, and clearable previews are stored in the operating system's application-data directory (Electron `userData`). An initial large-library scan still needs to read file information. Damaged, offline, or preview-less RAW files can show an error while other photographs remain usable.
 
-覆盖编辑、拼图导出、批量复制与 SD 卡导入会按你的选择创建或改动照片文件。批量复制不会移动原片，取消后已完成的副本保留。批量删除使用系统废纸篓，执行前显示所选数量并确认。硬盘空间不足、外置盘断开或权限不足会作为操作错误反馈。
+Overwrite editing, collage exports, batch copies, and SD imports create or change files according to your choices. Batch copies leave originals in place; completed copies remain when you cancel. Batch deletion uses system trash with a count and confirmation before execution. Permission failures, disconnected drives, and insufficient space are reported as operation errors.
 
-## 开发与构建
+## Development and builds
 
-需要 Node.js 22、npm、macOS 或 Linux。Linux 打包时需要系统 Perl（用于 ExifTool）；macOS 自带 Perl。
+Use Node.js 22, npm, and macOS or Linux. ExifTool requires system Perl on Linux; macOS includes Perl.
 
 ```sh
 npm ci
@@ -183,27 +209,27 @@ npm run icon
 npm start
 ```
 
-合成示例演示：
+Run the synthetic demonstration:
 
 ```sh
 npm run demo
 ```
 
-安装包：
+Build installation packages:
 
 ```sh
-# 在对应 Mac 架构上构建
+# Build on a Mac with the corresponding architecture
 npm run build:mac
-# Linux x64
+# Build on Linux x64
 npm run build:linux
 ```
 
-输出在 `dist/`。GitHub Actions 在 macOS 15 arm64、macOS 15 Intel 与 Ubuntu 22.04 x64 上分别构建，并启动打包后的应用运行界面烟雾测试，全部成功后创建包含安装包和校验和的草稿 Release。推送与 `package.json` 版本一致的 `v` 标签即可触发，也可手动选择已存在的标签运行。草稿经核验后再发布。
+Packages are written to `dist/`. GitHub Actions builds on macOS 15 arm64, macOS 15 Intel, and Ubuntu 22.04 x64, then launches the packaged applications for gallery, collage-limit, SD interface, font settings, calendar input, date timeline, dropdown menus, batch-copy interface and real disk copies, production IPC, disk-export, and recoverable SD synchronization checks using synthetic fixtures. Successful assembly produces a draft Release with packages and checksums. Push a `v` tag matching `package.json`, or manually run the workflow for an existing tag. Review the draft before publishing.
 
-## 隐私与许可证
+## Privacy and licenses
 
-应用没有账户、遥测、上传照片或联网分析功能。检查更新仅连接本项目的 GitHub Releases 及安装包下载服务，不发送照片、标签或相册路径；可以在设置中关闭自动检查。公开仓库只包括源代码、图标与合成截图。`npm run privacy` 检查原片、运行时数据库、个人绝对路径及常见密钥格式；截图还需人工核对画面内容。
+The app has no account system, telemetry, photo-upload feature, or online photo analysis. Update checks contact only this project's GitHub Releases and package download services without sending photos, tags, or library paths; automatic checks can be turned off in Settings. The public repository contains source code, icons, and synthetic screenshots. `npm run privacy` checks for original media, runtime databases, personal absolute paths, and common secret formats. Screenshot contents also require visual review.
 
-应用源代码使用 [MIT License](LICENSE)。Electron、Sharp、ExifTool 等依赖保留各自许可证；ExifTool 是 Phil Harvey 的作品，采用与 Perl 相同的双授权条款，详见 [架构与第三方说明](docs/architecture.md)。
+Application source uses the [MIT License](LICENSE). Electron, Sharp, ExifTool, and other dependencies retain their own licenses. ExifTool is by Phil Harvey and uses the same dual-license terms as Perl; see [Architecture and third-party notices](docs/architecture.md).
 
-实现边界与验证记录见 [验证说明](docs/validation.md)。
+See [Validation records and limitations](docs/validation.md) for what has actually been tested and the remaining boundaries.

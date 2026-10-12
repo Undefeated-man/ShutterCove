@@ -89,7 +89,7 @@ async function main() {
     const fontSmoke = path.join(__dirname, 'font-ui-smoke.js');
     if (!fs.existsSync(fontSmoke)) throw new Error('Required font-size UI smoke script is missing');
     launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', fontSmoke]);
-    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'creative-ui-smoke.js', 'motion-ui-smoke.js', 'fullscreen-ui-smoke.js', 'update-ui-smoke.js']) {
+    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'creative-ui-smoke.js', 'motion-ui-smoke.js', 'fullscreen-ui-smoke.js', 'update-ui-smoke.js', 'gallery-language-ui-smoke.js', 'studios-i18n-ui-smoke.js', 'widgets-english-ui-smoke.js']) {
       const smoke = path.join(__dirname, script);
       if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
       launch(binary, ['--demo', '--smoke', '--compact', ...(script === 'motion-ui-smoke.js' ? ['--qa-output', path.join(temporary, 'motion-ui-output')] : []), '--qa-script', smoke]);
@@ -111,6 +111,7 @@ async function main() {
       if (completedSettings && current !== completedSettings) throw new Error('Guide replay or application restart changed unrelated settings');
       completedSettings = current;
     }
+    require('./language-native-smoke.cjs').run(binary);
     const nativePID = launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'native-smoke.js')]);
     nativeUserData = path.join(os.tmpdir(), `shiguang-smoke-${nativePID}`);
     const settings = JSON.parse(fs.readFileSync(path.join(nativeUserData, 'settings.json'), 'utf8'));

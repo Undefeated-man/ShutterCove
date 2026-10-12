@@ -1,0 +1,92 @@
+/* Language integration with synthetic photographs and the demo bridge only. */
+(async () => {
+  const checks = [], el = id => document.getElementById(id);
+  const assert = (ok, label, details) => { if (!ok) throw new Error(label+(details?' '+JSON.stringify(details):'')); checks.push(label); };
+  const frames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const wait = async predicate => { for (let i = 0; i < 240; i++) { if (predicate()) return; await new Promise(resolve => setTimeout(resolve, 25)); } throw new Error('Widget language wait timeout: '+predicate); };
+  await wait(() => window.App?.api.isDemo && App.state.settingsReady && window.I18n && window.DateCalendar && window.GlassDropdown && window.PhotoTimeline && window.Onboarding && window.UpdaterUI);
+  await I18n.ready;
+  const originalLanguage = I18n.language(), originalSettings = {...App.state.settings}, originalPhotos = App.state.photos;
+  const originalFrom = el('date-from').value, originalTo = el('date-to').value;
+  const theme = el('theme-filter'), originalOptions = [...theme.options].map(option => option.cloneNode(true)), originalTheme = theme.value;
+  const language = async value => { I18n.setLanguage(value); await frames(); };
+  const input = (node, value) => { node.value = value; node.dispatchEvent(new Event('change',{bubbles:true})); };
+  try {
+    assert(App.api.isDemo, 'English widget checks use synthetic data only');
+    await language('zh-CN');
+    input(el('date-from'), '2025-09-24');
+    DateCalendar.open(el('date-from'));
+    const calendar = el('date-calendar'), year = calendar.querySelector('.calendar-year');
+    year.focus({preventScroll:true}); year.value = '2025';
+    const startValue = el('date-from').value;
+    await language('en');
+    assert(el('date-calendar') === calendar && document.activeElement === year && year.value === '2025' && el('date-from').value === startValue, 'Language switch preserves calendar popup, year input, focus and selected ISO date');
+    assert(calendar.getAttribute('aria-label') === 'Start date calendar' && calendar.querySelector('.date-calendar-title > span').textContent === 'Choose start date', 'Calendar title and accessible dialog name are English');
+    assert(calendar.querySelector('[data-month-step="-1"]').getAttribute('aria-label') === 'Previous month' && calendar.querySelector('[data-month-step="1"]').getAttribute('aria-label') === 'Next month', 'Calendar month navigation labels are English');
+    assert(calendar.querySelector('.calendar-month').value === '8' && calendar.querySelector('.calendar-month').selectedOptions[0].textContent === 'September', 'Calendar month names use English locale without changing selection');
+    assert([...calendar.querySelectorAll('.calendar-weekdays span')].map(node=>node.textContent).join(',') === 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', 'English weekday labels retain the Monday-first calendar');
+    assert(calendar.querySelector('[data-calendar-clear]').textContent === 'Clear date' && calendar.querySelector('[data-calendar-today]').textContent === 'Today' && calendar.querySelector('.calendar-format-hint').textContent.includes('You can also type'), 'Calendar footer and typing hint are English');
+    calendar.querySelector('[data-date="2025-09-25"]').click();
+    assert(el('date-from').value === '2025-09-25' && !el('date-calendar'), 'English calendar still stores ISO date and closes on selection');
+    input(el('date-from'), ''); input(el('date-to'), '');
+    await language('zh-CN');
+    App.state.photos=Array.from({length:25},(_,index)=>({...originalPhotos[index%originalPhotos.length],id:'qa-widget-language-'+index,theme:index===10?'今天':'用户主题 '+index})); await language('zh-CN');
+    theme.value='今天'; GlassDropdown.refresh(); GlassDropdown.open(theme);
+    const menu = el('glass-dropdown'), search = menu.querySelector('input'), list = menu.querySelector('.glass-dropdown-options');
+    search.focus({preventScroll:true}); search.value=''; list.scrollTop = Math.min(120,list.scrollHeight-list.clientHeight); const top=list.scrollTop;
+    await language('en');
+    assert(el('glass-dropdown') === menu && document.activeElement === search && search.value === '' && list.scrollTop === top, 'Switching language preserves an open dropdown, search focus and scroll position');
+    assert(search.placeholder === 'Search options…' && search.getAttribute('aria-label') === 'Search dropdown options' && menu.querySelector('.glass-dropdown-hint').textContent === '↑↓ Navigate · Enter Select', 'Dropdown search and keyboard hints are English');
+    assert(theme.selectedOptions[0].textContent === '今天' && theme.nextElementSibling.querySelector('.glass-select-label').textContent === '今天' && [...menu.querySelectorAll('.glass-dropdown-option-text')].some(node=>node.textContent==='今天'), 'A user theme equal to a translation key remains unchanged in source, trigger and popup');
+    search.value='not-found'; search.dispatchEvent(new Event('input',{bubbles:true}));
+    assert(menu.querySelector('.glass-dropdown-empty').textContent === 'No matching options', 'Empty dropdown search result is English');
+    await language('zh-CN');
+    assert(document.activeElement === search && search.value === 'not-found' && menu.querySelector('.glass-dropdown-empty').textContent === '没有匹配的选项', 'Switching back keeps the dropdown query and restores its Chinese empty message');
+    GlassDropdown.close(); App.state.photos=originalPhotos; theme.replaceChildren(...originalOptions.map(option=>option.cloneNode(true))); theme.value=originalTheme; App.render();
+    await language('en'); PhotoTimeline.refresh();
+    const timeline = el('photo-timeline'), current = PhotoTimeline.current();
+    assert(timeline.getAttribute('aria-label') === 'Photo timeline: drag to jump through filtered photos', 'Timeline accessible label is English');
+    assert(/photos/.test(timeline.querySelector('.photo-timeline-bubble span').textContent) && /photo \d+ of \d+/.test(timeline.getAttribute('aria-valuetext')), 'Timeline count and accessible position are English');
+    assert(/[A-Za-z]+ \d{1,2}, \d{4}/.test(timeline.querySelector('.photo-timeline-bubble strong').textContent), 'Timeline dates use an English month name');
+    await language('zh-CN');
+    assert(PhotoTimeline.current().index === current.index && PhotoTimeline.current().id === current.id && timeline.getAttribute('aria-valuetext').includes('张'), 'Timeline switch preserves the current photo position and restores Chinese date descriptions');
+    Onboarding.show(); el('onboarding-next').click();
+    const guide = el('onboarding-dialog'), next = el('onboarding-next'); next.focus({preventScroll:true});
+    await language('en');
+    assert(el('onboarding-dialog') === guide && guide.dataset.step === '2' && document.activeElement === next, 'Language switch preserves the guide step, dialog and keyboard focus');
+    assert(el('onboarding-title').textContent === 'An existing library, or a new journey' && el('onboarding-description').textContent.includes('Use Open Library'), 'Guide heading and complete explanatory paragraph are English');
+    assert(el('onboarding-skip').textContent === 'Skip guide' && el('onboarding-prev').textContent === 'Back' && next.textContent === 'Next →' && guide.querySelector('[data-onboarding-step="1"]').getAttribute('aria-label') === 'Step 2', 'Guide buttons and accessible step labels are English');
+    assert(el('onboarding-visual').textContent.includes('Open an existing library') && el('onboarding-visual').textContent.includes('Copy from an SD card'), 'Guide visual captions are English');
+    App.applyFontScale(1.5);
+    for(let index=0;index<5;index++){
+      guide.querySelector(`[data-onboarding-step="${index}"]`).click(); await frames();
+      const rect=guide.getBoundingClientRect();
+      assert(rect.left>=-1&&rect.top>=-1&&rect.right<=innerWidth+1&&rect.bottom<=innerHeight+1&&guide.scrollWidth<=guide.clientWidth+1, `English guide step ${index+1} fits at 150 percent text size`);
+    }
+    App.applyFontScale(originalSettings.fontScale||1.2); guide.querySelector('[data-onboarding-step="1"]').click(); next.focus({preventScroll:true});
+    await language('zh-CN');
+    assert(guide.dataset.step === '2' && el('onboarding-title').textContent === '已有相册，或新的旅程' && document.activeElement === next, 'Switching back preserves guide state and focus');
+    el('onboarding-skip').click(); await wait(()=>!Onboarding.isOpen());
+    await App.openSettings(); await wait(()=>el('settings-updater')); await new Promise(resolve=>setTimeout(resolve,50)); await frames();
+    App.api.qaEmitUpdateState({status:'available',currentVersion:'1.1.0',latestVersion:'1.1.1',support:'mac',installSupported:true,notify:false,message:'',progress:null});
+    const updater = el('settings-updater'), draft = el('setting-font-scale'); draft.value='1.4'; draft.focus({preventScroll:true});
+    await language('en');
+    assert(el('settings-updater') === updater && draft.value === '1.4' && document.activeElement === draft, 'Language switch preserves the update settings section, unsaved font draft and focus',{sameSection:el('settings-updater')===updater,draft:draft.value,focus:document.activeElement?.id,draftConnected:draft.isConnected});
+    assert(el('update-status').textContent === 'New version available: v1.1.1' && el('update-action').textContent === 'Update and restart' && el('update-check').textContent === 'Check for updates', 'Update version heading and primary controls are English');
+    assert(el('update-description').textContent.includes('Download and verify') && el('update-retained').textContent.includes('Originals, favorites, tags') && el('update-demo-note').textContent.includes('No network access'), 'Update behavior, data preservation and demo notice are English');
+    App.api.qaEmitUpdateState({status:'downloading',progress:{percent:31,receivedBytes:3100000,totalBytes:10000000}}); await frames();
+    assert(el('update-status').textContent==='Downloading update' && el('update-action').textContent==='Downloading…' && el('update-progress').value===31, 'English downloading status preserves live progress');
+    await language('zh-CN');
+    assert(el('update-status').textContent==='正在下载更新' && el('update-progress').value===31 && el('update-action').disabled, 'Switching language during an update keeps progress and disabled controls intact');
+    assert(App.state.photos === originalPhotos, 'Widget localization leaves the synthetic photo collection unchanged');
+  } catch(error) { throw new Error('Widget English QA after '+checks.at(-1)+': '+error.message+'; '+error.stack); } finally {
+    DateCalendar.close(); GlassDropdown.close();
+    if (Onboarding.isOpen()) { el('onboarding-skip').click(); await wait(()=>!Onboarding.isOpen()); }
+    App.closeModal(); App.state.photos=originalPhotos; theme.replaceChildren(...originalOptions); theme.value=originalTheme;
+    el('date-from').value=originalFrom; el('date-to').value=originalTo;
+    App.state.settings={...originalSettings}; await App.api.saveSettings({onboardingCompleted:originalSettings.onboardingCompleted});
+    App.api.qaEmitUpdateState({status:'idle',progress:null,latestVersion:null,notify:false});
+    I18n.setLanguage(originalLanguage); App.applyFontScale(originalSettings.fontScale||1.2); App.render();
+  }
+  return {passed:checks.length,checks,viewport:{width:innerWidth,height:innerHeight}};
+})();

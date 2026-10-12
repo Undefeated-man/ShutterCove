@@ -1,6 +1,7 @@
 'use strict';
 (() => {
   const MAX_ZOOM = 16;
+  const t = (text, values = {}) => window.I18n?.t(text, values) ?? text.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? '{' + key + '}'));
   let pendingFullscreen = null;
   let windowTransition = Promise.resolve();
   function mountFullscreen(root) {
@@ -11,7 +12,7 @@
     const formats = previews.map(block => block.querySelector('img')?.id === 'preview-raw' ? 'raw' : 'jpeg');
     if (!formats.length) return { register() {}, dispose() {} };
     const footerHint = modal.querySelector('.keyboard-hint');
-    if (footerHint) footerHint.textContent = '← → 切换照片 · F 全屏 · Esc 关闭';
+    if (footerHint) footerHint.textContent = t('← → 切换照片 · F 全屏 · Esc 关闭');
     const buttons = new Map();
     let selected = formats[0], session = null, disposed = false, handoff = false;
     const toolbar = document.createElement('div');
@@ -20,21 +21,22 @@
     const title = document.createElement('div');
     title.className = 'photo-fullscreen-title';
     const name = document.createElement('strong');
-    name.textContent = modal.querySelector('.modal-header h3')?.textContent || '照片';
+    name.textContent = modal.querySelector('.modal-header h3')?.textContent || t('照片');
+    name.setAttribute('data-i18n-ignore', '');
     const subtitle = document.createElement('span');
-    subtitle.textContent = '← → 切换照片 · F / Esc 返回详情';
+    subtitle.textContent = t('← → 切换照片 · F / Esc 返回详情');
     title.append(name, subtitle);
     const tabs = document.createElement('div');
     tabs.className = 'photo-fullscreen-formats';
     tabs.setAttribute('role', 'group');
-    tabs.setAttribute('aria-label', '全屏预览格式');
+    tabs.setAttribute('aria-label', t('全屏预览格式'));
     const formatButtons = new Map();
     for (const format of formats) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'photo-fullscreen-format';
       button.dataset.fullscreenFormat = format;
-      button.textContent = format === 'raw' ? 'CR3 预览' : 'JPEG';
+      button.textContent = format === 'raw' ? t('CR3 预览') : 'JPEG';
       button.addEventListener('click', () => { selected = format; render(true); focusFrame(); });
       formatButtons.set(format, button);
       tabs.append(button);
@@ -45,9 +47,9 @@
     const next = document.createElement('button');
     const exit = document.createElement('button');
     for (const button of [previous, next, exit]) { button.type = 'button'; button.className = 'photo-fullscreen-action'; }
-    previous.dataset.fullscreenNavigate = '-1'; previous.textContent = '←'; previous.setAttribute('aria-label', '全屏上一张照片');
-    next.dataset.fullscreenNavigate = '1'; next.textContent = '→'; next.setAttribute('aria-label', '全屏下一张照片');
-    exit.dataset.fullscreenExit = ''; exit.textContent = '退出全屏';
+    previous.dataset.fullscreenNavigate = '-1'; previous.textContent = '←'; previous.setAttribute('aria-label', t('全屏上一张照片'));
+    next.dataset.fullscreenNavigate = '1'; next.textContent = '→'; next.setAttribute('aria-label', t('全屏下一张照片'));
+    exit.dataset.fullscreenExit = ''; exit.textContent = t('退出全屏');
     previous.addEventListener('click', () => navigate(-1));
     next.addEventListener('click', () => navigate(1));
     exit.addEventListener('click', () => leave());
@@ -61,6 +63,14 @@
     };
     const render = focus => {
       const active = isActive();
+      if (footerHint) footerHint.textContent = t('← → 切换照片 · F 全屏 · Esc 关闭');
+      subtitle.textContent = t('← → 切换照片 · F / Esc 返回详情');
+      tabs.setAttribute('aria-label', t('全屏预览格式'));
+      previous.setAttribute('aria-label', t('全屏上一张照片'));
+      next.setAttribute('aria-label', t('全屏下一张照片'));
+      exit.textContent = t('退出全屏');
+      for (const [format, button] of formatButtons) button.textContent = format === 'raw' ? t('CR3 预览') : 'JPEG';
+      for (const [format, button] of buttons) { button.textContent = t('⛶ 全屏'); button.title = t('全屏查看这张照片 · F'); button.setAttribute('aria-label', t('{format} 全屏查看', { format: format === 'raw' ? t('CR3 内嵌预览') : 'JPEG' })); }
       modal.classList.toggle('is-photo-fullscreen', active);
       root.classList.toggle('is-photo-fullscreen-backdrop', active);
       modal.dataset.photoFullscreen = String(active);
@@ -83,7 +93,7 @@
       if (restore && current.hasSnapshot && typeof api?.setPhotoFullscreen === 'function') {
         await api.setPhotoFullscreen({ enabled: current.before });
       }
-    }).catch(error => { if (!disposed) window.App?.toast(error.message || '窗口恢复失败', true); });
+    }).catch(error => { if (!disposed) window.App?.toast(error.message || t('窗口恢复失败'), true); });
     function leave(restore = true) {
       const current = session;
       if (!current) return;
@@ -114,7 +124,7 @@
         if (!disposed && session === current && current.active) render(true);
       }).catch(error => {
         current.pending = false;
-        if (!disposed && session === current) { leave(); window.App?.toast(error.message || '无法进入全屏', true); }
+        if (!disposed && session === current) { leave(); window.App?.toast(error.message || t('无法进入全屏'), true); }
       });
     }
     function navigate(direction) {
@@ -140,6 +150,7 @@
       }
     };
     window.addEventListener('keydown', keys, true);
+    const removeLanguage = window.I18n?.onChange?.(() => { if (!disposed) render(false); });
     const removeWindowListener = api?.onPhotoFullscreen?.(state => {
       // The OS can leave fullscreen through its own controls. Do not reopen it
       // while restoring the detail dialog, or close the photo behind it.
@@ -156,9 +167,9 @@
         const button = document.createElement('button');
         button.type = 'button'; button.className = 'photo-viewer-fullscreen';
         button.dataset.viewerFullscreen = format;
-        button.textContent = '⛶ 全屏';
-        button.title = '全屏查看这张照片 · F';
-        button.setAttribute('aria-label', `${format === 'raw' ? 'CR3 内嵌预览' : 'JPEG'} 全屏查看`);
+        button.textContent = t('⛶ 全屏');
+        button.title = t('全屏查看这张照片 · F');
+        button.setAttribute('aria-label', t('{format} 全屏查看', { format: format === 'raw' ? t('CR3 内嵌预览') : 'JPEG' }));
         button.addEventListener('click', () => enter(format));
         frame.addEventListener('focus', () => { if (!isActive()) selected = format; });
         controls.insertBefore(button, controls.querySelector('.photo-viewer-hint'));
@@ -169,6 +180,7 @@
         if (disposed) return;
         disposed = true;
         window.removeEventListener('keydown', keys, true);
+        removeLanguage?.();
         removeWindowListener?.();
         if (isActive() && handoff) {
           const current = session;
@@ -203,24 +215,24 @@
       const status = document.createElement('output');
       status.className = 'photo-viewer-zoom';
       status.id = `zoom-${format}`;
-      status.setAttribute('aria-label', `${label} 相对适合窗口的缩放比例`);
+      status.setAttribute('aria-label', t('{format} 相对适合窗口的缩放比例', { format: t(label) }));
       const reset = document.createElement('button');
       reset.className = 'photo-viewer-reset';
       reset.type = 'button';
       reset.dataset.viewerReset = format;
-      reset.textContent = '适合窗口';
-      reset.setAttribute('aria-label', `${label} 重置为适合窗口`);
+      reset.textContent = t('适合窗口');
+      reset.setAttribute('aria-label', t('{format} 重置为适合窗口', { format: t(label) }));
       const hint = document.createElement('span');
       hint.className = 'photo-viewer-hint';
       hint.id = `zoom-hint-${format}`;
-      hint.textContent = 'Alt / Option + 滚轮缩放 · 放大后拖动';
+      hint.textContent = t('Alt / Option + 滚轮缩放 · 放大后拖动');
       controls.append(status, reset, hint);
       fullscreen.register(format, controls, frame);
       frame.after(controls);
       frame.classList.add('photo-viewer-frame');
       frame.tabIndex = 0;
       frame.setAttribute('role', 'group');
-      frame.setAttribute('aria-label', `${label} 图片预览`);
+      frame.setAttribute('aria-label', t('{format} 图片预览', { format: t(label) }));
       frame.setAttribute('aria-describedby', hint.id);
       frame.dataset.viewerFormat = format;
       frame.dataset.maxZoom = String(MAX_ZOOM);
@@ -239,6 +251,11 @@
         frame.classList.remove('is-panning');
       };
       const render = () => {
+        status.setAttribute('aria-label', t('{format} 相对适合窗口的缩放比例', { format: t(label) }));
+        reset.setAttribute('aria-label', t('{format} 重置为适合窗口', { format: t(label) }));
+        frame.setAttribute('aria-label', t('{format} 图片预览', { format: t(label) }));
+        reset.textContent = t('适合窗口');
+        hint.textContent = t('Alt / Option + 滚轮缩放 · 放大后拖动');
         const limitX = Math.max(0, (baseWidth * zoom - width) / 2);
         const limitY = Math.max(0, (baseHeight * zoom - height) / 2);
         panX = clamp(panX, limitX);
@@ -254,9 +271,9 @@
         frame.style.touchAction = zoom > 1 ? 'none' : 'auto';
         status.textContent = `${Math.round(zoom * 100)}%`;
         if (previewLabel) previewLabel.textContent = zoom > 1
-          ? (format === 'raw' ? '内嵌预览 · 放大细节' : '放大细节 · 拖动查看') : fitLabel;
-        status.title = '相对整张照片适合窗口的比例';
-        reset.title = zoom > 1 ? '恢复完整照片，也可双击预览' : '正在完整显示照片';
+          ? (format === 'raw' ? t('内嵌预览 · 放大细节') : t('放大细节 · 拖动查看')) : fitLabel ? t(fitLabel) : fitLabel;
+        status.title = t('相对整张照片适合窗口的比例');
+        reset.title = zoom > 1 ? t('恢复完整照片，也可双击预览') : t('正在完整显示照片');
       };
       const fit = () => {
         endDrag();
@@ -334,6 +351,7 @@
           zoomAt(zoom * (event.key === '-' ? 1 / 1.25 : 1.25), box.left + box.width / 2, box.top + box.height / 2);
         }
       });
+      const removeLanguage = window.I18n?.onChange?.(() => { if (!disposed) render(); });
       const resize = new ResizeObserver(measure);
       resize.observe(frame);
       measure();
@@ -341,6 +359,7 @@
         disposed = true;
         endDrag();
         resize.disconnect();
+        removeLanguage?.();
         listeners.forEach(remove => remove());
         controls.remove();
       });

@@ -1,6 +1,8 @@
 'use strict';
 (() => {
   const app = window.App;
+  const t = (value, replacements) => window.I18n?.t(value, replacements) ?? value;
+  const language = () => window.I18n?.language() === 'en' ? 'en' : 'zh-CN';
   const scroll = document.getElementById('main-scroll');
   const grid = document.getElementById('photo-grid');
   const panel = document.querySelector('.main-panel');
@@ -9,9 +11,10 @@
   const rail = document.createElement('div');
   rail.id = 'photo-timeline';
   rail.className = 'photo-timeline';
+  rail.dataset.i18nIgnore = 'true';
   rail.tabIndex = 0;
   rail.setAttribute('role', 'slider');
-  rail.setAttribute('aria-label', '照片时间轴，拖动快速跳转全部筛选照片');
+  rail.setAttribute('aria-label', t('照片时间轴，拖动快速跳转全部筛选照片'));
   rail.setAttribute('aria-orientation', 'vertical');
   rail.innerHTML = '<div class="photo-timeline-track"><span class="photo-timeline-tick first"></span><span class="photo-timeline-tick last"></span><div class="photo-timeline-handle"></div></div><span class="photo-timeline-end first"></span><span class="photo-timeline-end last"></span><div class="photo-timeline-bubble"><strong></strong><span></span></div>';
   panel.append(rail);
@@ -25,8 +28,9 @@
   const photos = () => app.state.filtered || [];
   const clamp = index => Math.max(0, Math.min(Math.max(0, photos().length - 1), Math.round(Number(index) || 0)));
   const pageStart = () => Math.max(0, (Number(app.state.visible) || PAGE) - PAGE);
-  const shortDate = date => /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date.slice(0, 7).replace('-', ' / ') : '日期未知';
-  const fullDate = date => /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$1 年 $2 月 $3 日') : '日期未知';
+  const asDate = value => new Date(`${value}T12:00:00`);
+  const shortDate = date => /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? (language()==='en'?new Intl.DateTimeFormat('en', { year:'numeric',month:'short' }).format(asDate(date)):date.slice(0,7).replace('-', ' / ')) : t('日期未知');
+  const fullDate = date => /^\d{4}-\d{2}-\d{2}$/.test(date || '') ? (language()==='en'?new Intl.DateTimeFormat('en', { year:'numeric',month:'long',day:'numeric' }).format(asDate(date)):date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, '$1 年 $2 月 $3 日')) : t('日期未知');
   const chronological = () => app.state.view !== 'similar' && (document.getElementById('sort-order')?.value || 'date-desc').startsWith('date-');
 
   function display(index, preview = false) {
@@ -39,11 +43,11 @@
     if (!preview || dragging) handle.style.transform = `translateY(${fraction * Math.max(0, trackHeight - 28)}px)`;
     bubble.style.top = `${Math.max(30, Math.min(rail.clientHeight - 30, y))}px`;
     bubble.querySelector('strong').textContent = fullDate(list[index].date);
-    bubble.querySelector('span').textContent = `${(index + 1).toLocaleString()} / ${list.length.toLocaleString()} 张${chronological() ? '' : ' · 当前排序位置'}`;
+    bubble.querySelector('span').textContent = t('{index} / {total} 张{order}', {index:(index+1).toLocaleString(language()),total:list.length.toLocaleString(language()),order:chronological()?'':t(' · 当前排序位置')});
     rail.setAttribute('aria-valuemin', '0');
     rail.setAttribute('aria-valuemax', String(Math.max(0, list.length - 1)));
     rail.setAttribute('aria-valuenow', String(preview ? currentIndex : index));
-    rail.setAttribute('aria-valuetext', `${fullDate(list[index].date)}，第 ${index + 1} 张，共 ${list.length} 张`);
+    rail.setAttribute('aria-valuetext', t('{date}，第 {index} 张，共 {total} 张', {date:fullDate(list[index].date),index:index+1,total:list.length}));
     rail.dataset.index = String(preview ? currentIndex : index);
     rail.dataset.previewIndex = String(index);
   }
@@ -70,9 +74,9 @@
     if (!list.length) { currentIndex = 0; pinnedIndex = null; return; }
     first.textContent = shortDate(list[0].date);
     last.textContent = shortDate(list.at(-1).date);
-    first.title = `当前排列的第一张 · ${fullDate(list[0].date)}`;
-    last.title = `当前排列的最后一张 · ${fullDate(list.at(-1).date)}`;
-    rail.title = chronological() ? '拖动时间轴，快速跳到一段回忆' : '按当前排列跳转，气泡显示对应照片日期';
+    first.title = t('当前排列的第一张 · {date}', {date:fullDate(list[0].date)});
+    last.title = t('当前排列的最后一张 · {date}', {date:fullDate(list.at(-1).date)});
+    rail.title = t(chronological() ? '拖动时间轴，快速跳到一段回忆' : '按当前排列跳转，气泡显示对应照片日期');
     const signature = `${list.length}:${list[0]?.id}:${list.at(-1)?.id}:${app.state.view}:${document.getElementById('sort-order')?.value}`;
     if (signature !== previousSignature) { previousSignature = signature; pinnedIndex = null; previewIndex = null; }
     if (!dragging && !jumping) scrollPosition();
@@ -165,5 +169,6 @@
     jump,
     current: () => ({ index: currentIndex, previewIndex, date: photos()[currentIndex]?.date || null, id: photos()[currentIndex]?.id || null, total: photos().length, page: Math.floor(currentIndex / PAGE) + 1 }),
   };
+  window.I18n?.onChange(() => { rail.setAttribute('aria-label', t('照片时间轴，拖动快速跳转全部筛选照片')); refresh(); });
   refresh();
 })();

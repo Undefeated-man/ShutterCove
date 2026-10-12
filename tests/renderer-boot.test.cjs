@@ -14,12 +14,12 @@ function boot({getSettings,scan,missingElement,bridge=true}={}) {
   const nodes=new Map(),errors=[],style=new Map();
   const node = id => {
     if(id===missingElement)return null;
-    if(!nodes.has(id))nodes.set(id,{id,style:{},hidden:false,value:'',listeners:new Map(),children:[],addEventListener(type,fn){this.listeners.set(type,fn);},querySelectorAll(){return[];},append(child){this.children.push(child);},remove(){}});
+    if(!nodes.has(id))nodes.set(id,{id,style:{},hidden:false,value:'',listeners:new Map(),children:[],addEventListener(type,fn){this.listeners.set(type,fn);},querySelectorAll(){return[];},append(child){this.children.push(child);},remove(){},setAttribute(){},removeAttribute(){},getAttribute(){return null;}});
     return nodes.get(id);
   };
   let settingsReads=0,scanReads=0;
   const api={getSettings:()=>{settingsReads++;return getSettings();},scan:root=>{scanReads++;return scan(root);},onProgress:()=>()=>{}};
-  const window={timeMachine:bridge?api:undefined};
+  const window={timeMachine:bridge?api:undefined,I18n:{ready:Promise.resolve(),setLanguage(){},t:value=>value,message:value=>value},LanguageUI:{ensureChoice:async settings=>settings}};
   const document={getElementById:node,documentElement:{style:{setProperty(key,value){style.set(key,value);}}},createElement:()=>node(`created-${nodes.size}`),addEventListener(){},dispatchEvent(){}};
   const context=vm.createContext({window,document,location:{search:''},URLSearchParams,setTimeout:()=>0,console:{error:error=>errors.push(error)}});
   let startupError;

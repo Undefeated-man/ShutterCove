@@ -8,6 +8,8 @@ const { promisify } = require('node:util');
 const { createReadStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const { PhotoLibrary } = require('./library.cjs');
+const { languageDefaults, languagePatch } = require('./language-settings.cjs');
+const { nativeMessage, localizedDialog } = require('./ui-language.cjs');
 const { prepareImageOutput } = require('./image-output.cjs');
 const { GifService } = require('./gif-service.cjs');
 const { UpdateService, waitForBootReady } = require('./updater.cjs');
@@ -29,6 +31,7 @@ const copyDestinations = new Set();
 const demo = process.argv.includes('--demo');
 const screenshotIndex = process.argv.indexOf('--screenshot');
 const smoke = process.argv.includes('--smoke');
+const qaFirstLanguage = smoke && process.argv.includes('--qa-first-language');
 const screenshotPath = screenshotIndex >= 0 ? process.argv[screenshotIndex + 1] : null;
 const qaIndex = process.argv.indexOf('--qa-script');
 const qaScript = qaIndex >= 0 ? process.argv[qaIndex + 1] : null;
@@ -101,8 +104,10 @@ async function persistSettings(patch = {}) {
     if (typeof patch.checkUpdatesAutomatically !== 'boolean') throw new Error('无效的自动更新检查设置');
     next.checkUpdatesAutomatically = patch.checkUpdatesAutomatically;
   }
+  Object.assign(next, languagePatch(patch));
   await atomicJSON(settingsPath, next);
   settings = next;
+  if (Object.hasOwn(patch, 'language')) { setApplicationMenu(); win?.setTitle(nativeMessage('拾光屿 · 摄影回忆时光机', settings.language)); }
   return publicSettings();
 }
 async function approvedFolder(folder) {
@@ -119,7 +124,7 @@ function mediaURL(file) {
 }
 async function diskResponse(file, media = false) {
   const stat = await fs.stat(file);
-  const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml' }[path.extname(file).toLowerCase()] || 'application/octet-stream';
+  const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json; charset=utf-8' }[path.extname(file).toLowerCase()] || 'application/octet-stream';
   return new Response(Readable.toWeb(createReadStream(file)), { headers: { 'Content-Type': mime, 'Content-Length': String(stat.size), 'X-Content-Type-Options': 'nosniff', ...(media ? { 'Access-Control-Allow-Origin': 'memory-app://app', 'Cache-Control': 'private, max-age=3600' } : {}) } });
 }
 function handle(name, callback) {
@@ -129,7 +134,7 @@ function handle(name, callback) {
     const tracks = !['getUpdateState', 'checkForUpdates', 'downloadUpdate', 'installUpdate', 'getSettings'].includes(name);
     const operation = Promise.resolve().then(() => callback(args));
     if (tracks) activeOperations.add(operation);
-    try { return await operation; } finally { activeOperations.delete(operation); }
+    try { return await operation; } catch(error) { const localized = nativeMessage(error.message, settings.language); throw new Error(localized); } finally { activeOperations.delete(operation); }
   });
 }
 function bindAPI() {
@@ -149,7 +154,7 @@ function bindAPI() {
     if (qaOutput) {
       await fs.mkdir(path.resolve(qaOutput), { recursive: true });
       chosen = { canceled: false, filePath: path.join(path.resolve(qaOutput), name) };
-    } else chosen = await dialog.showSaveDialog(win, { title: '保存 GIF 动图', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: [{ name:'GIF 动图', extensions:['gif'] }] });
+    } else chosen = await localizedDialog(dialog, 'showSaveDialog', win, settings.language, { title: '保存 GIF 动图', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: [{ name:'GIF 动图', extensions:['gif'] }] });
     if (chosen.canceled) return { canceled:true };
     return gifService.save(args?.token, chosen.filePath);
   });
@@ -180,7 +185,7 @@ function bindAPI() {
   handle('installUpdate', () => updater.installUpdate());
   handle('chooseFolder', async args => {
     const title = typeof args?.title === 'string' && args.title.trim() ? args.title.slice(0, 120) : '选择照片文件夹';
-    const result = await dialog.showOpenDialog(win, { title, properties: ['openDirectory', ...(args?.createDirectory === true ? ['createDirectory'] : [])] });
+    const result = await localizedDialog(dialog, 'showOpenDialog', win, settings.language, { title, properties: ['openDirectory', ...(args?.createDirectory === true ? ['createDirectory'] : [])] });
     if (result.canceled) return null;
     const stat = await fs.lstat(result.filePaths[0]);
     if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('请选择真实文件夹，不能选择符号链接');
@@ -190,7 +195,7 @@ function bindAPI() {
   });
   handle('chooseEditor', async editor => {
     if (!['photoshop', 'lightroom'].includes(editor)) throw new Error('未知修图软件');
-    const result = await dialog.showOpenDialog(win, { title: `选择 ${editor === 'photoshop' ? 'Photoshop' : 'Lightroom'} 应用`, properties: ['openFile'], ...(process.platform === 'darwin' ? { filters: [{ name: '应用', extensions: ['app'] }] } : {}) });
+    const result = await localizedDialog(dialog, 'showOpenDialog', win, settings.language, { title: `选择 ${editor === 'photoshop' ? 'Photoshop' : 'Lightroom'} 应用`, properties: ['openFile'], ...(process.platform === 'darwin' ? { filters: [{ name: '应用', extensions: ['app'] }] } : {}) });
     if (result.canceled) return null;
     const chosen = await fs.realpath(result.filePaths[0]);
     await saveSettings({ editorPaths: { [editor]: chosen } });
@@ -289,7 +294,7 @@ function bindAPI() {
   handle('trash', async ({ ids, format = 'both' }) => {
     const files = await library.authorizePaths(ids, format);
     if (!files.length) return { canceled: true };
-    const choice = await dialog.showMessageBox(win, { type: 'warning', title: '移到废纸篓', message: `将 ${ids.length} 组照片、共 ${files.length} 个原文件移到废纸篓？`, detail: '包含选中的 JPEG 和 CR3。可以从系统废纸篓恢复。', buttons: ['取消', '移到废纸篓'], defaultId: 0, cancelId: 0 });
+    const choice = await localizedDialog(dialog, 'showMessageBox', win, settings.language, { type: 'warning', title: '移到废纸篓', message: `将 ${ids.length} 组照片、共 ${files.length} 个原文件移到废纸篓？`, detail: '包含选中的 JPEG 和 CR3。可以从系统废纸篓恢复。', buttons: ['取消', '移到废纸篓'], defaultId: 0, cancelId: 0 });
     if (choice.response !== 1) return { canceled: true };
     const trashed = [], failed = [];
     for (const file of files) {
@@ -307,7 +312,7 @@ function bindAPI() {
     if (overwriteId) {
       target = (await library.authorizePaths([overwriteId], 'jpeg'))[0];
       if (!target) throw new Error('只能覆盖 JPEG，CR3 请交给专业修图软件');
-      const result = await dialog.showMessageBox(win, { type: 'warning', message: '覆盖原 JPEG？', detail: '此操作会替换原文件，画布导出的照片不保留原 EXIF。建议另存为。', buttons: ['取消', '覆盖'], defaultId: 0, cancelId: 0 });
+      const result = await localizedDialog(dialog, 'showMessageBox', win, settings.language, { type: 'warning', message: '覆盖原 JPEG？', detail: '此操作会替换原文件，画布导出的照片不保留原 EXIF。建议另存为。', buttons: ['取消', '覆盖'], defaultId: 0, cancelId: 0 });
       if (result.response !== 1) return { canceled: true };
     } else {
       const name = path.basename(suggestedName).replace(/[\x00-\x1f]/g, '');
@@ -315,7 +320,7 @@ function bindAPI() {
       if (qaOutput) {
         await fs.mkdir(path.resolve(qaOutput), { recursive: true });
         chosen = { canceled: false, filePath: path.join(path.resolve(qaOutput), name) };
-      } else chosen = await dialog.showSaveDialog(win, { title: '保存新的照片', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: preserveEncoding ? [{ name: 'JPEG 分享成品', extensions: ['jpg','jpeg'] }] : [{ name: 'JPEG 照片', extensions: ['jpg'] }, { name: 'PNG 图片', extensions: ['png'] }] });
+      } else chosen = await localizedDialog(dialog, 'showSaveDialog', win, settings.language, { title: '保存新的照片', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: preserveEncoding ? [{ name: 'JPEG 分享成品', extensions: ['jpg','jpeg'] }] : [{ name: 'JPEG 照片', extensions: ['jpg'] }, { name: 'PNG 图片', extensions: ['png'] }] });
       if (chosen.canceled) return { canceled: true };
       target = chosen.filePath;
       if (/\.cr3$/i.test(target)) throw new Error('不能覆盖 CR3 原片');
@@ -328,11 +333,22 @@ function bindAPI() {
     return { canceled: false, path: target };
   });
 }
+function setApplicationMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    ...(process.platform === 'darwin' ? [{ label: '拾光屿', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
+    { label: nativeMessage('编辑', settings.language), submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
+    { label: nativeMessage('窗口', settings.language), submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }] }
+  ]));
+}
 async function start() {
   await app.whenReady();
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
   settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2, checkUpdatesAutomatically: true };
-  try { settings = { ...settings, ...JSON.parse(await fs.readFile(settingsPath, 'utf8')) }; } catch {}
+  let saved = {}, existing = false;
+  try { saved = JSON.parse(await fs.readFile(settingsPath, 'utf8')); existing = true; } catch {}
+  settings = { ...settings, ...saved, ...languageDefaults(saved, existing) };
+  // Ordinary isolated QA preserves historical Chinese fixtures; first-launch QA uses production defaults.
+  if (smoke && !qaFirstLanguage && !existing) Object.assign(settings, { language: 'zh-CN', languageChosen: true });
   // Existing libraries can revisit the guide in Settings without interrupting an upgrade.
   settings.onboardingCompleted = typeof settings.onboardingCompleted === 'boolean' ? settings.onboardingCompleted : Boolean(settings.libraryRoot);
   settings.fontScale = typeof settings.fontScale === 'number' && Number.isFinite(settings.fontScale) ? Math.min(1.5, Math.max(1, settings.fontScale)) : 1.2;
@@ -376,7 +392,7 @@ async function start() {
   bindAPI();
   function createWindow() {
     const compact = process.argv.includes('--compact');
-    win = new BrowserWindow({ title: '拾光屿 · 摄影回忆时光机', width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
+    win = new BrowserWindow({ title: nativeMessage('拾光屿 · 摄影回忆时光机', settings.language), width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     for (const event of ['enter-full-screen','leave-full-screen']) win.on(event, () => win?.webContents.send('memory:photo-fullscreen', { enabled: win.isFullScreen() }));
     win.webContents.on('will-navigate', (event, url) => { if (!url.startsWith('memory-app://app/')) event.preventDefault(); });
@@ -411,11 +427,7 @@ async function start() {
       finally { if (smoke) { closing = true; await gifService.close(); await library.close(); app.exit(exitStatus); } }
     });
   }
-  Menu.setApplicationMenu(Menu.buildFromTemplate([
-    ...(process.platform === 'darwin' ? [{ label: '拾光屿', submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
-    { label: '编辑', submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
-    { label: '窗口', submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }] }
-  ]));
+  setApplicationMenu();
   createWindow();
   app.on('activate', () => { if (!win) createWindow(); });
 }

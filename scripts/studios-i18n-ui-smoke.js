@@ -1,0 +1,85 @@
+/* Real canvas workbenches with generated photographs only. Language changes
+ * must translate controls without translating user text or losing composition. */
+(async () => {
+  const checks = [], el = id => document.getElementById(id);
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const frames = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const assert = (ok, label, details) => { if (!ok) throw new Error(label + (details ? ' ' + JSON.stringify(details) : '')); checks.push(label); };
+  const wait = async fn => { for (let i = 0; i < 500; i++) { if (fn()) return; await pause(20); } throw new Error('Studio language timeout: ' + fn); };
+  await wait(() => window.App?.api.isDemo && window.I18n && App.state.photos.length && !App.state.scanning && App.state.settingsReady);
+  await I18n.ready;
+  const savedLanguage = await App.api.getSettings();
+  await App.api.saveSettings({ language: 'en', languageChosen: true });
+  const api = App.api, saved = [], original = { language: I18n.language(), thumbnail: App.thumbnail, source: api.source, save: api.saveImage, getFullscreen: api.getPhotoFullscreen, setFullscreen: api.setPhotoFullscreen };
+  const photos = App.state.photos.slice(0, 4).map((photo, i) => ({ ...photo, name: ['退出全屏', '调整方向', '海报标题', '文字内容'][i], jpegPath: '/synthetic/locale-' + i + '.jpg', rawPath: null }));
+  const sources = new Map(photos.map((photo, index) => {
+    const c = document.createElement('canvas'); c.width = index % 2 ? 400 : 600; c.height = index % 2 ? 600 : 400;
+    const x = c.getContext('2d'); x.fillStyle = ['#ae573e', '#e1bd62', '#69908d', '#506650'][index]; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#f7f0e2'; x.fillRect(c.width * .1, c.height * .1, c.width * .2, c.height * .2);
+    return [photo.id, c.toDataURL('image/jpeg', .95)];
+  }));
+  const change = (id, value, kind = 'change') => { el(id).value = String(value); el(id).dispatchEvent(new Event(kind, { bubbles: true })); };
+  const language = async value => { I18n.setLanguage(value); await frames(); };
+  const output = async () => { const count = saved.length; el('collage-export').click(); await wait(() => saved.length === count + 1 && !el('collage-export').disabled); return saved.at(-1).dataUrl; };
+  let viewerCleanup;
+  try {
+    App.thumbnail = async photo => sources.get(photo.id);
+    api.source = async ({ id }) => { if (!sources.has(id)) throw new Error('Non-synthetic language fixture requested'); return sources.get(id); };
+    api.saveImage = async args => { saved.push(args); return { canceled: true }; };
+    await language('en');
+    await Studio.collage(photos); await frames();
+    assert(el('collage-fit').textContent === 'Fit to window' && el('collage-compose').textContent === 'Frame photo', 'Collage buttons are English');
+    assert([...el('collage-template').options].every(option => !/[\u4e00-\u9fff]/.test(option.text)), 'Every collage template is English');
+    assert(document.querySelector('.collage-studio .modal-header p').textContent.includes('4 photos'), 'Collage count and help subtitle are English');
+    assert(el('collage-title').value === 'Keep a moment. Make it timeless.', 'New English collage gets an English editable default title');
+    assert(JSON.stringify([...document.querySelectorAll('.collage-thumb img')].map(img => img.alt)) === JSON.stringify(photos.map(photo => photo.name)), 'Chinese photo names matching UI dictionary keys remain unchanged');
+    change('collage-width', 800); change('collage-template', 'board'); change('collage-photo-zoom', 137, 'input'); change('collage-photo-angle', 23, 'input'); change('collage-title', '退出全屏', 'input'); await frames();
+    assert(el('collage-photo-heading').textContent === 'Photo 1 · Freeform board' && el('collage-photo-help').textContent.startsWith('Drag photos'), 'Dynamic selected-photo labels and help are English');
+    const before = await output(), canvas = el('collage-canvas').toDataURL();
+    const box = el('collage-preview').getBoundingClientRect(); el('collage-preview').dispatchEvent(new WheelEvent('wheel', { altKey: true, deltaY: -130, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2, bubbles: true, cancelable: true }));
+    const zoom = el('collage-preview').dataset.zoom;
+    await language('zh-CN');
+    assert(el('collage-fit').textContent === '适合窗口' && el('collage-photo-heading').textContent === '第 1 张 · 自由贴板', 'Open collage switches static and dynamic controls back to Chinese');
+    assert(el('collage-title').value === '退出全屏' && el('collage-photo-angle').value === '23' && el('collage-photo-zoom').value === '137', 'Language switching preserves user title, per-photo angle and scale');
+    assert(el('collage-canvas').toDataURL() === canvas && el('collage-preview').dataset.zoom === zoom, 'Language switching leaves preview pixels and canvas magnification intact');
+    await language('en');
+    assert(el('collage-status').textContent.includes('4 photos') && el('collage-photo-heading').textContent === 'Photo 1 · Freeform board', 'Dynamic collage status returns to English');
+    assert(await output() === before, 'Language round trip preserves the actual exported JPEG byte for byte');
+    App.closeModal();
+    await Studio.edit(photos[0]); await frames();
+    assert(el('rotate-left').textContent === '↶ Rotate left' && el('edit-status').textContent.includes('Choose a tool'), 'Photo editing actions and status are English');
+    assert(document.querySelector('.modal-header p').textContent.startsWith('退出全屏 · Full-resolution editing'), 'Edit subtitle retains the Chinese filename and translates surrounding chrome');
+    el('crop-tool').click(); const editPixels = el('edit-canvas').toDataURL(); await language('zh-CN');
+    assert(el('edit-status').textContent.includes('拖动框选') && el('edit-canvas').toDataURL() === editPixels, 'Editor switches language without touching photo pixels or chosen tool');
+    App.closeModal(); await language('en');
+    await MotionStudio.open(photos); await frames();
+    assert(el('motion-add-speech').textContent === '＋ Speech bubble' && el('motion-save').textContent === 'Save animated GIF', 'GIF / sticker controls are English');
+    assert([...el('motion-colors').options].every(option => !/[\u4e00-\u9fff]/.test(option.text)), 'GIF compression palette options are English');
+    assert(el('motion-frame-label').textContent.startsWith('Editing frame 1') && el('motion-status').textContent.includes('4 frames'), 'GIF dynamic frame count and timing are English');
+    el('motion-add-text').click(); change('motion-text', '调整方向', 'input'); change('motion-font', 6, 'input'); await frames();
+    const motionPixels = el('motion-canvas').toDataURL(), motionNames = [...document.querySelectorAll('.motion-film-frame img')].map(img => img.alt);
+    await language('zh-CN');
+    assert(el('motion-text').value === '调整方向' && el('motion-overlays').textContent.includes('调整方向'), 'Captions matching UI keys stay as user-written Chinese');
+    assert(el('motion-canvas').toDataURL() === motionPixels && el('motion-font').value === '6', 'GIF language changes preserve frame pixels and caption font');
+    await language('en');
+    assert(el('motion-frame-label').textContent.startsWith('Editing frame 1') && el('motion-text').value === '调整方向', 'Open GIF editor restores English labels while retaining caption content');
+    assert(JSON.stringify([...document.querySelectorAll('.motion-film-frame img')].map(img => img.alt)) === JSON.stringify(motionNames), 'Filmstrip photo names and order survive a language round trip');
+    App.closeModal();
+    let native = false; api.getPhotoFullscreen = async () => ({ enabled: native }); api.setPhotoFullscreen = async ({ enabled }) => ({ enabled: native = enabled });
+    const detail = App.modal({ title: '退出全屏', titleIsData: true, large: true, body: '<div class="pair-previews"><div class="preview-block"><div class="preview-label"><span>JPEG</span><span>适合窗口</span></div><div class="preview-frame"><img id="preview-jpeg" alt="退出全屏"></div></div></div>', footer: '<span class="keyboard-hint"></span>', onClose: () => viewerCleanup?.() });
+    detail.querySelector('.modal').classList.add('photo-detail'); viewerCleanup = PhotoViewer.mount(detail); el('preview-jpeg').src = sources.get(photos[0].id); await wait(() => el('preview-jpeg').naturalWidth > 0); await frames();
+    assert(document.querySelector('[data-viewer-fullscreen="jpeg"]').textContent === '⛶ Fullscreen', 'Photo detail fullscreen action is English');
+    document.querySelector('[data-viewer-fullscreen="jpeg"]').click(); await wait(() => native && detail.querySelector('.modal').dataset.photoFullscreen === 'true'); await frames();
+    assert(detail.querySelector('[data-fullscreen-exit]').textContent === 'Exit fullscreen', 'Immersive fullscreen toolbar is English');
+    assert(detail.querySelector('.photo-fullscreen-title strong').textContent === '退出全屏', 'Fullscreen title keeps a filename that matches a UI translation key');
+    await language('zh-CN'); assert(native && detail.querySelector('[data-fullscreen-exit]').textContent === '退出全屏', 'Changing language preserves native fullscreen session');
+    await language('en'); assert(detail.querySelector('.photo-fullscreen-title span').textContent.includes('Return to details') && detail.querySelector('.photo-fullscreen-title strong').textContent === '退出全屏', 'Fullscreen switches helper chrome without translating the photo name');
+    App.closeModal(); await wait(() => !native);
+    return { syntheticOnly: true, passed: checks.length, checks, viewport: [innerWidth, innerHeight] };
+  } finally {
+    App.closeModal(); App.thumbnail = original.thumbnail; api.source = original.source; api.saveImage = original.save;
+    if (original.getFullscreen === undefined) delete api.getPhotoFullscreen; else api.getPhotoFullscreen = original.getFullscreen;
+    if (original.setFullscreen === undefined) delete api.setPhotoFullscreen; else api.setPhotoFullscreen = original.setFullscreen;
+    await App.api.saveSettings({ language: savedLanguage.language || 'zh-CN', languageChosen: savedLanguage.languageChosen !== false });
+    I18n.setLanguage(original.language);
+  }
+})();

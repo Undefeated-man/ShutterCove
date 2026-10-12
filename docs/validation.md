@@ -345,3 +345,15 @@ v1.0.7 的 Mac arm64 CI 在更新提醒的滚动保持断言失败。隔离复�
 - 画布最大长边为 24,000 px、总面积为 4,800 万像素，超过时等比缩小；这是图像资源上限，横向 / 纵向拼图没有预设张数上限。
 - 批量操作存在磁盘故障、权限与空间限制；失败时保留具体文件的结果，不将部分成功报告为全部完成。
 - 自动化打包成功说明分发文件已生成；首次安装、系统安全提示以及专业编辑器交接仍需对应系统验收。
+
+## v1.2.0 language and documentation validation
+
+Source validation on 2026-10-12:
+
+- All **86** backend and lifecycle tests passed, including fresh / existing language defaults, preference validation, and native dialog specificity while preserving paths and extensions.
+- English gallery **58**, creative studios **26**, and calendar / dropdown / timeline / guide / updater **33** UI assertions passed in both normal and compact windows. Language switching preserved user filenames, themes, tags, drafts, focus, photo selection, composition, zoom, order, and exact already-encoded JPEG bytes.
+- Production settings IPC passed **65** checks across three isolated profiles and five real app launches: fresh English and Chinese choices, failed-save retry, persisted restarts, legacy Chinese defaults, and one-click switching without saving unrelated draft fields.
+- Existing Chinese gallery, copy, font, detail, sticky toolbar, collage, GIF, calendar, dropdown, timeline, updater, and onboarding regressions passed. Tests use generated photographs and isolated profiles; no original user photographs are edited.
+- The language chooser and English gallery screenshots were inspected. They contain synthetic artwork and metadata only. README defaults to English after the bilingual introduction, with four working language links and explicit English / Chinese-only interface support in the Japanese and Korean guides.
+
+Reproduce the English UI checks with `--demo --smoke --qa-script` and the scripts `gallery-language-ui-smoke.js`, `studios-i18n-ui-smoke.js`, and `widgets-english-ui-smoke.js`. `scripts/package-smoke.cjs` also runs the five-launch language-profile validation against each packaged executable; ordinary smoke profiles retain Chinese fixtures, while `--qa-first-language` exercises production first-install defaults.
