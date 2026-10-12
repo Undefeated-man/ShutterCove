@@ -70,9 +70,30 @@
       assert(copy.clientWidth <= budget && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, brand) && textContained(caption, brand), language + ' real text fits ' + budget + ' px with persistent scrollbar at ' + font, {brand:brand.getBoundingClientRect().toJSON(),scrollWidth:brand.scrollWidth,titleFont:getComputedStyle(title).font,captionFont:getComputedStyle(caption).font});
       if (language === 'zh-CN') {
         const tops = textRects(title).map(rect => rect.top);
-        assert(tops.length === 5 && Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1), 'Forced narrow Chinese title breaks only 时光 / 杂货店 at ' + budget + ' px and ' + font, tops);
+        const oneLine = tops.every(top => Math.abs(top - tops[0]) < 1);
+        const twoThenThree = Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1);
+        assert(tops.length === 5 && (oneLine || twoThenThree), 'Fixed narrow Chinese title is one line or exactly 时光 / 杂货店 at ' + budget + ' px and ' + font, tops);
       } else assert(title.textContent === 'Shutter Cove', 'English title survives narrow Chinese/English switching');
     }
+  }
+  // A fixed 107 px budget can fit all five characters in some system fonts.
+  // Measure the rendered words to force a real break without assuming glyph size.
+  I18n.setLanguage('zh-CN');
+  for (const font of [1.2, 1.5]) {
+    App.applyFontScale(font); copy.style.maxWidth = priorMaxWidth; await paint();
+    const brand = copy.querySelector('strong'), title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');
+    const wordWidths = [...title.querySelectorAll('.brand-word')].map(word => word.getBoundingClientRect().width);
+    const longest = Math.max(...wordWidths), combined = wordWidths.reduce((sum, width) => sum + width, 0);
+    const budget = Math.ceil(longest + Math.min(6, (combined - longest) / 3));
+    assert(wordWidths.length === 2 && budget > longest && budget < combined, 'Measured title budget fits either word while excluding their combined width at ' + font, {wordWidths, budget});
+    // Constrain only the title, keeping its font container unchanged. Otherwise
+    // a container-unit font fallback could shrink glyphs as the budget shrinks.
+    const priorTitleWidth = title.style.width;
+    title.style.width = budget + 'px'; await paint();
+    assert(title.clientWidth <= budget && title.scrollWidth <= title.clientWidth + 1 && brand.scrollWidth <= brand.clientWidth + 1 && textContained(title, title) && textContained(caption, brand), 'Measured narrow title and caption remain unclipped at ' + font, {budget, scrollWidth:title.scrollWidth, clientWidth:title.clientWidth});
+    const tops = textRects(title).map(rect => rect.top);
+    assert(tops.length === 5 && Math.abs(tops[0] - tops[1]) < 1 && tops[2] > tops[0] && tops.slice(2).every(top => Math.abs(top - tops[2]) < 1), 'Measured narrow Chinese title actually breaks only 时光 / 杂货店 at ' + font, {budget, tops});
+    title.style.width = priorTitleWidth;
   }
   copy.style.maxWidth = priorMaxWidth; sidebar.style.overflowY = priorOverflow;
   const settledTitle = copy.querySelector('.brand-title'); let titleMutations = 0;

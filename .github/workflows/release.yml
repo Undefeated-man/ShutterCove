@@ -59,6 +59,14 @@ jobs:
             throw new Error('Tag and package.json version must match');
           }
           NODE
+      - name: Ensure Chinese fonts for Linux layout validation
+        if: matrix.platform == 'linux'
+        run: |
+          if [ -z "$(fc-list :lang=zh family)" ]; then
+            sudo apt-get update
+            sudo apt-get install -y fonts-noto-cjk
+          fi
+          test -n "$(fc-list :lang=zh family)"
       - run: npm ci
       - run: npm test
       - run: npm run privacy
