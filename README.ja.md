@@ -1,4 +1,4 @@
-# Shiguang Isle: RAW Photo Organizer & Creative Studio
+# Shutter Cove: RAW Photo Organizer & Creative Studio
 
 **Language:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
@@ -10,7 +10,7 @@
 
 **A local desktop photo library built specifically for DSLR and mirrorless photographers who shoot RAW.**
 
-Shiguang Isle follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
+Shutter Cove (拾光屿) follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
 
 - **Keep RAW and JPEG together.** Browse matching files as a pair, inspect details with zoom and fullscreen, and open either format in Photoshop / Lightroom on Mac or a configured local editor on Linux.
 - **Browse quickly without duplicating originals.** On-demand thumbnails, nearby-photo prefetching, and a bounded, removable preview cache keep the library light while originals stay in their folders.
@@ -47,6 +47,8 @@ Shiguang Isle follows your photography workflow: import from an SD card, browse 
 All screenshots use synthetic artwork, with no private photographs, real portraits, personal paths, or real capture metadata. 所有截图使用合成画面，不含私人原片、真人肖像、个人路径或真实拍摄信息。
 
 ## インストール
+
+**パッケージ名について：** Shutter Cove は「拾光屿」の新しい英語ブランド名です。現在公開中のパッケージとアプリ画面では従来の名称 `Shiguang Isle` を使用し、ファイル名は `Shiguang-Isle-` で始まります。同じアプリです。
 
 [GitHub Releases](https://github.com/Undefeated-man/shiguang-isle/releases) から、お使いのコンピューターに合うパッケージをダウンロードしてください。ファイル名は `Shiguang-Isle-` とバージョン番号で始まります。下表はプラットフォームごとの末尾です。
 
