@@ -28,6 +28,10 @@
     for (const font of [1.2, 1.5]) {
       App.applyFontScale(font); await paint(); await pause(500);
       const brand = document.querySelector('.brand strong'), sidebar = document.querySelector('.sidebar');
+      const hero = document.querySelector('.hero'), heroCopy = document.querySelector('.hero-copy');
+      const heroParts = ['.eyebrow', 'h1', 'p', '.hero-bottom'].map(selector => heroCopy.querySelector(selector));
+      assert(heroParts.every(part => textContained(part, heroCopy)) && heroParts.every(part => textContained(part, hero)), language + ' hero at ' + font + ' shows every line without clipping');
+      assert(heroParts.slice(1).every((part, index) => part.getBoundingClientRect().top >= heroParts[index].getBoundingClientRect().bottom - 1), language + ' hero at ' + font + ' has no overlapping title, description or statistics');
       assert(bounds(), language + ' gallery ' + font + ' has no horizontal overflow');
       assert(contained(brand, sidebar), language + ' wordmark ' + font + ' remains inside sidebar');
       const title = brand.querySelector('.brand-title'), caption = brand.querySelector('.brand-caption');

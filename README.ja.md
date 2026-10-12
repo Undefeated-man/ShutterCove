@@ -50,7 +50,7 @@ All screenshots use synthetic artwork, with no private photographs, real portrai
 
 ## インストール
 
-**パッケージ名について：** Shutter Cove は英語ブランド名です。v1.3.2 から中国語名は「时光杂货店」（旧名「拾光屿」）になります。互換性のため、ファイル名は引き続き `Shiguang-Isle-` で始まり、Mac パッケージには `Shiguang Isle.app` が含まれます。同じアプリです。
+**パッケージ名について：** Shutter Cove は英語ブランド名です。v1.3.3 から中国語名は「时光杂货店」（旧名「拾光屿」）になります。互換性のため、ファイル名は引き続き `Shiguang-Isle-` で始まり、Mac パッケージには `Shiguang Isle.app` が含まれます。同じアプリです。
 
 **公式リポジトリ：** [Undefeated-man/ShutterCove](https://github.com/Undefeated-man/ShutterCove)。v1.2.1 では更新の確認とダウンロードに新しいアドレスを使用します。既存のアプリ識別子、インストール先、お気に入り、タグ、設定は引き継がれます。
 
