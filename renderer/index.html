@@ -7,6 +7,7 @@
 <title>拾光屿 · 摄影回忆时光机</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="studio-viewer.css">
+<link rel="stylesheet" href="motion-studio.css">
 <link rel="stylesheet" href="dropdown.css">
 <link rel="stylesheet" href="calendar.css">
 <link rel="stylesheet" href="timeline.css">
@@ -17,6 +18,8 @@
 <link rel="stylesheet" href="updater-ui.css">
 <script defer src="demo.js"></script>
 <script defer src="studio.js"></script>
+<script defer src="motion-model.js"></script>
+<script defer src="motion-studio.js"></script>
 <script defer src="photo-viewer.js"></script>
 <script defer src="app.js"></script>
 <script defer src="updater-ui.js"></script>
@@ -61,7 +64,7 @@
 <div class="pagination"><button class="button quiet" id="previous-page" hidden>← 上一页</button><span class="light-label" id="page-label" hidden></span><button class="button quiet" id="load-more" hidden>继续翻阅 →</button></div>
 <footer class="gallery-footer"><span>每一帧，都值得被记住。</span><span>拾光屿 · 摄影回忆时光机</span></footer>
 </div>
-<div class="selection-bar" id="selection-bar" hidden><div><span class="selection-counter" id="selected-count">0</span> 张已选 <button class="link-button" id="select-all">全选筛选结果</button><button class="link-button" id="clear-selection">取消选择</button></div><div class="selection-actions"><button class="button quiet" id="batch-tags">＋ 标签 / 主题</button><button class="button quiet" id="batch-favorite">♡ 收藏</button><button class="button quiet" id="batch-reveal">↥ 复制到文件夹</button><button class="button quiet" id="batch-collage">▧ 拼图</button><button class="button danger-quiet" id="batch-delete">删除</button></div></div>
+<div class="selection-bar" id="selection-bar" hidden><div><span class="selection-counter" id="selected-count">0</span> 张已选 <button class="link-button" id="select-all">全选筛选结果</button><button class="link-button" id="clear-selection">取消选择</button></div><div class="selection-actions"><button class="button quiet" id="batch-tags">＋ 标签 / 主题</button><button class="button quiet" id="batch-favorite">♡ 收藏</button><button class="button quiet" id="batch-reveal">↥ 复制到文件夹</button><button class="button quiet" id="batch-collage">▧ 拼图</button><button class="button quiet" id="batch-gif">▷ GIF / 表情包</button><button class="button danger-quiet" id="batch-delete">删除</button></div></div>
 </main>
 </div>
 <div id="modal-root"></div><div id="toast-root" class="toast-root" aria-live="polite"></div>

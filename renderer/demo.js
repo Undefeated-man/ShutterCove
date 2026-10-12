@@ -44,7 +44,20 @@ window.createDemoBridge = function () {
   const updateSnapshot=()=>({...updateState,progress:updateState.progress?{...updateState.progress}:null});
   const emitUpdate=patch=>{updateState={...updateState,...patch};if(patch.currentVersion)demoVersion=patch.currentVersion;updateListeners.forEach(fn=>fn(updateSnapshot()));return updateSnapshot();};
   const updatePause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  window.timeMachine?.onProgress?.(emit);
+  let demoGifRevision=0;
+  async function demoGifSources(frames) {
+    const sources=[];
+    for(const frame of frames){
+      if(!/^demo-(?:[0-9]|1[0-5])$/.test(frame.id))throw new Error('请选择合成演示照片');
+      const img=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('演示画面无法读取'));image.src=landscape(Number(frame.id.split('-')[1]));});
+      const canvas=document.createElement('canvas');canvas.width=960;canvas.height=640;canvas.getContext('2d').drawImage(img,0,0,960,640);sources.push(canvas.toDataURL('image/png'));canvas.width=canvas.height=1;
+    }
+    return sources;
+  }
   return {
+    previewGif:async args=>{if(!window.timeMachine?.previewGif)throw new Error('请在拾光屿桌面 App 中生成 GIF');const revision=++demoGifRevision;const demoSources=await demoGifSources(args.frames);if(revision!==demoGifRevision)return {canceled:true};return window.timeMachine.previewGif({...args,demoSources});},
+    saveGif:async args=>window.timeMachine.saveGif(args),cancelGif:async()=>{demoGifRevision++;return window.timeMachine.cancelGif();},releaseGif:async args=>window.timeMachine.releaseGif(args),
     qaEmitProgress:emit,
     qaEmitUpdateState:emitUpdate,
     getUpdateState:async()=>updateSnapshot(),

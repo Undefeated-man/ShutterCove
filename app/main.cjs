@@ -8,14 +8,17 @@ const { promisify } = require('node:util');
 const { createReadStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const { PhotoLibrary } = require('./library.cjs');
+const { prepareImageOutput } = require('./image-output.cjs');
+const { GifService } = require('./gif-service.cjs');
 const { UpdateService, waitForBootReady } = require('./updater.cjs');
 const run = promisify(execFile);
 protocol.registerSchemesAsPrivileged([
   { scheme: 'memory-app', privileges: { standard: true, secure: true, supportFetchAPI: true } },
   { scheme: 'memory-photo', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
 ]);
-let win, library, settings, settingsPath, updater;
+let win, library, settings, settingsPath, updater, gifService;
 let settingsSaveChain = Promise.resolve(), installingUpdate = false;
+let fullscreenChain = Promise.resolve();
 const activeOperations = new Set();
 let exitStatus = 0;
 const approvedRoots = new Set();
@@ -130,6 +133,45 @@ function handle(name, callback) {
   });
 }
 function bindAPI() {
+  handle('previewGif', args => {
+    if (args?.demoSources !== undefined) {
+      if (!demo) throw new Error('正式相册只能使用已索引照片');
+      return gifService.previewDemo(args, args.demoSources);
+    }
+    return gifService.preview(args);
+  });
+  handle('cancelGif', () => gifService.cancel());
+  handle('releaseGif', args => gifService.release(args?.token));
+  handle('saveGif', async args => {
+    if (!gifService.ready || typeof args?.token !== 'string' || gifService.ready.token !== args.token) throw new Error('请先生成有效的 GIF 预览');
+    const name = path.basename(String(args?.suggestedName || '拾光动图.gif')).replace(/[\x00-\x1f]/g,'');
+    let chosen;
+    if (qaOutput) {
+      await fs.mkdir(path.resolve(qaOutput), { recursive: true });
+      chosen = { canceled: false, filePath: path.join(path.resolve(qaOutput), name) };
+    } else chosen = await dialog.showSaveDialog(win, { title: '保存 GIF 动图', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: [{ name:'GIF 动图', extensions:['gif'] }] });
+    if (chosen.canceled) return { canceled:true };
+    return gifService.save(args?.token, chosen.filePath);
+  });
+  handle('getPhotoFullscreen', () => ({ enabled: Boolean(win?.isFullScreen()) }));
+  handle('setPhotoFullscreen', async args => {
+    if (typeof args?.enabled !== 'boolean') throw new Error('无效的全屏状态');
+    const target = win, enabled = args.enabled;
+    const operation = fullscreenChain.catch(() => {}).then(async () => {
+      if (!target || target.isDestroyed()) throw new Error('照片窗口已关闭');
+      if (target.isFullScreen() === enabled) return { enabled };
+      return new Promise((resolve, reject) => {
+        const event = enabled ? 'enter-full-screen' : 'leave-full-screen';
+        const cleanup = () => { clearTimeout(timer); target.removeListener(event, done); target.removeListener('closed', closed); };
+        const done = () => { cleanup(); resolve({ enabled: target.isFullScreen() }); };
+        const closed = () => { cleanup(); reject(new Error('照片窗口已关闭')); };
+        const timer = setTimeout(() => { cleanup(); target.isFullScreen() === enabled ? resolve({ enabled }) : reject(new Error('全屏切换未完成，请重试')); }, 8000);
+        target.once(event, done); target.once('closed', closed); target.setFullScreen(enabled);
+      });
+    });
+    fullscreenChain = operation;
+    return operation;
+  });
   handle('getSettings', publicSettings);
   handle('saveSettings', saveSettings);
   handle('getUpdateState', () => updater.snapshot());
@@ -256,7 +298,7 @@ function bindAPI() {
     if (settings.libraryRoot) await library.scan(settings.libraryRoot);
     return { canceled: false, count: trashed.length, failed };
   });
-  handle('saveImage', async ({ dataUrl, suggestedName = '拾光拼图.jpg', overwriteId }) => {
+  handle('saveImage', async ({ dataUrl, suggestedName = '拾光拼图.jpg', overwriteId, preserveEncoding = false }) => {
     if (typeof dataUrl !== 'string' || dataUrl.length > 400_000_000 || !/^data:image\/(jpeg|png);base64,[A-Za-z0-9+/=]+$/.test(dataUrl)) throw new Error('无效的图像数据');
     const bytes = Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64');
     const sharp = require('sharp');
@@ -273,12 +315,13 @@ function bindAPI() {
       if (qaOutput) {
         await fs.mkdir(path.resolve(qaOutput), { recursive: true });
         chosen = { canceled: false, filePath: path.join(path.resolve(qaOutput), name) };
-      } else chosen = await dialog.showSaveDialog(win, { title: '保存新的照片', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: [{ name: 'JPEG 照片', extensions: ['jpg'] }, { name: 'PNG 图片', extensions: ['png'] }] });
+      } else chosen = await dialog.showSaveDialog(win, { title: '保存新的照片', defaultPath: path.join(settings.libraryRoot || app.getPath('pictures'), name), filters: preserveEncoding ? [{ name: 'JPEG 分享成品', extensions: ['jpg','jpeg'] }] : [{ name: 'JPEG 照片', extensions: ['jpg'] }, { name: 'PNG 图片', extensions: ['png'] }] });
       if (chosen.canceled) return { canceled: true };
       target = chosen.filePath;
       if (/\.cr3$/i.test(target)) throw new Error('不能覆盖 CR3 原片');
     }
-    const output = /\.png$/i.test(target) ? await sharp(bytes).png().toBuffer() : await sharp(bytes).jpeg({ quality: 95, mozjpeg: true }).toBuffer();
+    if (preserveEncoding && !/\.jpe?g$/i.test(target)) throw new Error('分享成品请使用 .jpg 或 .jpeg 后缀');
+    const output = await prepareImageOutput(dataUrl, { preserveEncoding: preserveEncoding === true, png: /\.png$/i.test(target) });
     const temp = path.join(path.dirname(target), `.${path.basename(target)}.${crypto.randomBytes(6).toString('hex')}.tmp`);
     try { await fs.writeFile(temp, output, { flag: 'wx' }); await fs.rename(temp, target); }
     finally { await fs.unlink(temp).catch(() => {}); }
@@ -307,6 +350,7 @@ async function start() {
   }
   library = new PhotoLibrary({ userData: app.getPath('userData'), emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress', payload); } });
   await library.init();
+  gifService = new GifService({ library, allowDemo: demo, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress',payload); } });
   updater = new UpdateService({ app, disabled: smoke || demo, automatic: () => settings.checkUpdatesAutomatically, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:update-state', payload); }, openInstaller: file => shell.openPath(file), beforeInstall: async () => {
     if (activeOperations.size) throw new Error('请等待照片处理和设置保存结束后再更新');
     installingUpdate = true;
@@ -334,6 +378,7 @@ async function start() {
     const compact = process.argv.includes('--compact');
     win = new BrowserWindow({ title: '拾光屿 · 摄影回忆时光机', width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    for (const event of ['enter-full-screen','leave-full-screen']) win.on(event, () => win?.webContents.send('memory:photo-fullscreen', { enabled: win.isFullScreen() }));
     win.webContents.on('will-navigate', (event, url) => { if (!url.startsWith('memory-app://app/')) event.preventDefault(); });
     const query = new URLSearchParams();
     if (demo) query.set('demo', '1');
@@ -354,7 +399,7 @@ async function start() {
         } catch {}
       }
     });
-    win.on('closed', () => { win = null; });
+    win.on('closed', () => { win = null; void gifService?.cancel(); });
     if (smoke || screenshotPath) win.webContents.once('did-finish-load', async () => {
       try {
         await new Promise(resolve => setTimeout(resolve, 1800));
@@ -363,7 +408,7 @@ async function start() {
         if (screenshotPath) { await fs.mkdir(path.dirname(screenshotPath), { recursive: true }); await fs.writeFile(screenshotPath, (await win.webContents.capturePage()).toPNG()); }
         console.log(JSON.stringify(state));
       } catch (e) { console.error(e); exitStatus = 1; }
-      finally { if (smoke) { closing = true; await library.close(); app.exit(exitStatus); } }
+      finally { if (smoke) { closing = true; await gifService.close(); await library.close(); app.exit(exitStatus); } }
     });
   }
   Menu.setApplicationMenu(Menu.buildFromTemplate([
@@ -381,7 +426,7 @@ app.on('before-quit', event => {
     event.preventDefault();
     closing = true;
     updater?.stop();
-    Promise.resolve(settingsSaveChain).catch(() => {}).then(() => library.close?.()).finally(() => app.quit());
+    Promise.resolve(settingsSaveChain).catch(() => {}).then(() => gifService?.close()).then(() => library.close?.()).finally(() => app.quit());
   }
 });
 if (ownsInstance) start().catch(error => { console.error(error); app.exit(1); });

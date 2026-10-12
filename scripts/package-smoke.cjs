@@ -58,6 +58,7 @@ function launch(binary, args) {
   if (result.status !== 0) throw new Error(`Packaged smoke failed: exit ${result.status}, signal ${result.signal || 'none'}`);
   const pid = linux ? Number(result.stdout.match(/^SHIGUANG_SMOKE_PID=(\d+)$/m)?.[1]) : result.pid;
   if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error('Cannot identify the packaged smoke application process');
+  launch.lastQA = result.stdout.split(/\r?\n/).map(line => { try { return JSON.parse(line).qa; } catch { return null; } }).filter(Boolean).at(-1);
   return pid;
 }
 
@@ -88,10 +89,10 @@ async function main() {
     const fontSmoke = path.join(__dirname, 'font-ui-smoke.js');
     if (!fs.existsSync(fontSmoke)) throw new Error('Required font-size UI smoke script is missing');
     launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', fontSmoke]);
-    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'update-ui-smoke.js']) {
+    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'creative-ui-smoke.js', 'motion-ui-smoke.js', 'fullscreen-ui-smoke.js', 'update-ui-smoke.js']) {
       const smoke = path.join(__dirname, script);
       if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
-      launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', smoke]);
+      launch(binary, ['--demo', '--smoke', '--compact', ...(script === 'motion-ui-smoke.js' ? ['--qa-output', path.join(temporary, 'motion-ui-output')] : []), '--qa-script', smoke]);
     }
     const onboardingSmoke = path.join(__dirname, 'onboarding-ui-smoke.js');
     if (!fs.existsSync(onboardingSmoke)) throw new Error('Required first-use guide UI smoke script is missing');
@@ -124,6 +125,15 @@ async function main() {
     if (copied.length !== expectedCopies || fs.readdirSync(output, { withFileTypes: true }).some(entry => entry.isDirectory())) throw new Error('Production copy must create flat JPEG batches and one optional synthetic CR3 pair');
     const copyHashes = copied.map(digest);
     for (const original of originals) if (copyHashes.filter(hash => hash === original.sha256).length !== (original.format === 'jpeg' ? 3 : 1)) throw new Error('Production copies do not preserve the synthetic JPEG and CR3 bytes');
+    const creativeOutput = path.join(temporary, 'creative-output');
+    fs.mkdirSync(creativeOutput);
+    launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', creativeOutput, '--qa-script', path.join(__dirname, 'creative-native-smoke.js')]);
+    const creative = launch.lastQA;
+    if (!creative || creative.passed !== creative.checks.length || digest(path.join(creativeOutput, 'synthetic-share-exact.jpg')) !== creative.shareSHA256 || digest(path.join(creativeOutput, 'synthetic-motion.gif')) !== creative.gifSHA256) throw new Error('Encoded preview differs from the actual JPEG / GIF disk output');
+    const motion = await sharp(path.join(creativeOutput, 'synthetic-motion.gif'), {animated:true}).metadata();
+    if (motion.format !== 'gif' || motion.pages !== 2 || motion.pageHeight !== 100 || motion.width !== 160 || motion.delay.some(delay => delay !== 320) || motion.loop !== 0) throw new Error('Actual GIF file has incorrect frames, dimensions, timing or loop');
+    if (photoFiles(photos).some(file => !originals.some(original => original.file === file && digest(file) === original.sha256))) throw new Error('Creative export changed source photos');
+    if (process.platform === 'darwin') launch(binary, ['--demo', '--smoke', '--qa-script', path.join(__dirname, 'fullscreen-native-smoke.js')]);
     launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'sync-smoke.js')]);
     const retained = photoFiles(photos);
     const pending = path.join(photos, '待删');

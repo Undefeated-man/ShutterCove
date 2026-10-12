@@ -60,11 +60,15 @@ Starting with v1.0.8, **Settings → Software update** shows the installed versi
 | First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
 | Update checks and installation | Check manually in Settings or receive automatic reminders; installed Mac apps and writable AppImages can download, verify, replace themselves in place, and restart while preserving favorites, tags, and settings |
 | Detail zoom and pan | Hold Option / Alt while scrolling to zoom, then drag to pan; choose Fit to window or double-click to reset, with up to 16× relative zoom |
+| Native fullscreen details | Click Fullscreen or press F, switch between JPEG / CR3 previews, and browse adjacent photographs; Esc leaves fullscreen first, then closes details |
 | Color organization | Analyze image colors automatically and browse within a date range |
 | Date and theme search | Pick dates from a calendar or type them directly, search theme names, and assign themes to individual or selected photographs |
 | Date timeline | A slim rail expands a translucent date badge on hover or press; scrub to dates across all currently filtered results, with newest-first browsing by default |
 | Similar photographs | Choose a directory and compare average-pooled RGB pixels using cosine similarity; adjustable granularity, estimated time, progress, and cancellation |
-| Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace and film posters; both posters support 1–12 photos per row, defaulting to 2, with Alt / Option wheel preview zoom, drag reordering, and JPEG export |
+| Collages and posters | Vertical and horizontal strips, four-cell and nine-cell layouts, whitespace, film, original-ratio magazine, and wooden-board layouts; posters support 1–12 photos per row, defaulting to 2, adjustable title size, and new JPEG export |
+| Per-photo composition | Select a photograph and adjust its scale and position within a cell, choosing cover or contain; composition follows the photograph when reordered, independently of canvas zoom |
+| Controlled share compression | Process originals individually and encode the final JPEG with adjustable maximum edge and quality; preview and save use the same encoded bytes while preserving originals |
+| GIF and meme creation | Scroll through a filmstrip and drag to reorder, add text or bubbles per frame, set size, palette, global frame delay, and looping; preview an encoded GIF or save a static meme frame |
 | Favorites | Mark favorite photographs and browse them in a dedicated view |
 | Individual and batch tags | Edit tags on one photograph or add tags to a selection |
 | Shared filters | Date, color, theme, and tag restrictions work across all photos, favorites, color browsing, similarity results, and collage photo selection |
@@ -85,9 +89,27 @@ The paired-preview screenshot uses generated photographs and sample metadata, wi
 
 In photo details, hold **Option (Mac) / Alt** while scrolling to zoom in or out, then drag the enlarged image to pan; ordinary scrolling still scrolls the detail view. Choose “适合窗口” (Fit to window) or double-click the image to reset. With the preview focused, use + / − to zoom and 0 to reset. **100% is relative to the fitted view, not a 1:1 original-pixel scale**; the maximum is 16 times the fitted size. JPEG and CR3 previews zoom independently; changing photographs or resizing the preview area restores the fitted view. CR3 zoom uses the camera's embedded preview rather than RAW development, so clarity depends on that preview's resolution.
 
+Click Fullscreen beside a preview or press **F** to enter the operating system's fullscreen mode. Switch between JPEG / CR3 previews, use ← / → for adjacent photographs, and keep zooming and panning. **Esc** returns to details first; press it again to close details. Closing restores the window's prior fullscreen state.
+
 ![Independent detail zoom: synthetic JPEG at 223%, with the CR3 embedded preview still fitted](docs/screenshots/detail-zoom.png)
 
 ![Collage preview zoom and photos-per-row controls using synthetic photographs](docs/screenshots/collage-zoom.png)
+
+Choose “调整构图” (Adjust composition), select a photograph, and drag within its cell, change its scale, or choose contain to keep it complete. Reordering thumbnails keeps the composition attached to the photograph. Alt / Option + scroll zooms the whole canvas; when zoomed, ordinary dragging pans the canvas and **Shift + drag** adjusts the selected photograph.
+
+The original-ratio magazine layout keeps complete photographs in their original proportions with a separate title area. On the wooden display board, move full photographs, resize or rotate them, and change their stacking order with overlap allowed. Title size is specified in pixels at the export width and scales with a smaller output.
+
+![Original-ratio magazine: complete photographs and a separate title area, using synthetic images](docs/screenshots/collage-magazine.png)
+
+![Wooden display board: movable, rotated, resized, and overlapping synthetic photographs](docs/screenshots/collage-board.png)
+
+Enable proactive share compression, set the maximum edge and JPEG quality, and inspect the encoded result, dimensions, and file size. Preview decoding and saving use the same JPEG bytes. Composition or layout changes regenerate the result; processing preserves originals and creates no intermediate copies in photo folders. An anonymous **3000 × 8364 → 516 × 1440** sample supports a **1440-pixel / quality-80** reference preset only. It does not establish a universal WeChat rule or guarantee avoidance of further compression. Shrinking a tall collage reduces detail in each photograph; WYSIWYG refers to this app's exported file.
+
+Select photographs with JPEGs and open GIF / meme creation. Scroll through the filmstrip, drag thumbnails to reorder, and add or drag text and bubbles on the current frame. Configure output scale, palette size, global frame delay, and looping, then generate the actual GIF preview and save the same result; a single photograph can also become a static meme. CR3-only photographs require a JPEG export first. Encoding provides progress and cancellation. GIF supports at most 256 colors, so photographic gradients may show banding.
+
+![GIF and meme studio: filmstrip ordering and text-bubble editing, with encoded preview generation using synthetic images](docs/screenshots/motion-studio.png)
+
+See the [bilingual creative-studio guide](docs/creative-studio.md). These creative views contain synthetic photographs with no real people or private data.
 
 ![Update checks and version reminders: demonstration states without private data](docs/screenshots/update-settings.png)
 
@@ -123,10 +145,11 @@ Choose “开始浏览” (Start browsing) to close the guide, or “选择照�
 2. Filter by date range, color, tags, and theme. Pick dates from the calendar or type them directly. Scrub the slim date rail to jump across all filtered results; hovering or pressing expands a translucent date badge. Browsing defaults to newest first. Use the favorites view to revisit your selected photographs.
 3. Select multiple photographs to add tags, mark favorites, copy to a folder, or move files to trash. Use “Copy to folder” to collect photographs from different subfolders, choosing an existing destination or creating a folder in the picker. JPEGs are copied by default, and you can include corresponding CR3 files. Originals remain in place; collisions receive unique names shared by each JPEG / CR3 pair. Review progress and copied, skipped, or failed results, and cancel when needed. RAW-only photographs are skipped unless CR3 copying is enabled. A single photograph can still be revealed in the file manager or handed to an editor as JPEG or CR3.
 4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
-5. Open the collage workspace, choose a layout, and drag photographs into a new order. Both poster templates support 1–12 photos per row, defaulting to 2. Hold Alt / Option while scrolling to zoom the preview, then drag to pan; Fit to window resets the view. Thumbnail reordering works at any zoom, and the fitted canvas also supports direct swapping. Preview zoom does not change the export dimensions.
+5. Open the collage workspace, choose a layout, and adjust photographs individually. Whitespace, film, and original-ratio magazine posters support 1–12 photos per row, defaulting to 2. Move photographs, adjust angles, and change stacking order on the wooden display board. Drag thumbnails to reorder or choose canvas swapping for direct exchanges. Alt / Option scrolling zooms the preview; ordinary dragging pans the canvas and Shift + drag adjusts a photograph. Fit to window resets the view. With share compression enabled, inspect the encoded JPEG result before saving a new photograph.
 6. Use the editor to crop, rotate, mirror, or add rectangular and elliptical mosaics. Choose overwrite or save-as. Canvas exports do not retain the original EXIF; editing does not overwrite CR3 files.
 7. Import from an SD card or another directory into your chosen memories root. Pick an existing theme or create one. Files are copied, sorted by capture date, and checked for duplicates; source files remain available.
 8. Synchronize favorites or the current selection to an SD card. Review the keep and move lists first. Other photographs move into a `待删` batch on that card with their relative paths and a journal. Empty matches, ambiguity, or files changing after preview stop execution.
+9. Select photographs with JPEGs and open GIF / meme creation. Scroll through frames, drag to reorder, and add text per frame. Generate an encoded preview before saving the GIF, or save the current frame as a static meme.
 
 Moving files into `待删` preserves their contents and does not immediately free card space. Open the batch directory to review or restore files to their recorded original locations; remove pending files yourself when you decide they are no longer needed.
 
@@ -137,6 +160,8 @@ Filter and sort dropdowns support mouse and keyboard use. Long lists show up to 
 CR3 display uses the camera's embedded preview rather than full RAW development. Photoshop normally delegates RAW handling to Adobe Camera Raw. Lightroom may show an import dialog depending on its installed version; the app hands over the file and does not complete Adobe catalog imports automatically.
 
 Vertical and horizontal collages have no fixed photograph-count limit. To control memory, canvases are limited to a **24,000 px** long edge and **48 million pixels**. Larger results are scaled proportionally. Simple editing follows the same limit for unusually large originals; use your professional editor for full-resolution development beyond it.
+
+GIF supports **2–80 frames**, up to **1,600 px** per side, **24 million pixels** across all frames, and **24 MB** of encoded data. The interface scales dimensions to fit the pixel budget and reports remaining limit errors. A single photograph can be saved as a static meme. These resource limits do not describe another app's sending restrictions.
 
 The gallery's filtering, selection, and sorting toolbar stays at the top as you scroll. Adjust conditions, change the order, or act on selected photographs without returning to the beginning. Its height adapts to the window and font size, and photo navigation reserves space beneath it. Returning focus after opening or closing the calendar or a menu, or confirming an option, preserves the current scroll position.
 

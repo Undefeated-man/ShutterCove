@@ -1,8 +1,189 @@
 'use strict';
 (() => {
   const MAX_ZOOM = 16;
+  let pendingFullscreen = null;
+  let windowTransition = Promise.resolve();
+  function mountFullscreen(root) {
+    const modal = root.querySelector('.photo-detail');
+    if (!modal) return { register() {}, dispose() {} };
+    const api = window.App?.api || window.timeMachine;
+    const previews = [...root.querySelectorAll('.preview-block')];
+    const formats = previews.map(block => block.querySelector('img')?.id === 'preview-raw' ? 'raw' : 'jpeg');
+    if (!formats.length) return { register() {}, dispose() {} };
+    const footerHint = modal.querySelector('.keyboard-hint');
+    if (footerHint) footerHint.textContent = '← → 切换照片 · F 全屏 · Esc 关闭';
+    const buttons = new Map();
+    let selected = formats[0], session = null, disposed = false, handoff = false;
+    const toolbar = document.createElement('div');
+    toolbar.className = 'photo-fullscreen-toolbar';
+    toolbar.hidden = true;
+    const title = document.createElement('div');
+    title.className = 'photo-fullscreen-title';
+    const name = document.createElement('strong');
+    name.textContent = modal.querySelector('.modal-header h3')?.textContent || '照片';
+    const subtitle = document.createElement('span');
+    subtitle.textContent = '← → 切换照片 · F / Esc 返回详情';
+    title.append(name, subtitle);
+    const tabs = document.createElement('div');
+    tabs.className = 'photo-fullscreen-formats';
+    tabs.setAttribute('role', 'group');
+    tabs.setAttribute('aria-label', '全屏预览格式');
+    const formatButtons = new Map();
+    for (const format of formats) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'photo-fullscreen-format';
+      button.dataset.fullscreenFormat = format;
+      button.textContent = format === 'raw' ? 'CR3 预览' : 'JPEG';
+      button.addEventListener('click', () => { selected = format; render(true); focusFrame(); });
+      formatButtons.set(format, button);
+      tabs.append(button);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'photo-fullscreen-actions';
+    const previous = document.createElement('button');
+    const next = document.createElement('button');
+    const exit = document.createElement('button');
+    for (const button of [previous, next, exit]) { button.type = 'button'; button.className = 'photo-fullscreen-action'; }
+    previous.dataset.fullscreenNavigate = '-1'; previous.textContent = '←'; previous.setAttribute('aria-label', '全屏上一张照片');
+    next.dataset.fullscreenNavigate = '1'; next.textContent = '→'; next.setAttribute('aria-label', '全屏下一张照片');
+    exit.dataset.fullscreenExit = ''; exit.textContent = '退出全屏';
+    previous.addEventListener('click', () => navigate(-1));
+    next.addEventListener('click', () => navigate(1));
+    exit.addEventListener('click', () => leave());
+    actions.append(previous, next, exit);
+    toolbar.append(title, tabs, actions);
+    modal.prepend(toolbar);
+    const isActive = () => !!session?.active;
+    const focusFrame = () => {
+      const block = previews[formats.indexOf(selected)];
+      block?.querySelector('.preview-frame')?.focus({ preventScroll: true });
+    };
+    const render = focus => {
+      const active = isActive();
+      modal.classList.toggle('is-photo-fullscreen', active);
+      root.classList.toggle('is-photo-fullscreen-backdrop', active);
+      modal.dataset.photoFullscreen = String(active);
+      toolbar.hidden = !active;
+      previews.forEach((block, index) => block.classList.toggle('is-fullscreen-active', active && formats[index] === selected));
+      for (const [format, button] of formatButtons) button.setAttribute('aria-pressed', String(format === selected));
+      for (const button of buttons.values()) {
+        button.disabled = !!session?.pending;
+        button.setAttribute('aria-pressed', String(active));
+      }
+      if (focus) queueMicrotask(() => { if (!disposed && isActive()) focusFrame(); });
+    };
+    const transition = operation => {
+      const result = windowTransition.catch(() => {}).then(operation);
+      windowTransition = result.catch(() => {});
+      return result;
+    };
+    const restoreWindow = (current, restore = true) => transition(async () => {
+      await current.ready.catch(() => {});
+      if (restore && current.hasSnapshot && typeof api?.setPhotoFullscreen === 'function') {
+        await api.setPhotoFullscreen({ enabled: current.before });
+      }
+    }).catch(error => { if (!disposed) window.App?.toast(error.message || '窗口恢复失败', true); });
+    function leave(restore = true) {
+      const current = session;
+      if (!current) return;
+      current.active = false;
+      session = null;
+      render(false);
+      if (!disposed) buttons.get(selected)?.focus({ preventScroll: true });
+      return restoreWindow(current, restore);
+    }
+    function enter(format) {
+      if (disposed || isActive()) return;
+      selected = formats.includes(format) ? format : formats[0];
+      const current = { active: true, pending: true, hasSnapshot: false, before: false, ready: null };
+      session = current;
+      render(true);
+      current.ready = transition(async () => {
+        // Demo and browser previews cover their own window; packaged builds use
+        // a narrow IPC bridge to the actual Electron window, never DOM permission.
+        if (typeof api?.getPhotoFullscreen === 'function' && typeof api?.setPhotoFullscreen === 'function') {
+          const initial = await api.getPhotoFullscreen();
+          current.before = initial?.enabled === true;
+          current.hasSnapshot = true;
+          if (current.active && !current.before) await api.setPhotoFullscreen({ enabled: true });
+        }
+      });
+      current.ready.then(() => {
+        current.pending = false;
+        if (!disposed && session === current && current.active) render(true);
+      }).catch(error => {
+        current.pending = false;
+        if (!disposed && session === current) { leave(); window.App?.toast(error.message || '无法进入全屏', true); }
+      });
+    }
+    function navigate(direction) {
+      if (!isActive() || session.pending) return;
+      const current = session;
+      current.format = selected;
+      handoff = true;
+      root.querySelector(direction < 0 ? '#inspect-prev' : '#inspect-next')?.click();
+      // A missing adjacent photo leaves this dialog mounted.
+      if (!disposed) handoff = false;
+    }
+    const keys = event => {
+      if (disposed || !root.isConnected) return;
+      const typing = event.target?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target?.tagName);
+      if (event.key === 'Escape' && isActive()) {
+        event.preventDefault(); event.stopImmediatePropagation(); leave(); return;
+      }
+      if (!typing && !event.metaKey && !event.ctrlKey && !event.altKey && event.key.toLowerCase() === 'f') {
+        event.preventDefault(); event.stopImmediatePropagation(); isActive() ? leave() : enter(selected); return;
+      }
+      if (!typing && isActive() && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        event.preventDefault(); event.stopImmediatePropagation(); navigate(event.key === 'ArrowLeft' ? -1 : 1);
+      }
+    };
+    window.addEventListener('keydown', keys, true);
+    const removeWindowListener = api?.onPhotoFullscreen?.(state => {
+      // The OS can leave fullscreen through its own controls. Do not reopen it
+      // while restoring the detail dialog, or close the photo behind it.
+      if (state?.enabled === false && isActive() && !session.pending) leave(false);
+    });
+    if (pendingFullscreen) {
+      session = pendingFullscreen;
+      pendingFullscreen = null;
+      selected = formats.includes(session.format) ? session.format : formats[0];
+      render(true);
+    } else render(false);
+    return {
+      register(format, controls, frame) {
+        const button = document.createElement('button');
+        button.type = 'button'; button.className = 'photo-viewer-fullscreen';
+        button.dataset.viewerFullscreen = format;
+        button.textContent = '⛶ 全屏';
+        button.title = '全屏查看这张照片 · F';
+        button.setAttribute('aria-label', `${format === 'raw' ? 'CR3 内嵌预览' : 'JPEG'} 全屏查看`);
+        button.addEventListener('click', () => enter(format));
+        frame.addEventListener('focus', () => { if (!isActive()) selected = format; });
+        controls.insertBefore(button, controls.querySelector('.photo-viewer-hint'));
+        buttons.set(format, button);
+        render(false);
+      },
+      dispose() {
+        if (disposed) return;
+        disposed = true;
+        window.removeEventListener('keydown', keys, true);
+        removeWindowListener?.();
+        if (isActive() && handoff) {
+          const current = session;
+          pendingFullscreen = current;
+          queueMicrotask(() => { if (pendingFullscreen === current) { pendingFullscreen = null; current.active = false; restoreWindow(current); } });
+          session = null;
+        } else leave();
+        toolbar.remove();
+      }
+    };
+  }
   function mount(root) {
     const cleanups = [];
+    const fullscreen = mountFullscreen(root);
+    cleanups.push(() => fullscreen.dispose());
     const avoidAltMenu = event => { if (event.key === 'Alt') event.preventDefault(); };
     root.addEventListener('keydown', avoidAltMenu, true);
     root.addEventListener('keyup', avoidAltMenu, true);
@@ -34,6 +215,7 @@
       hint.id = `zoom-hint-${format}`;
       hint.textContent = 'Alt / Option + 滚轮缩放 · 放大后拖动';
       controls.append(status, reset, hint);
+      fullscreen.register(format, controls, frame);
       frame.after(controls);
       frame.classList.add('photo-viewer-frame');
       frame.tabIndex = 0;

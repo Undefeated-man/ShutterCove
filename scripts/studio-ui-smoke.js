@@ -116,7 +116,7 @@
     wheel(-300);thumbs[0].dispatchEvent(new DragEvent('dragstart',{bubbles:true,cancelable:true,dataTransfer:transfer}));thumbs.at(-1).dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));
     assert(JSON.stringify(order())===JSON.stringify([...oldNames.slice(1),oldNames[0]]),'Thumbnail drag reorders all seven photos even while the canvas is zoomed');
     await verifyPixels(await captureExport(),'poster',3,order());
-    el('collage-fit').click();const oldOrder=order(),geometry=cells('poster',3,1000,30),box=display.getBoundingClientRect();
+    el('collage-fit').click();el('collage-swap').click();const oldOrder=order(),geometry=cells('poster',3,1000,30),box=display.getBoundingClientRect();
     const point=r=>({x:box.left+(r.x+r.w/2)/display.width*box.width,y:box.top+(r.y+r.h/2)/display.height*box.height});
     const a=point(geometry.rects[0]),b=point(geometry.rects.at(-1));eventAt(display,'pointerdown',a.x,a.y);eventAt(display,'pointerup',b.x,b.y);
     const expected=[...oldOrder];[expected[0],expected[expected.length-1]]=[expected.at(-1),expected[0]];

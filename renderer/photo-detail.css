@@ -9,3 +9,34 @@
 .photo-detail .modal-header>div{min-width:0}.photo-detail .modal-header h3{overflow-wrap:anywhere}
 @media(max-width:900px){.photo-detail .inspect-layout{grid-template-columns:minmax(0,1fr) 225px;gap:16px}}
 @media(max-width:700px){.photo-detail .inspect-layout{grid-template-columns:minmax(0,1fr)}.photo-detail .preview-frame{height:clamp(160px,34vh,260px)}}
+.photo-viewer-fullscreen{background:#edf2e9b8;color:#537b6b;border:1px solid #a4b49b3b;border-radius:7px;padding:3px 10px;line-height:1.6;font-size:inherit;white-space:nowrap;backdrop-filter:blur(12px)}
+.photo-viewer-fullscreen:hover{background:#e2eddf;color:#315d53}
+.is-photo-fullscreen-backdrop{padding:0;background:#172623;backdrop-filter:none}
+.photo-detail.is-photo-fullscreen{display:flex;flex-direction:column;width:100vw;max-width:none;height:100vh;max-height:100vh;border:0;border-radius:0;background:#172623;color:#e7eee5;overflow:hidden;box-shadow:none}
+.photo-detail.is-photo-fullscreen>.modal-header,.photo-detail.is-photo-fullscreen>.modal-footer{display:none}
+.photo-detail.is-photo-fullscreen>.modal-body{display:flex;flex:1;min-height:0;padding:8px 18px 12px;overflow:hidden}
+.photo-detail.is-photo-fullscreen .inspect-layout{display:block;width:100%;height:100%;min-height:0}
+.photo-detail.is-photo-fullscreen .inspector-aside{display:none}
+.photo-detail.is-photo-fullscreen .pair-previews{display:block;height:100%;min-height:0}
+.photo-detail.is-photo-fullscreen .preview-block{display:none}
+.photo-detail.is-photo-fullscreen .preview-block.is-fullscreen-active{display:flex;flex-direction:column;height:100%;min-height:0}
+.photo-detail.is-photo-fullscreen .preview-label,.photo-detail.is-photo-fullscreen .editor-buttons,.photo-detail.is-photo-fullscreen .photo-viewer-fullscreen{display:none}
+.photo-detail.is-photo-fullscreen .preview-frame{flex:1;height:auto;min-height:0;border:0;border-radius:8px;background:#101c1a}
+.photo-detail.is-photo-fullscreen .photo-viewer-controls{padding:10px 2px 0;color:#b9cabd;flex-shrink:0}
+.photo-detail.is-photo-fullscreen .photo-viewer-zoom{color:#d3e3d3}
+.photo-detail.is-photo-fullscreen .photo-viewer-hint{color:#a8beb1}
+.photo-detail.is-photo-fullscreen .photo-viewer-reset{background:#f1f7ed14;color:#d1e1d4;border-color:#ffffff20}
+.photo-detail.is-photo-fullscreen .photo-viewer-reset:hover{background:#f1f7ed24}
+.photo-fullscreen-toolbar{display:flex;align-items:center;gap:20px;min-height:74px;padding:14px 24px;border-bottom:1px solid #d7e7dc17;background:linear-gradient(120deg,#24362feb,#203330ed);flex-shrink:0;line-height:1.6}
+.photo-fullscreen-title{min-width:0;flex:1}
+.photo-fullscreen-title strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(12px * var(--font-scale,1.2));font-weight:550;letter-spacing:.3px}
+.photo-fullscreen-title span{display:block;margin-top:2px;font-size:calc(10px * var(--font-scale,1.2));color:#acc1b1}
+.photo-fullscreen-formats{display:flex;gap:4px;padding:4px;border:1px solid #e4efdf20;border-radius:12px;background:#ecf7e608;flex-shrink:0}
+.photo-fullscreen-format{font-size:calc(11px * var(--font-scale,1.2));border-radius:8px;padding:6px 12px;color:#acc1b1;background:transparent;white-space:nowrap}
+.photo-fullscreen-format[aria-pressed=true]{color:#e8f4e5;background:#a5c7ad26;box-shadow:inset 0 0 0 1px #c1dabe23}
+.photo-fullscreen-format:hover{background:#a5c7ad18}
+.photo-fullscreen-actions{display:flex;gap:7px;flex-shrink:0}
+.photo-fullscreen-action{min-width:38px;min-height:38px;font-size:calc(11px * var(--font-scale,1.2));padding:7px 11px;border:1px solid #d9eadf20;border-radius:9px;background:#edfae50b;color:#d4e3d4;white-space:nowrap}
+.photo-fullscreen-action:hover{background:#dff0d822}
+@media(max-width:900px){.photo-fullscreen-toolbar{padding:12px 18px;gap:12px}.photo-fullscreen-title span{max-width:280px}.photo-fullscreen-format{padding:5px 9px}.photo-detail.is-photo-fullscreen .photo-viewer-hint{flex:0 1 auto}}
+@media(max-width:700px){.photo-fullscreen-toolbar{flex-wrap:wrap;gap:8px 12px;padding:12px 14px}.photo-fullscreen-title{flex-basis:100%}.photo-fullscreen-actions{margin-left:auto}.photo-detail.is-photo-fullscreen>.modal-body{padding:8px 10px 12px}}

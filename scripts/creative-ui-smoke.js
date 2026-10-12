@@ -1,0 +1,87 @@
+/* Real canvas / JPEG assertions. Every photograph is generated in memory. */
+(async()=>{
+  const checks=[],el=id=>document.getElementById(id),pause=ms=>new Promise(r=>setTimeout(r,ms));
+  const assert=(ok,label,detail)=>{if(!ok)throw new Error(label+(detail?' '+JSON.stringify(detail):''));checks.push(label);};
+  const wait=async fn=>{for(let i=0;i<1500;i++){if(fn())return;await pause(20);}throw new Error('Collage composition timeout: '+fn);};
+  const paint=()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+  await wait(()=>window.App?.api.isDemo&&App.state.photos.length&&!App.state.scanning);
+  const api=App.api,originals={source:api.source,thumbnail:api.thumbnail,save:api.saveImage},saved=[];
+  const sizes=[[1800,900],[600,1200],[1500,750],[600,600]],sources=new Map(),thumbs=new Map();
+  const colors=[[230,38,32],[32,184,58],[25,64,228]],photos=sizes.map(([w,h],i)=>({...App.state.photos[i],id:'composition-'+i,name:'Synthetic-'+i+'.JPG',jpegPath:'/synthetic/'+i+'.JPG',rawPath:null,width:w,height:h}));
+  for(let i=0;i<sizes.length;i++){
+    const [w,h]=sizes[i],c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+    if(i===0){for(let j=0;j<3;j++){x.fillStyle='rgb('+colors[j].join(',')+')';x.fillRect(j*w/3,0,w/3,h);}}
+    else{x.fillStyle=['','#f1aa22','#1ba3cc','#964ac0'][i];x.fillRect(0,0,w,h);x.fillStyle='#fff';x.fillRect(0,0,w*.05,h);x.fillRect(w*.95,0,w*.05,h);}
+    sources.set(photos[i].id,c.toDataURL('image/jpeg',.96));const t=document.createElement('canvas');t.width=180;t.height=Math.round(180*h/w);t.getContext('2d').drawImage(c,0,0,t.width,t.height);thumbs.set(photos[i].id,t.toDataURL());c.width=c.height=t.width=t.height=1;
+  }
+  let calls=0,delay=0;const seenSources=new Set();
+  api.source=async({id})=>{if(!sources.has(id))throw new Error('Non synthetic original requested');if(!seenSources.has(id)){seenSources.add(id);assert(true,'Only synthetic original '+id+' is read');}calls++;if(delay)await pause(delay);return sources.get(id);};
+  api.thumbnail=async({id})=>{if(!thumbs.has(id))throw new Error('Non synthetic thumb');return thumbs.get(id);};
+  api.saveImage=async args=>{saved.push(args);return{canceled:true};};
+  const change=(id,value,type='change')=>{el(id).value=String(value);el(id).dispatchEvent(new Event(type,{bubbles:true}));};
+  const toggle=(id,value)=>{el(id).checked=value;el(id).dispatchEvent(new Event('change',{bubbles:true}));};
+  const decode=url=>new Promise((resolve,reject)=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=url;});
+  const pixels=async url=>{const image=await decode(url),c=document.createElement('canvas');c.width=image.width;c.height=image.height;c.getContext('2d').drawImage(image,0,0);return c;};
+  const pixel=(c,x,y)=>[...c.getContext('2d').getImageData(Math.round(x),Math.round(y),1,1).data].slice(0,3);
+  const closeColor=(a,b)=>a.every((v,i)=>Math.abs(v-b[i])<22);
+  const redCentroid=c=>{const data=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let x=0,y=0,count=0;for(let i=0;i<data.length;i+=4){if(data[i]>170&&data[i+1]<90&&data[i+2]<70){const at=i/4;x+=at%c.width;y+=Math.floor(at/c.width);count++;}}if(!count)throw new Error('Missing synthetic red subject');return{x:x/count,y:y/count,count};};
+  const capture=async()=>{const before=saved.length;el('collage-export').click();await wait(()=>saved.length===before+1&&!el('collage-export').disabled);return saved.at(-1);};
+  const point=(x,y)=>{const c=el('collage-canvas'),r=c.getBoundingClientRect();return{x:r.left+x/c.width*r.width,y:r.top+y/c.height*r.height};};
+  const pointer=(type,p,extra={})=>el('collage-canvas').dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:71,button:0,clientX:p.x,clientY:p.y,...extra}));
+  const drag=(a,b,extra={})=>{pointer('pointerdown',a,extra);pointer('pointermove',b,extra);pointer('pointerup',b,extra);};
+  try{
+    await Studio.collage(photos);change('collage-width',800);await paint();
+    assert(el('collage-compose').classList.contains('active'),'Individual framing is the default tool');
+    let result=await capture(),baseline=await pixels(result.dataUrl);const margin=24,cell=(800-72)/2,center=margin+cell/2;
+    assert(closeColor(pixel(baseline,center,center),colors[1]),'A wide photo initially crops its center into a square');
+    const neighbor=pixel(baseline,800-center,center),oldNames=[...document.querySelectorAll('.collage-thumb img')].map(i=>i.alt);
+    change('collage-photo-zoom',200,'input');const start=point(257.5,257.5),end=point(900,257.5);drag(start,end);await paint();
+    result=await capture();let adjusted=await pixels(result.dataUrl);
+    assert(closeColor(pixel(adjusted,center,center),colors[0]),'Single-photo zoom and pan expose the left subject in the actual JPEG',pixel(adjusted,center,center));
+    assert(closeColor(pixel(adjusted,800-center,center),neighbor),'Framing changes leave the neighboring photo untouched');
+    assert(JSON.stringify([...document.querySelectorAll('.collage-thumb img')].map(i=>i.alt))===JSON.stringify(oldNames),'Framing does not reorder photographs');
+    assert(result.preserveEncoding===true,'Exports request byte-preserving JPEG storage');
+    const frame=el('collage-preview'),f=frame.getBoundingClientRect();frame.dispatchEvent(new WheelEvent('wheel',{altKey:true,deltaY:-280,clientX:f.left+f.width/2,clientY:f.top+f.height/2,bubbles:true,cancelable:true}));
+    const beforeZoomed=el('collage-photo-zoom').value;const a=point(257.5,257.5);drag(a,{x:a.x-140,y:a.y},{shiftKey:true});
+    assert(+frame.dataset.zoom>1&&el('collage-photo-zoom').value===beforeZoomed,'Shift drag keeps the whole canvas magnified and the selected photo scale unchanged');const shiftAdjusted=await capture();assert(shiftAdjusted.dataUrl!==result.dataUrl,'Shift drag while magnified changes the selected framing in the actual JPEG');el('collage-fit').click();
+    el('collage-photo-reset').click();change('collage-photo-zoom',50,'input');result=await capture();const smaller=await pixels(result.dataUrl);assert(closeColor(pixel(smaller,margin+cell*.12,center),colors[0])&&closeColor(pixel(smaller,margin+cell*.88,center),colors[2]),'Zooming below 100 percent reveals both edge subjects rather than forcing a cover crop');el('collage-photo-reset').click();change('collage-photo-fit','contain');result=await capture();const contained=await pixels(result.dataUrl);assert(closeColor(pixel(contained,margin+cell*.12,center),colors[0])&&closeColor(pixel(contained,margin+cell*.88,center),colors[2]),'Complete-fit mode preserves both subjects in a square slot');assert(closeColor(pixel(contained,center,margin+cell*.1),[250,247,238]),'Complete fit leaves deliberate background instead of cropping the source');el('collage-photo-reset').click();result=await capture();adjusted=await pixels(result.dataUrl);assert(closeColor(pixel(adjusted,center,center),colors[1]),'Reset restores the selected photo framing');
+    change('collage-template','magazine');change('collage-columns',2);await paint();
+    assert(!el('collage-columns-field').hidden&&el('collage-photo-zoom').disabled,'Original-ratio magazine exposes rows and preserves full images');
+    result=await capture();const magazine=await pixels(result.dataUrl),m=44,g=24,head=136,rh=(800-2*m-g)/2.5,wide=rh*2;
+    assert(closeColor(pixel(magazine,m+wide*.12,head+rh*.5),colors[0])&&closeColor(pixel(magazine,m+wide*.88,head+rh*.5),colors[2]),'Magazine preserves both edges of a wide image instead of cropping it');
+    assert(closeColor(pixel(magazine,m+wide+g+rh*.5*.03,head+rh*.5),[255,255,255]),'Magazine preserves the edge marker of a portrait image');
+    const height=magazine.height;change('collage-title-size',170);result=await capture();const bigger=await decode(result.dataUrl);assert(bigger.height>height,'Increasing title font reserves enough header space in the exported poster');
+    change('collage-title-size',22);change('collage-template','board');await paint();
+    assert(!el('collage-board-tools').hidden&&el('collage-photo-zoom').min==='20','Board uses photo size and angle controls rather than a crop window');
+    const select=i=>document.querySelectorAll('.collage-thumb')[i].click();
+    select(0);change('collage-photo-angle',0,'input');change('collage-photo-zoom',150,'input');el('collage-front').click();
+    result=await capture();const board=await pixels(result.dataUrl),boardOriginal=result.dataUrl;assert(board.width===800&&board.height>608,'Board export includes wood and a readable title footer');
+    const bw=.31*800*1.5,bh=bw/2,initialX=.2*800,initialY=.25*(800*.76),clampedX=Math.max(800*.045+bw/2+800*.008,initialX);
+    assert(closeColor(pixel(board,clampedX-bw*.37,initialY),colors[0])&&closeColor(pixel(board,clampedX+bw*.37,initialY),colors[2]),'A resized board photo still contains both original sides');
+    const bp=point(clampedX/800*1000,initialY/800*1000);drag(bp,{x:bp.x+60,y:bp.y+50});result=await capture();assert(result.dataUrl!==boardOriginal,'Dragging a board photo changes the saved composition');
+    change('collage-photo-angle',23,'input');assert(el('collage-photo-angle-value').textContent==='23°','Selected photo angle can be controlled independently');
+    const rotated=await capture();assert(rotated.dataUrl!==result.dataUrl,'Board rotation affects real exported JPEG pixels');
+    const boardFrame=el('collage-preview'),bf=boardFrame.getBoundingClientRect(),beforeBoard=redCentroid(await pixels(rotated.dataUrl));boardFrame.dispatchEvent(new WheelEvent('wheel',{altKey:true,deltaY:-170,clientX:bf.left+bf.width/2,clientY:bf.top+bf.height/2,bubbles:true,cancelable:true}));const redPreview=redCentroid(el('collage-canvas')),bs=point(redPreview.x,redPreview.y);drag(bs,{x:bs.x+50,y:bs.y+30},{shiftKey:true});const boardShifted=await capture(),afterBoard=redCentroid(await pixels(boardShifted.dataUrl));assert(+boardFrame.dataset.zoom>1&&el('collage-photo-angle').value==='23','Dragging a board photo while zoomed preserves its angle and canvas magnification');assert(afterBoard.x>beforeBoard.x+10&&afterBoard.y>beforeBoard.y+10,'Shift dragging a zoomed board photo moves the actual exported subject center', [beforeBoard,afterBoard]);assert(Math.abs(afterBoard.count/beforeBoard.count-1)<.05,'Board movement retains the complete rotated photograph without resizing or recropping');el('collage-fit').click();
+    select(1);assert(el('collage-photo-angle').value==='5','Neighboring board photograph keeps its own angle');
+    // Force two photos to overlap, then prove foreground/background controls
+    // affect the exported image, not merely a DOM outline.
+    change('collage-photo-angle',0,'input');const p=point(.49*1000,.25*.76*1000);drag(p,point(.3*1000,.34*.76*1000));el('collage-front').click();const foreground=await capture();el('collage-back').click();const background=await capture();assert(foreground.dataUrl!==background.dataUrl,'Changing board layers changes overlapping photographs in the actual JPEG');
+    change('collage-template','poster');change('collage-width',3000);change('collage-title-size',81);
+    delay=35;toggle('collage-share',true);await wait(()=>el('collage-share-status').textContent.includes('实际 JPEG 成品'));await paint();
+    assert(el('collage-share-quality').value==='80'&&el('collage-share-side').value==='1440','The provided 1440px / Q80 sample is the explicit default reference');
+    result=await capture();const shared=await decode(result.dataUrl),visible=el('collage-canvas');assert(Math.max(shared.width,shared.height)===1440,'Sharing constrains the final long edge to 1440px');
+    assert(visible.width===shared.width&&visible.height===shared.height,'Sharing displays the decoded final JPEG at its actual pixel size');
+    const expected=await pixels(result.dataUrl),current=visible.getContext('2d').getImageData(0,0,visible.width,visible.height).data,finalPixels=expected.getContext('2d').getImageData(0,0,expected.width,expected.height).data;
+    assert(current.every((v,i)=>v===finalPixels[i]),'Sharing preview pixels exactly match decoding the same bytes handed to saveImage');
+    assert(el('collage-status').textContent.includes('KB')&&el('collage-share-status').textContent.includes('相同字节'),'Sharing shows file size and an accurate WYSIWYG explanation');
+    el('collage-pixels').click();await wait(()=>Math.abs(el('collage-canvas').getBoundingClientRect().width-shared.width)<1.5);assert(true,'Actual-size button displays one CSS pixel per output pixel');el('collage-fit').click();
+    const old=result.dataUrl;change('collage-title','最新标题必须出现在成品','input');change('collage-share-quality',63,'input');
+    assert(el('collage-share-status').textContent.includes('正在生成'),'A changed composition invalidates the previous compressed preview');
+    result=await capture();assert(result.dataUrl!==old&&result.preserveEncoding,'Immediate save waits for the newest title and quality, then preserves those exact bytes');
+    change('collage-share-side',2560);result=await capture();const clearer=await decode(result.dataUrl);assert(Math.max(clearer.width,clearer.height)===2560,'A clearer custom sharing size changes the actual encoded dimensions');
+    const beforeClose=saved.length;change('collage-title','关闭时取消重建','input');el('collage-export').click();App.closeModal();await pause(400);assert(saved.length===beforeClose,'Closing during original reads cancels export without saving stale data');
+    assert(!document.querySelector('.collage-studio'),'Closing releases the composition workbench');
+    const previousThumbnail=api.thumbnail;api.thumbnail=async args=>{await pause(60);return previousThumbnail(args);};const pending=Studio.collage(photos);await pause(10);const other=App.modal({title:'Later synthetic dialog',body:'Keep this dialog visible.'});await pending;assert(other.isConnected&&!document.querySelector('.collage-studio'),'A late thumbnail batch cannot replace a newer user dialog');App.closeModal();api.thumbnail=previousThumbnail;
+    return{syntheticOnly:true,passed:checks.length,checks};
+  }finally{App.closeModal();api.source=originals.source;api.thumbnail=originals.thumbnail;api.saveImage=originals.save;}
+})();
