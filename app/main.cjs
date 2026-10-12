@@ -107,7 +107,7 @@ async function persistSettings(patch = {}) {
   Object.assign(next, languagePatch(patch));
   await atomicJSON(settingsPath, next);
   settings = next;
-  if (Object.hasOwn(patch, 'language')) { setApplicationMenu(); win?.setTitle(nativeMessage('拾光屿 · 摄影回忆时光机', settings.language)); }
+  if (Object.hasOwn(patch, 'language')) { setApplicationMenu(); win?.setTitle(nativeMessage('时光杂货店 · 摄影回忆时光机', settings.language)); }
   return publicSettings();
 }
 async function approvedFolder(folder) {
@@ -334,9 +334,9 @@ function bindAPI() {
   });
 }
 function setApplicationMenu() {
-  app.setName(nativeMessage('拾光屿', settings.language));
+  app.setName(nativeMessage('时光杂货店', settings.language));
   Menu.setApplicationMenu(Menu.buildFromTemplate([
-    ...(process.platform === 'darwin' ? [{ label: nativeMessage('拾光屿', settings.language), submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
+    ...(process.platform === 'darwin' ? [{ label: nativeMessage('时光杂货店', settings.language), submenu: [{ role: 'about' }, { type: 'separator' }, { role: 'hide' }, { role: 'hideOthers' }, { type: 'separator' }, { role: 'quit' }] }] : []),
     { label: nativeMessage('编辑', settings.language), submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }] },
     { label: nativeMessage('窗口', settings.language), submenu: [{ role: 'minimize' }, { role: 'zoom' }, { role: 'close' }] }
   ]));
@@ -393,7 +393,7 @@ async function start() {
   bindAPI();
   function createWindow() {
     const compact = process.argv.includes('--compact');
-    win = new BrowserWindow({ title: nativeMessage('拾光屿 · 摄影回忆时光机', settings.language), width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
+    win = new BrowserWindow({ title: nativeMessage('时光杂货店 · 摄影回忆时光机', settings.language), width: compact ? 900 : 1440, height: compact ? 680 : 960, minWidth: 860, minHeight: 600, show: true, backgroundColor: '#f1f3ee', ...(process.platform === 'darwin' ? { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 20, y: 20 }, vibrancy: 'under-window' } : {}), webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !smoke } });
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
     for (const event of ['enter-full-screen','leave-full-screen']) win.on(event, () => win?.webContents.send('memory:photo-fullscreen', { enabled: win.isFullScreen() }));
     win.webContents.on('will-navigate', (event, url) => { if (!url.startsWith('memory-app://app/')) event.preventDefault(); });

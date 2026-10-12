@@ -31,6 +31,11 @@
     assert([...el('collage-template').options].every(option => !/[\u4e00-\u9fff]/.test(option.text)), 'Every collage template is English');
     assert(document.querySelector('.collage-studio .modal-header p').textContent.includes('4 photos'), 'Collage count and help subtitle are English');
     assert(el('collage-title').value === 'Keep a moment. Make it timeless.', 'New English collage gets an English editable default title');
+    assert(document.querySelector('label[for="collage-background"]').textContent === 'Background color' && document.querySelector('label[for="collage-text-color"]').textContent === 'Text color' && el('collage-colors-reset').textContent === 'Reset template colors', 'Custom canvas and text color controls are English');
+    assert(el('collage-background').getAttribute('aria-label') === 'Choose background color' && el('collage-text-color-hex').getAttribute('aria-label') === 'Text HEX color', 'Color picker and HEX fields have localized accessible names');
+    change('collage-background', '#123456', 'input'); change('collage-text-color-hex', '#ca3d75'); await frames();
+    const colorsBounds = document.querySelector('.collage-colors').getBoundingClientRect();
+    assert([...document.querySelectorAll('.collage-colors input,.collage-colors button')].every(control => { const b = control.getBoundingClientRect(); return b.left >= colorsBounds.left - 1 && b.right <= colorsBounds.right + 1; }), 'English color controls fit inside the tools column at the current viewport');
     assert(JSON.stringify([...document.querySelectorAll('.collage-thumb img')].map(img => img.alt)) === JSON.stringify(photos.map(photo => photo.name)), 'Chinese photo names matching UI dictionary keys remain unchanged');
     change('collage-width', 800); change('collage-template', 'board'); change('collage-photo-zoom', 137, 'input'); change('collage-photo-angle', 23, 'input'); change('collage-title', '退出全屏', 'input'); await frames();
     assert(el('collage-photo-heading').textContent === 'Photo 1 · Freeform board' && el('collage-photo-help').textContent.startsWith('Drag photos'), 'Dynamic selected-photo labels and help are English');
@@ -40,6 +45,8 @@
     await language('zh-CN');
     assert(el('collage-fit').textContent === '适合窗口' && el('collage-photo-heading').textContent === '第 1 张 · 自由贴板', 'Open collage switches static and dynamic controls back to Chinese');
     assert(el('collage-title').value === '退出全屏' && el('collage-photo-angle').value === '23' && el('collage-photo-zoom').value === '137', 'Language switching preserves user title, per-photo angle and scale');
+    assert(el('collage-background').value === '#123456' && el('collage-text-color').value === '#ca3d75' && el('collage-text-color-hex').value === '#CA3D75', 'Language switching and board selection preserve both user-chosen colors');
+    assert(document.querySelector('label[for="collage-text-color"]').textContent === '文字颜色' && el('collage-colors-reset').textContent === '恢复模板配色', 'Custom color labels and reset action return to Chinese');
     assert(el('collage-canvas').toDataURL() === canvas && el('collage-preview').dataset.zoom === zoom, 'Language switching leaves preview pixels and canvas magnification intact');
     await language('en');
     assert(el('collage-status').textContent.includes('4 photos') && el('collage-photo-heading').textContent === 'Photo 1 · Freeform board', 'Dynamic collage status returns to English');

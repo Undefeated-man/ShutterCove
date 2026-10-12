@@ -162,7 +162,7 @@
     assert(el('update-action').textContent==='下载并打开安装器' && /系统安装器/.test(el('update-description').textContent) && !/重启|原位置/.test(el('update-description').textContent),'Linux deb update names the system installer and does not promise app replacement');
     emit({status:'ready'});
     assert(el('update-action').textContent==='打开安装器' && /系统/.test(el('update-description').textContent),'Downloaded Linux deb offers opening the installer without promising restart');
-    emit({status:'ready',message:'已打开系统安装器；请完成安装后手动重新打开拾光屿'});
+    emit({status:'ready',message:'已打开系统安装器；请完成安装后手动重新打开时光杂货店'});
     assert(/已打开系统安装器/.test(el('update-description').textContent) && /手动重新打开/.test(el('update-description').textContent),'Linux deb displays the installer result and manual relaunch instructions from the backend');
     await clean();
     for (const font of [1.2,1.5]) {

@@ -2,7 +2,7 @@
 
 **Language:** [English](README.md) · [简体中文](README.zh-CN.md) · [日本語](README.ja.md) · [한국어](README.ko.md)
 
-**拾光屿：专为 RAW 摄影打造的整理与创作相册 — 精选照片，制作拼图海报与 GIF 动图。**
+**时光杂货店：专为 RAW 摄影打造的整理与创作相册 — 精选照片，制作拼图海报与 GIF 动图。**
 
 > **지원 언어:** 현재 앱 인터페이스는 **영어와 간체 중국어 두 언어**를 지원합니다. 새로 설치하면 영어로 시작하며, 첫 실행에서 언어를 선택할 수 있습니다. 설정의 “Interface language / 界面语言”에서 즉시 전환할 수 있고 선택이 저장됩니다. 일본어와 한국어 문서는 사용 설명의 번역입니다. 앞으로 수요에 따라 앱의 지원 언어를 추가할 예정입니다. 본문에는 중국어 버튼 이름도 한국어 뜻과 함께 표시합니다.
 
@@ -10,12 +10,12 @@
 
 **A local desktop photo library built specifically for DSLR and mirrorless photographers who shoot RAW.**
 
-Shutter Cove (拾光屿) follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
+Shutter Cove (时光杂货店) follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
 
 - **Keep RAW and JPEG together.** Browse matching files as a pair, inspect details with zoom and fullscreen, and open either format in Photoshop / Lightroom on Mac or a configured local editor on Linux.
 - **Browse quickly without duplicating originals.** On-demand thumbnails, nearby-photo prefetching, and a bounded, removable preview cache keep the library light while originals stay in their folders.
 - **Find and curate your best photographs.** Filter by date, color, theme, and tags; collect favorites, tag in batches, and search similar photographs on demand without building a vector database first.
-- **Make collages and posters with control over composition.** Zoom and move each photograph within its cell, preserve original aspect ratios in a magazine poster, or freely position, resize, rotate, and overlap full photographs on a wooden board. Set title size, arrange the story, and preview the actual encoded share JPEG before saving the same result.
+- **Make collages and posters with control over composition.** Zoom and move each photograph within its cell, preserve original aspect ratios in a magazine poster, or freely position, resize, rotate, and overlap full photographs on a wooden board. Set title size, customize background and text colors, arrange the story, and preview the actual encoded share JPEG before saving the same result.
 - **Create GIF stories and memes.** Scroll a filmstrip, drag frames to reorder, and add movable speech bubbles or text to each photograph. Choose output scale, palette, frame timing, and looping; preview a real encoded GIF, or save one frame as a static PNG meme.
 - **Organize from SD card to delivery.** Import by capture date and gather selections across folders into one destination, optionally including CR3. Favorite synchronization first moves other JPEG / CR3 files on the chosen SD card into a recoverable pending-deletion folder for review.
 
@@ -25,12 +25,12 @@ Shutter Cove (拾光屿) follows your photography workflow: import from an SD ca
 
 **专为拍摄 RAW 的单反与微单摄影用户量身定制的本地桌面相册。**
 
-拾光屿围绕相机摄影的完整流程设计：从 SD 卡导入、RAW / JPEG 配对浏览、精选整理和修图交接，到拼图海报与光影动图，让照片更容易找、选、用。支持 macOS 与 Linux；**当前支持 JPEG 与 Canon CR3，RAW 支持目前限于 CR3。**
+时光杂货店围绕相机摄影的完整流程设计：从 SD 卡导入、RAW / JPEG 配对浏览、精选整理和修图交接，到拼图海报与光影动图，让照片更容易找、选、用。支持 macOS 与 Linux；**当前支持 JPEG 与 Canon CR3，RAW 支持目前限于 CR3。**
 
 - **一张照片，RAW / JPEG 一起管理。** 配对浏览、放大查看细节与全屏看图；Mac 可交给 Photoshop / Lightroom，Linux 可配置本机编辑器。
 - **轻量预览，减少等待和存储负担。** 缩略图按需加载、预读，缓存有上限且可清理；原片留在原目录，浏览不额外复制完整照片。
 - **从一堆照片中找出值得留下的作品。** 按日期、色系、主题和标签筛选，收藏精品、批量加标签；相似照片按需计算，无需预先建立向量库。
-- **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号可调，分享压缩展示实际编码成品，预览与保存一致。
+- **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号、背景色与文字颜色可调，分享压缩展示实际编码成品，预览与保存一致。
 - **GIF 与表情包，让回忆一帧一帧流动。** 滚轮浏览电影胶片、拖拽换序，逐帧添加可移动的对话气泡与文字；设置尺寸、色彩数、时长和循环，预览真实 GIF，也可保存单帧 PNG 表情包。
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
 
@@ -42,13 +42,15 @@ Shutter Cove (拾光屿) follows your photography workflow: import from an SD ca
 
 ![Photo gallery / 相册浏览：synthetic landscapes only / 仅合成风景](docs/screenshots/gallery-en.png)
 
+The warm ivory and sage glass interface adds staggered spring entrances, tactile button feedback, and a continuous photo-card-to-detail transition. Animations respect the operating system’s Reduce motion preference. 中文界面采用「时光杂货店」新名字；暖白与鼠尾草绿玻璃界面加入交错入场、按钮轻回弹和照片连续转场，并遵循系统减少动态效果设置。
+
 ![GIF and meme studio / GIF 与表情包工作台：synthetic artwork only / 仅合成画面](docs/screenshots/motion-studio.png)
 
 All screenshots use synthetic artwork, with no private photographs, real portraits, personal paths, or real capture metadata. 所有截图使用合成画面，不含私人原片、真人肖像、个人路径或真实拍摄信息。
 
 ## 설치
 
-**패키지 이름 안내:** Shutter Cove는 “拾光屿”의 영문 브랜드 이름으로, v1.2.1부터 영어 인터페이스에 사용됩니다. 호환성을 위해 파일 이름은 계속 `Shiguang-Isle-`로 시작하고 Mac 패키지에는 `Shiguang Isle.app`이 포함됩니다. 같은 앱입니다.
+**패키지 이름 안내:** Shutter Cove는 영문 브랜드 이름입니다. v1.3.0부터 중국어 이름은 “时光杂货店”(이전 이름 “拾光屿”)입니다. 호환성을 위해 파일 이름은 계속 `Shiguang-Isle-`로 시작하고 Mac 패키지에는 `Shiguang Isle.app`이 포함됩니다. 같은 앱입니다.
 
 **공식 저장소:** [Undefeated-man/ShutterCove](https://github.com/Undefeated-man/ShutterCove). v1.2.1은 새 주소에서 업데이트를 확인하고 다운로드합니다. 기존 앱 식별자, 설치 경로, 즐겨찾기, 태그와 설정은 유지됩니다.
 

@@ -238,7 +238,7 @@ class UpdateService {
     if (!this.ready) return this.set({ status: 'error', message: '请先下载并校验更新' });
     if (this.ready.format === 'deb') {
       const error = await this.openInstaller(this.ready.staged);
-      return this.set({ status: error ? 'error' : 'ready', message: error ? '无法打开系统安装器，请从正式发布页下载 deb 并使用系统包管理器安装' : '已打开系统安装器；请完成安装后手动重新打开拾光屿' });
+      return this.set({ status: error ? 'error' : 'ready', message: error ? '无法打开系统安装器，请从正式发布页下载 deb 并使用系统包管理器安装' : '已打开系统安装器；请完成安装后手动重新打开时光杂货店' });
     }
     this.busy = 'install'; this.set({ status: 'installing', message: '正在保存相册记录，即将退出并更新…' });
     let helper;

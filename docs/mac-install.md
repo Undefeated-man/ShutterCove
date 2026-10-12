@@ -6,7 +6,7 @@
 
 ### 为什么会显示安全性提示？
 
-当前拾光屿 Mac 发布包使用 ad-hoc 签名，没有 Apple Developer ID 证书，也未经过 Apple 公证。首次启动时，macOS 可能提示无法验证开发者或无法检查恶意软件。这不是 Apple 对软件安全性的认可。请先核对下载来源和文件完整性，再自行决定是否允许运行。[Apple 官方说明](https://support.apple.com/zh-cn/102445)
+当前时光杂货店 Mac 发布包使用 ad-hoc 签名，没有 Apple Developer ID 证书，也未经过 Apple 公证。首次启动时，macOS 可能提示无法验证开发者或无法检查恶意软件。这不是 Apple 对软件安全性的认可。请先核对下载来源和文件完整性，再自行决定是否允许运行。[Apple 官方说明](https://support.apple.com/zh-cn/102445)
 
 ### 先确认下载与校验
 

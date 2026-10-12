@@ -2,6 +2,12 @@
 
 ## 中文
 
+### 自定义配色
+
+拼图可分别设置背景与文字颜色，使用取色器或输入 3 / 6 位 HEX 色值。标题、副标题与页脚使用同一文字色；木质展示板保留木纹并随背景染色。切换模板或界面语言会保留自定义配色，点击“恢复模板配色”可回到当前模板默认色。配色直接参与成品绘制，分享预览与保存使用相同 JPEG 字节。
+
+![拼图配色：仅合成照片](screenshots/collage-colors.png)
+
 ### 构图与两种新海报
 
 拼图中的“调整构图”用来单独调整一张照片：先点击照片，再拖动格内画面或调整该照片的缩放。缩略图换序会让构图跟着照片移动。Option / Alt + 滚轮仍控制整个预览；两种缩放不会混淆。
@@ -35,6 +41,10 @@ GIF 的颜色数有限，渐变或摄影画面可能出现色带。缩小尺寸�
 照片详情点击“全屏”或按 F，进入全屏看图。保留 Option / Alt 缩放、拖动及左右切换；Esc 优先退出全屏，再按一次关闭详情。关闭详情会恢复进入前的窗口状态。
 
 ## English
+
+### Custom colors
+
+Set background and text colors separately with the color picker or 3 / 6-digit HEX values. The title, subtitle, and imprint use the same text color; the wooden board retains its grain with your background tint. Switching templates or languages keeps custom colors. Restore template colors resets to the current template defaults. Colors are drawn into the export, and share preview and save use the same JPEG bytes.
 
 ### Composition and new poster layouts
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: memory-photo: file:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' memory-photo:; font-src 'self';">
-<title data-i18n="拾光屿 · 摄影回忆时光机">拾光屿 · 摄影回忆时光机</title>
+<title data-i18n="时光杂货店 · 摄影回忆时光机">时光杂货店 · 摄影回忆时光机</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="studio-viewer.css">
 <link rel="stylesheet" href="motion-studio.css">
@@ -17,6 +17,8 @@
 <link rel="stylesheet" href="photo-viewer.css">
 <link rel="stylesheet" href="updater-ui.css">
 <link rel="stylesheet" href="language-ui.css">
+<link rel="stylesheet" href="cove-design.css">
+<link rel="stylesheet" href="ambient-motion.css">
 <script defer src="i18n.js"></script>
 <script defer src="language-ui.js"></script>
 <script defer src="demo.js"></script>
@@ -24,6 +26,7 @@
 <script defer src="motion-model.js"></script>
 <script defer src="motion-studio.js"></script>
 <script defer src="photo-viewer.js"></script>
+<script defer src="ambient-motion.js"></script>
 <script defer src="app.js"></script>
 <script defer src="updater-ui.js"></script>
 <script defer src="onboarding.js"></script>
@@ -35,7 +38,7 @@
 <body>
 <div class="app-shell">
 <aside class="sidebar">
-<div class="brand"><div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M7 28c3-7 6-9 9-9 4 0 4 5 8 5 3 0 5-5 9-5M10 13h5l2-4h8l2 4h4a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3Z"/><circle cx="21" cy="22" r="7"/></svg></div><div><strong>拾光屿<span>SHUTTER COVE</span></strong></div></div>
+<div class="brand"><div class="brand-icon" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M7 28c3-7 6-9 9-9 4 0 4 5 8 5 3 0 5-5 9-5M10 13h5l2-4h8l2 4h4a3 3 0 0 1 3 3v15a3 3 0 0 1-3 3H10a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3Z"/><circle cx="21" cy="22" r="7"/></svg></div><div><strong>时光杂货店<span>SHUTTER COVE</span></strong></div></div>
 <p class="sidebar-caption">给每一束光，一个归处。</p>
 <div class="nav-label">我的时光</div>
 <nav id="navigation" aria-label="主要导航">
@@ -65,7 +68,7 @@
 <div id="photo-grid" class="photo-grid" aria-label="照片列表"></div>
 <div id="empty-state" class="empty-state" hidden><div class="empty-symbol">✧</div><h3>从一段旅程开始</h3><p>打开照片文件夹，让光影与回忆重新相遇。</p><button class="button primary" id="empty-open">选择照片文件夹</button></div>
 <div class="pagination"><button class="button quiet" id="previous-page" hidden>← 上一页</button><span class="light-label" id="page-label" hidden></span><button class="button quiet" id="load-more" hidden>继续翻阅 →</button></div>
-<footer class="gallery-footer"><span>每一帧，都值得被记住。</span><span>拾光屿 · 摄影回忆时光机</span></footer>
+<footer class="gallery-footer"><span>每一帧，都值得被记住。</span><span>时光杂货店 · 摄影回忆时光机</span></footer>
 </div>
 <div class="selection-bar" id="selection-bar" hidden><div><span class="selection-counter" id="selected-count">0</span> 张已选 <button class="link-button" id="select-all">全选筛选结果</button><button class="link-button" id="clear-selection">取消选择</button></div><div class="selection-actions"><button class="button quiet" id="batch-tags">＋ 标签 / 主题</button><button class="button quiet" id="batch-favorite">♡ 收藏</button><button class="button quiet" id="batch-reveal">↥ 复制到文件夹</button><button class="button quiet" id="batch-collage">▧ 拼图</button><button class="button quiet" id="batch-gif">▷ GIF / 表情包</button><button class="button danger-quiet" id="batch-delete">删除</button></div></div>
 </main>

@@ -83,6 +83,9 @@
     document.querySelector(`.photo-card[data-id="${photo.id}"]`).click();
     await wait(() => App.state.inspectorId === photo.id && [...document.querySelectorAll('.photo-detail .preview-frame img')].length === (photo.jpegPath && photo.rawPath ? 2 : 1) && [...document.querySelectorAll('.photo-detail .preview-frame img')].every(img => img.complete && img.naturalWidth > 0 && Number(img.closest('.preview-frame').dataset.baseWidth) > 0));
     await Promise.all([...document.querySelectorAll('.photo-detail .preview-frame img')].map(img => img.decode()));
+    // Pixel comparisons need settled geometry. In-flight interruption and
+    // late-loading geometry are exercised independently by the motion suite.
+    await wait(() => !window.AmbientMotion?.diagnostics().shared);
     await frames();
   };
   let negativeStyle;

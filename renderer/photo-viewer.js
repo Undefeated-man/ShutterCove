@@ -282,11 +282,16 @@
       };
       const measure = () => {
         if (disposed) return;
-        const box = frame.getBoundingClientRect(), style = getComputedStyle(frame);
+        const style = getComputedStyle(frame);
         borderLeft = parseFloat(style.borderLeftWidth) || 0;
         borderTop = parseFloat(style.borderTopWidth) || 0;
-        const nextWidth = box.width - borderLeft - (parseFloat(style.borderRightWidth) || 0);
-        const nextHeight = box.height - borderTop - (parseFloat(style.borderBottomWidth) || 0);
+        // Detail entrances transform the whole modal. Their visual rectangle
+        // must not change the photo's layout dimensions or zoom bounds. Computed
+        // dimensions also retain fractions that clientWidth/clientHeight round.
+        const horizontalBorder = borderLeft + (parseFloat(style.borderRightWidth) || 0);
+        const verticalBorder = borderTop + (parseFloat(style.borderBottomWidth) || 0);
+        const nextWidth = parseFloat(style.width) - (style.boxSizing === 'border-box' ? horizontalBorder : 0);
+        const nextHeight = parseFloat(style.height) - (style.boxSizing === 'border-box' ? verticalBorder : 0);
         const changed = Math.abs(nextWidth - width) > .5 || Math.abs(nextHeight - height) > .5;
         width = nextWidth; height = nextHeight;
         const scale = image.naturalWidth && image.naturalHeight

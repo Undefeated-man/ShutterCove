@@ -50,6 +50,27 @@
     result=await capture();const magazine=await pixels(result.dataUrl),m=44,g=24,head=136,rh=(800-2*m-g)/2.5,wide=rh*2;
     assert(closeColor(pixel(magazine,m+wide*.12,head+rh*.5),colors[0])&&closeColor(pixel(magazine,m+wide*.88,head+rh*.5),colors[2]),'Magazine preserves both edges of a wide image instead of cropping it');
     assert(closeColor(pixel(magazine,m+wide+g+rh*.5*.03,head+rh*.5),[255,255,255]),'Magazine preserves the edge marker of a portrait image');
+    const originalTitle=el('collage-title').value,originalTitleSize=el('collage-title-size').value;
+    change('collage-background','#112233','input');change('collage-text-color-hex','#d2a');
+    assert(el('collage-text-color').value==='#dd22aa'&&el('collage-text-color-hex').value==='#DD22AA','Three-digit HEX expands to a synchronized native color picker');
+    change('collage-text-color-hex','#d62a71');change('collage-title','LIGHT','input');change('collage-title-size',40);
+    result=await capture();const coloredMagazine=await pixels(result.dataUrl);
+    assert(closeColor(pixel(coloredMagazine,5,5),[17,34,51]),'Custom canvas background is present in the actual exported JPEG');
+    let customTextPixels=0;const headerPixels=coloredMagazine.getContext('2d').getImageData(0,0,coloredMagazine.width,136).data;
+    for(let at=0;at<headerPixels.length;at+=4)if(closeColor([...headerPixels.slice(at,at+3)],[214,42,113]))customTextPixels++;
+    assert(customTextPixels>250,'The selected title text color appears in actual poster pixels rather than just the form',customTextPixels);
+    const drawText=CanvasRenderingContext2D.prototype.fillText,textPaint=[];
+    try{CanvasRenderingContext2D.prototype.fillText=function(value,...args){textPaint.push({value,color:this.fillStyle});return drawText.call(this,value,...args);};change('collage-title','LIGHT AGAIN','input');await capture();}finally{CanvasRenderingContext2D.prototype.fillText=drawText;}
+    assert(['LIGHT AGAIN','A LITTLE BOOK OF LIGHT','SHUTTER COVE  /  MOMENTS TO REMEMBER'].every(value=>textPaint.some(item=>item.value===value&&item.color==='#d62a71')),'Title, subtitle and imprint consistently use the chosen text color');
+    change('collage-text-color-hex','nothex');assert(el('collage-text-color').value==='#d62a71'&&el('collage-text-color-hex').value==='#D62A71','Invalid HEX input restores the last valid color without changing the composition');
+    for(const next of ['film','poster','board']){change('collage-template',next);assert(el('collage-background').value==='#112233'&&el('collage-text-color').value==='#d62a71','Switching to '+next+' preserves both custom colors');}
+    result=await capture();const tintedBoard=await pixels(result.dataUrl),woodCorner=pixel(tintedBoard,5,5);
+    assert(woodCorner[2]>woodCorner[0]+20&&closeColor(pixel(tintedBoard,5,tintedBoard.height-5),[17,34,51]),'Board wood is tinted by the custom background while its footer uses the exact canvas color',woodCorner);
+    change('collage-template','film');el('collage-colors-reset').click();assert(el('collage-background').value==='#253c35'&&el('collage-text-color').value==='#eee9dd','Reset restores a readable default film palette');
+    change('collage-template','magazine');assert(el('collage-background').value==='#faf7ee'&&el('collage-text-color').value==='#456455','Reset re-enables template-appropriate colors on the next template switch');
+    change('collage-title',originalTitle,'input');change('collage-title-size',originalTitleSize);
+    await paint();const colorSection=document.querySelector('.collage-colors'),colorBounds=colorSection.getBoundingClientRect();
+    assert([...colorSection.querySelectorAll('input,button')].every(control=>{const r=control.getBoundingClientRect();return r.left>=colorBounds.left-1&&r.right<=colorBounds.right+1;})&&colorSection.scrollWidth<=colorSection.clientWidth+1,'Color pickers, HEX fields and reset button remain within the tools column, including compact windows');
     const height=magazine.height;change('collage-title-size',170);result=await capture();const bigger=await decode(result.dataUrl);assert(bigger.height>height,'Increasing title font reserves enough header space in the exported poster');
     change('collage-title-size',22);change('collage-template','board');await paint();
     assert(!el('collage-board-tools').hidden&&el('collage-photo-zoom').min==='20','Board uses photo size and angle controls rather than a crop window');

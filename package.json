@@ -1,7 +1,7 @@
 {
   "name": "shiguang-isle",
-  "version": "1.2.1",
-  "description": "拾光屿 · 摄影回忆时光机 — a local-first DSLR photo library",
+  "version": "1.3.0",
+  "description": "时光杂货店 · 摄影回忆时光机 — a local-first DSLR photo library",
   "main": "app/main.cjs",
   "author": "Shiguang Isle contributors",
   "license": "MIT",

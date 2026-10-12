@@ -1,6 +1,6 @@
 # Interface and documentation languages
 
-Shutter Cove (拾光屿) supports **English** and **Simplified Chinese** throughout the desktop application. Open **Settings → Interface language** and select English or 中文. Changes apply immediately and are saved independently of other unsaved settings fields.
+Shutter Cove (时光杂货店) supports **English** and **Simplified Chinese** throughout the desktop application. Open **Settings → Interface language** and select English or 中文. Changes apply immediately and are saved independently of other unsaved settings fields.
 
 A fresh profile defaults to English and must choose a language before the first-use guide. Upgrading an existing Chinese profile keeps Chinese. Restarting uses the saved choice; the chooser is not shown again after a successful choice.
 

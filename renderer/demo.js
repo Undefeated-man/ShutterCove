@@ -56,7 +56,7 @@ window.createDemoBridge = function () {
     return sources;
   }
   return {
-    previewGif:async args=>{if(!window.timeMachine?.previewGif)throw new Error('请在拾光屿桌面 App 中生成 GIF');const revision=++demoGifRevision;const demoSources=await demoGifSources(args.frames);if(revision!==demoGifRevision)return {canceled:true};return window.timeMachine.previewGif({...args,demoSources});},
+    previewGif:async args=>{if(!window.timeMachine?.previewGif)throw new Error('请在时光杂货店桌面 App 中生成 GIF');const revision=++demoGifRevision;const demoSources=await demoGifSources(args.frames);if(revision!==demoGifRevision)return {canceled:true};return window.timeMachine.previewGif({...args,demoSources});},
     saveGif:async args=>window.timeMachine.saveGif(args),cancelGif:async()=>{demoGifRevision++;return window.timeMachine.cancelGif();},releaseGif:async args=>window.timeMachine.releaseGif(args),
     qaEmitProgress:emit,
     qaEmitUpdateState:emitUpdate,

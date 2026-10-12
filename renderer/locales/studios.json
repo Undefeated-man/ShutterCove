@@ -217,5 +217,15 @@
   "放大细节 · 拖动查看": "Zoomed detail · Drag to explore",
   "相对整张照片适合窗口的比例": "Zoom relative to fitting the entire photo in the window",
   "恢复完整照片，也可双击预览": "Show the entire photo; you can also double-click the preview",
-  "正在完整显示照片": "The entire photo is visible"
+  "正在完整显示照片": "The entire photo is visible",
+  "画布配色": "Canvas colors",
+  "背景颜色": "Background color",
+  "文字颜色": "Text color",
+  "选择背景颜色": "Choose background color",
+  "背景十六进制色值": "Background HEX color",
+  "选择文字颜色": "Choose text color",
+  "文字十六进制色值": "Text HEX color",
+  "恢复模板配色": "Reset template colors",
+  "文字颜色用于标题、副标题与页脚；切换模板时保留自定义配色。": "Text color applies to titles, subtitles and the footer. Custom colors stay when switching templates.",
+  "请输入 3 位或 6 位十六进制色值，例如 #faf7ee。": "Enter a 3- or 6-digit HEX color, such as #faf7ee."
 }

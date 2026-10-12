@@ -385,3 +385,18 @@ Published v1.2.1 acceptance:
 - The installed desktop app generated an actual six-photo JPEG preview at **1,440 × 2,154 px / quality 90%**, with width-fit and actual-pixel controls visible. The collage was closed without saving, and temporary selections were cleared. No private photograph or real-user screenshot was published.
 
 Collage previews are encoded in memory. Closing the studio clears the pending composition, stops queued regeneration, releases the canvas and image references, and discards the intermediate JPEG; confirming a save destination is the step that writes a finished photograph. Shared thumbnail / CR3 previews remain reusable in the bounded preview cache and can be cleared in Settings. This cache limit describes the application's preview directory, rather than all caches maintained by Electron.
+
+
+## v1.3.0 color, motion, layout, and Chinese name validation
+
+Source validation on 2026-10-12:
+
+- All **86** backend and lifecycle tests passed. The Chinese name is now **时光杂货店**; English remains **Shutter Cove**. Bundle identity, executable compatibility names, updater asset names, and the existing data directory are preserved.
+- Normal and compact windows each passed **90** layout checks at the actual 120% and 150% font settings. The Chinese wordmark fits on one line; the check permits only a deliberate 时光 / 杂货店 split if wrapping is needed. The gallery, selection toolbar, settings, five guide steps, first-language chooser, and color controls were checked in both languages.
+- Collage color checks passed **70** assertions in each window size; English creative studios passed **41**. Real encoded JPEG pixels verify background and text colors, tinted wood grain, template preservation and reset, and unchanged already-encoded bytes when switching languages.
+- Motion checks passed **39** assertions in each normal-motion window and **8** in each window with Chromium's actual reduced-motion preference. Checks exercise staggered visible-card entrances, physical pointer and keyboard button feedback, in-flight photo geometry, real early-close events, rapid navigation, late-loading previews, cleanup, and immediate viewer interaction.
+- Detail zoom passed **661** normal-window and **667** compact-window assertions. The viewer measures layout dimensions rather than transient shared-transition scaling, preserving pointer anchors and pan bounds.
+- Existing collage checks passed **150** in each window. A new one-pixel frame border exposed subpixel rounding at 16x pan limits; measuring the resolved canvas geometry fixes this edge sliver.
+- Public gallery and custom-color screenshots were visually inspected and contain generated scenery and synthetic metadata only. No private originals or portraits were published.
+
+The packaged release runner includes the motion suite in both window sizes and both system motion preferences, plus the normal and compact layout suite. Release and local installation acceptance will be recorded after they finish.

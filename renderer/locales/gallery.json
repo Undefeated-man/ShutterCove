@@ -1,6 +1,6 @@
 {
-  "拾光屿 · 摄影回忆时光机": "Shutter Cove · Photography Time Machine",
-  "拾光屿": "Shutter Cove",
+  "时光杂货店 · 摄影回忆时光机": "Shutter Cove · Photography Time Machine",
+  "时光杂货店": "Shutter Cove",
   "给每一束光，一个归处。": "A home for every ray of light.",
   "我的时光": "My moments",
   "主要导航": "Main navigation",
@@ -231,7 +231,7 @@
   "已将所选照片移到废纸篓": "Selected photos moved to the Trash",
   "已将所选照片移到废纸篓，部分文件未能移动，请检查": "Selected photos moved to the Trash. Some files could not be moved; please review.",
   "已请求取消": "Cancellation requested",
-  "请通过拾光屿应用打开；浏览器预览可使用 ?demo=1。": "Open this in Shutter Cove. Browser previews can use ?demo=1.",
+  "请通过时光杂货店应用打开；浏览器预览可使用 ?demo=1。": "Open this in Shutter Cove. Browser previews can use ?demo=1.",
   "请先保存或关闭当前窗口，再查看更新。": "Save or close the current window before checking for updates.",
   "只缓存轻量预览，完整 JPEG 与 RAW 保留在原位置。": "Only lightweight previews are cached. Full JPEG and RAW files stay in their original locations.",
   "界面字体大小": "Interface text size",

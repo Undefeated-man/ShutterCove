@@ -137,7 +137,7 @@ jobs:
         shell: bash
         run: |
           cat > release-notes.md <<'EOF'
-          拾光屿 · 摄影回忆时光机
+          时光杂货店 · 摄影回忆时光机
 
           本地管理 JPEG / CR3，原片留在所选目录；缓存可清理。
 
@@ -162,8 +162,8 @@ jobs:
               echo 'Refusing to overwrite a published release.' >&2
               exit 1
             fi
-            gh release edit "$RELEASE_TAG" --title "拾光屿 $RELEASE_TAG" --notes-file release-notes.md
+            gh release edit "$RELEASE_TAG" --title "时光杂货店 $RELEASE_TAG" --notes-file release-notes.md
           else
-            gh release create "$RELEASE_TAG" --verify-tag --draft --title "拾光屿 $RELEASE_TAG" --notes-file release-notes.md
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "时光杂货店 $RELEASE_TAG" --notes-file release-notes.md
           fi
           gh release upload "$RELEASE_TAG" packages/* --clobber

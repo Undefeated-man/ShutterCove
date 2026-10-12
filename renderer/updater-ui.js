@@ -85,7 +85,7 @@
     section.dataset.status = update.status;
     find('#update-current-version').textContent = version(update.currentVersion || context.settings.currentVersion);
     const descriptions = {
-      idle: ['让拾光屿，陪你走得更远', '可以手动检查新版本。'],
+      idle: ['让时光杂货店，陪你走得更远', '可以手动检查新版本。'],
       checking: ['正在查看新的光影', '检查更新期间，可以继续浏览照片。'],
       upToDate: ['已经是最新版本', '安心留住此刻，新的版本会在这里与你见面。'],
       available: [t('发现新版本 {version}', {version:version(update.latestVersion)}), deb() ? '下载并校验后打开系统安装器，请按系统提示完成安装。' : '一键下载并校验，随后重启更新；应用会在原位置替换。'],
@@ -123,15 +123,15 @@
     if (!notice) {
       notice = document.createElement('aside');
       notice.id = 'update-notice'; notice.className = 'update-notice'; notice.setAttribute('role', 'status'); notice.hidden = true;
-      notice.innerHTML = '<div class="update-notice-copy"><strong id="update-notice-title"></strong><span>为下一段旅程，准备新的拾光屿。</span></div><div class="update-notice-actions"><button class="button quiet" id="update-notice-view">查看更新</button><button class="update-notice-later" id="update-notice-later" aria-label="稍后提醒">稍后</button></div>';
+      notice.innerHTML = '<div class="update-notice-copy"><strong id="update-notice-title"></strong><span>为下一段旅程，准备新的时光杂货店。</span></div><div class="update-notice-actions"><button class="button quiet" id="update-notice-view">查看更新</button><button class="update-notice-later" id="update-notice-later" aria-label="稍后提醒">稍后</button></div>';
       document.body.append(notice);
       window.I18n?.apply(notice);
       notice.querySelector('#update-notice-view').onclick = openSettings;
       notice.querySelector('#update-notice-later').onclick = () => { dismissedVersion = update.latestVersion; renderNotice(); };
     }
-    notice.querySelector('.update-notice-copy > span').textContent = t('为下一段旅程，准备新的拾光屿。');
+    notice.querySelector('.update-notice-copy > span').textContent = t('为下一段旅程，准备新的时光杂货店。');
     notice.hidden = !['available', 'ready'].includes(update.status) || !update.latestVersion || update.notify === false || dismissedVersion === update.latestVersion;
-    notice.querySelector('#update-notice-title').textContent = update.status === 'ready' ? t('更新已准备好，随时启程') : t('拾光屿 {version} 已到来', {version:version(update.latestVersion)});
+    notice.querySelector('#update-notice-title').textContent = update.status === 'ready' ? t('更新已准备好，随时启程') : t('时光杂货店 {version} 已到来', {version:version(update.latestVersion)});
   }
   function render() { renderSection(); renderNotice(); }
   function openSettings() {
@@ -153,7 +153,7 @@
   }
   function mountSettings(root, options = {}) {
     const local = document.createElement('section');
-    local.id = 'settings-updater'; local.className = 'settings-updater'; local.setAttribute('aria-label', t('拾光屿版本与更新'));
+    local.id = 'settings-updater'; local.className = 'settings-updater'; local.setAttribute('aria-label', t('时光杂货店版本与更新'));
     inlineMessage = '';
     local.innerHTML = '<div class="update-section-heading"><div><span class="update-eyebrow">SHUTTER COVE · 软件更新</span><h4>每一段光影，都值得更新</h4><span class="update-version-label">当前版本 <strong id="update-current-version"></strong></span></div><label class="update-auto-label"><span>启动时自动检查</span><input id="update-auto" type="checkbox" role="switch" aria-label="启动时自动检查更新"><i aria-hidden="true"></i></label></div><div class="update-status-copy"><strong id="update-status" aria-live="polite"></strong><p id="update-description"></p></div><div id="update-progress-wrap" class="update-progress-wrap" hidden><progress id="update-progress" max="100" value="0" aria-label="更新下载进度"></progress><span id="update-progress-text"></span></div><p id="update-error" class="update-error" role="alert" hidden></p><div class="update-section-actions"><button class="button quiet" id="update-check">检查更新</button><button class="button primary" id="update-action" hidden></button><button class="update-download-only" id="update-download-only" hidden>仅下载，稍后安装</button></div><p id="update-retained" class="update-retained"></p><p id="update-demo-note" class="update-demo-note" hidden>演示模式 · 只模拟更新，不联网或替换应用。</p>';
     root.querySelector('.modal-body').prepend(local);
@@ -191,6 +191,6 @@
     const initialRevision = revision;
     Promise.resolve(api.getUpdateState()).then(next => { if (revision === initialRevision) apply(next); }).catch(() => {});
   }
-  window.I18n?.onChange(() => { render(); if (section?.isConnected) { section.setAttribute('aria-label', t('拾光屿版本与更新')); window.I18n?.apply(section); } if (notice) window.I18n?.apply(notice); });
+  window.I18n?.onChange(() => { render(); if (section?.isConnected) { section.setAttribute('aria-label', t('时光杂货店版本与更新')); window.I18n?.apply(section); } if (notice) window.I18n?.apply(notice); });
   window.UpdaterUI = { mountSettings, openSettings, current: () => ({ ...update }) };
 })();
