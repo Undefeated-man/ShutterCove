@@ -16,6 +16,29 @@
   const cards = () => [...grid.querySelectorAll('.photo-card')];
   const activeEntrance = node => node.getAnimations().filter(animation => animation.id === 'gallery-spring' && ['running', 'pending'].includes(animation.playState));
   const buttonsSettled = () => !motion().diagnostics().buttons && !motion().diagnostics().presses;
+  const animationState = animation => {
+    if (!animation) return null;
+    const timing = animation.effect?.getComputedTiming();
+    return { id: animation.id, playState: animation.playState, pending: animation.pending,
+      currentTime: animation.currentTime, startTime: animation.startTime,
+      progress: timing?.progress, duration: timing?.duration, endTime: timing?.endTime };
+  };
+  const buttonState = (button, animation) => ({ scale: getComputedStyle(button).scale,
+    connected: button.isConnected, pressed: button.classList.contains('motion-button-pressed'),
+    focus: document.hasFocus(), visibility: document.visibilityState, activeElement: document.activeElement?.id || document.activeElement?.tagName,
+    timelineTime: document.timeline.currentTime, animation: animationState(animation),
+    animations: button.getAnimations().map(animationState), diagnostics: motion().diagnostics() });
+  const finishButtonAnimation = async (button, animation, label) => {
+    if (!animation) throw new Error(label + ': missing animation ' + JSON.stringify(buttonState(button)));
+    let timeout;
+    try {
+      await Promise.race([animation.finished, new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('animation did not finish within 10 seconds')), 10000);
+      })]);
+    } catch (error) {
+      throw new Error(label + ': ' + error.message + ' ' + JSON.stringify(buttonState(button, animation)));
+    } finally { clearTimeout(timeout); }
+  };
   const detachedButtons = async () => {
     let modal = App.modal({ title: 'Motion lifecycle QA', body: '<p>Synthetic modal</p>' });
     let close = modal.querySelector('.modal-close');
@@ -81,21 +104,37 @@
     assert(cards().filter(node => batch.some(old => old.dataset.id === node.dataset.id)).every(node => !activeEntrance(node).length), 'Metadata or selection rerenders do not replay already seen cards');
     const before = cards().length;
     const select = $('select-mode');
-    pointer(select, 'pointerdown'); await pause(120);
-    assert(Math.abs(Number(getComputedStyle(select).scale) - .96) < .002, 'Pointer press compresses a button to scale 0.96');
+    pointer(select, 'pointerdown');
+    const pointerPress = select.getAnimations().find(animation => animation.id === 'button-press');
+    await finishButtonAnimation(select, pointerPress, 'Pointer press completion');
+    assert(pointerPress.playState === 'finished' && Math.abs(Number(getComputedStyle(select).scale) - .96) < .002,
+      'Pointer press compresses a button to scale 0.96', buttonState(select, pointerPress));
     assert(getComputedStyle(select).boxShadow.includes('inset'), 'Pressed button receives visible inset depth');
     pointer(select, 'pointerup');
-    let maximumScale = 0;
-    for (let i = 0; i < 12; i++) { await pause(16); maximumScale = Math.max(maximumScale, parseFloat(getComputedStyle(select).scale) || 1); }
-    assert(maximumScale > 1, 'Release overshoots gently before settling', { maximumScale });
+    const release = select.getAnimations().find(animation => animation.id === 'button-release');
+    let maximumScale = 0, sampling = true, sampleFrame = null;
+    const samples = [];
+    const sampleRelease = () => {
+      const scale = parseFloat(getComputedStyle(select).scale) || 1;
+      maximumScale = Math.max(maximumScale, scale);
+      if (samples.length < 120) samples.push({ scale, time: release?.currentTime, playState: release?.playState, pending: release?.pending });
+      if (sampling) sampleFrame = requestAnimationFrame(sampleRelease);
+    };
+    sampleRelease();
+    try { await finishButtonAnimation(select, release, 'Button release completion'); }
+    finally { sampling = false; cancelAnimationFrame(sampleFrame); }
+    assert(maximumScale > 1, 'Release overshoots gently before settling', { maximumScale, samples, state: buttonState(select, release) });
     await wait(buttonsSettled);
     assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed'), 'Button release removes animated scale and pressed depth');
     const disabled = document.createElement('button'); disabled.disabled = true; document.body.append(disabled);
     pointer(disabled, 'pointerdown');
     assert(!disabled.getAnimations().length && !disabled.classList.contains('motion-button-pressed'), 'Disabled buttons do not enter a press animation');
     disabled.remove();
-    select.focus(); select.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true })); await pause(120);
-    assert(Math.abs(Number(getComputedStyle(select).scale) - .96) < .002, 'Keyboard activation receives the same physical press feedback');
+    select.focus(); select.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    const keyboardPress = select.getAnimations().find(animation => animation.id === 'button-press');
+    await finishButtonAnimation(select, keyboardPress, 'Keyboard press completion');
+    assert(keyboardPress.playState === 'finished' && Math.abs(Number(getComputedStyle(select).scale) - .96) < .002,
+      'Keyboard activation receives the same physical press feedback', buttonState(select, keyboardPress));
     select.dispatchEvent(new KeyboardEvent('keyup', { key: ' ', bubbles: true })); await wait(buttonsSettled);
     assert((getComputedStyle(select).scale === 'none' || Number(getComputedStyle(select).scale) === 1) && !select.classList.contains('motion-button-pressed') && cards().length === before, 'Keyboard spring settles without preventing gallery interaction');
     pointer(select, 'pointerdown'); select.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 991 }));
