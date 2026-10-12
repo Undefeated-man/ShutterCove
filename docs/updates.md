@@ -43,3 +43,8 @@ Checks and downloads contact only the fixed [official GitHub repository](https:/
 Mac packages remain ad-hoc signed, without a Developer ID or Apple notarization. Updates do not change system security settings. If macOS blocks a newer version, follow the per-app approval process in the [Mac installation guide](mac-install.md).
 
 Implementation references: [Electron autoUpdater](https://www.electronjs.org/docs/latest/api/auto-updater), [GitHub release asset API](https://docs.github.com/en/rest/releases/assets), [Apple app-opening guidance](https://support.apple.com/en-us/102445).
+
+
+GitHub 公共更新接口可能暂时限流。检查失败时可稍后重试，或核对同版校验表后从官方 Release 手动安装；沿原安装路径替换，同一系统用户与应用标识继续使用收藏、标签和设置。
+
+GitHub public update checks can temporarily be rate-limited. Retry later or manually install from the official release after checksum verification. Replacing the original installation path under the same user and application identity retains favorites, tags, and settings.
