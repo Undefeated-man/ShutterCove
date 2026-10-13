@@ -452,4 +452,28 @@ After normal application exit, the same bundle was renamed to `/Applications/时
 - Automatic updater: 45 Node tests; the update UI passes 79 checks at both regular and compact widths, including English at 150% font scale, work deferral, default-on preference, explicit download-only intent and installation locking. Demo and smoke modes do not contact update servers or replace applications.
 - Published source privacy scan: 150 publishable files checked. Updated screenshots show synthetic landscapes, example directory paths and a simulated update, with no personal photos or real portraits.
 
-Remote platform builds and release / local installation acceptance are recorded after they complete.
+### Official v1.3.7 remote CI and release acceptance
+
+[Release workflow 38332704405](https://github.com/Undefeated-man/ShutterCove/actions/runs/38332704405) completed successfully at immutable tag commit `a38ae6f612f72b287eed0dd9b7209c5cd3c564cc`. All three package jobs and draft assembly passed. Full job logs were downloaded and every per-launch QA JSON was parsed; the totals below distinguish check arrays from the language runner's six additional persistence checks.
+
+| Platform | Job | Production launches | Per-launch QA checks | Additional language persistence checks | Separate gallery checks |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Mac arm64 | `115085826620` | 39 | 2,129 | 6 | 24 |
+| Mac Intel | `115085826027` | 39 | 2,129 | 6 | 24 |
+| Linux x64 | `115085826212` | 38 | 2,180 | 6 | 24 |
+
+Each platform passed **106 / 106 Node tests** and the **150-file source privacy scan**. The independent package totals are 2,135 on each Mac and 2,186 on Linux before the separate gallery suite. The five real language-profile launches and their 61 QA checks are already included; the runner's aggregate of 67 is not added a second time. Native import **19**, import UI **28**, and updater UI **79** were executed successfully on every platform. Each package driver reached its final success marker after checking actual synthetic JPEG / GIF output, original and copied file hashes, persisted settings, and recoverable SD synchronization journals.
+
+Mac runners reported the reduced-motion branch in all four ambient-motion launches, with 12 checks each. Linux covered both normal-motion window sizes with 43 checks each and both reduced-motion sizes with 12 each. The separate [Linux renderer workflow 38332702204](https://github.com/Undefeated-man/ShutterCove/actions/runs/38332702204) passed at the same immutable commit: two 121-check layout runs, two 43-check source motion runs and two 43-check unpacked production motion runs, for **six launches / 414 checks**. Its six redirected QA logs were inspected from the uploaded artifact. Across both workflows, all **125 QA JSON results** strictly satisfied `passed === checks.length`; no alternate counting rule was required.
+
+[v1.3.7](https://github.com/Undefeated-man/ShutterCove/releases/tag/v1.3.7) was publicly released on 2026-10-13 at 01:43:36 UTC. Exactly six installers and `SHA256SUMS.txt` are uploaded: Apple Silicon and Intel DMG / ZIP, Linux x64 AppImage and amd64 deb. Every manifest row matches its corresponding GitHub asset SHA-256 digest, and the downloaded manifest's own bytes match its asset digest. This remote audit downloaded the checksum manifest, job logs and renderer validation artifact; it does not substitute for downloading and hashing a complete installer on the target machine.
+
+### Local official v1.3.7 installation and real import acceptance
+
+The published Apple Silicon ZIP was downloaded through authenticated GitHub CLI. Its complete bytes match both the public asset digest and checksum manifest. The production automatic-update service and helper replaced the existing v1.3.6 installation in place and received the new app's real startup acknowledgment. This uses a bounded transport of the verified official release; it is not represented as an end-to-end GUI network-download test. Strict native signature verification passed, and the installed Info.plist, native executable and ASAR bytes match that official ZIP.
+
+Before importing a new directory, every existing setting was verified preserved and the library metadata remained byte-identical. Migration added the prior directory to the persistent multi-directory index and enabled automatic installation by default. The native Settings interface showed v1.3.7, Chinese, 120% type, and the enabled automatic-update switch. Spotlight returns exactly one application at `/Applications/时光杂货店.app`; pending/ready files, helper work directories and temporary application copies were cleaned up.
+
+The real native Import Photos interface was then used to select an existing photo directory and enter its theme. Preparation feedback appeared immediately, the import completed by indexing the source in place, the new theme appeared, and its photos were visible. Switching to the previous theme still displayed its original photos. Settings showed both registered directories and the newly chosen default theme. A normal native-menu quit and fresh launch restored that default theme after the index scan completed.
+
+Private before/after audits verify every original source file's path, byte count, modification time and SHA-256 remained unchanged, all previous photo aliases and metadata entries were preserved, and unrelated settings retained their values. Exact private theme names, paths, counts and photo captures remain outside the public repository. Real-library acceptance is separate from the synthetic cross-platform fixture coverage above.
