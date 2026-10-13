@@ -8,6 +8,7 @@ const { promisify } = require('node:util');
 const { createReadStream } = require('node:fs');
 const { Readable } = require('node:stream');
 const { PhotoLibrary } = require('./library.cjs');
+const { librarySettings, registerLibrary, removeLibrary } = require('./library-settings.cjs');
 const { languageDefaults, languagePatch } = require('./language-settings.cjs');
 const { nativeMessage, localizedDialog } = require('./ui-language.cjs');
 const { prepareImageOutput } = require('./image-output.cjs');
@@ -20,6 +21,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 let win, library, settings, settingsPath, updater, gifService;
 let settingsSaveChain = Promise.resolve(), installingUpdate = false;
+let pendingSettings = 0;
 let fullscreenChain = Promise.resolve();
 const activeOperations = new Set();
 let exitStatus = 0;
@@ -72,9 +74,10 @@ async function detectEditor(editor) {
 }
 function publicSettings() { return { ...settings, currentVersion: app.getVersion() }; }
 function saveSettings(patch = {}) {
+  pendingSettings++;
   const operation = settingsSaveChain.catch(() => {}).then(() => persistSettings(patch));
   settingsSaveChain = operation;
-  return operation;
+  return operation.finally(() => { pendingSettings--; });
 }
 async function persistSettings(patch = {}) {
   const next = { ...settings, editorPaths: { ...settings.editorPaths } };
@@ -86,6 +89,16 @@ async function persistSettings(patch = {}) {
       next[key] = resolved;
       approvedRoots.add(resolved);
     }
+  }
+  if (!Object.hasOwn(patch, 'libraryRoots') && next.libraryRoot && next.libraryRoot !== settings.libraryRoot) next.libraryRoots = [...new Set([...settings.libraryRoots, next.libraryRoot])];
+  if (Object.hasOwn(patch, 'libraryRoots')) {
+    if (!Array.isArray(patch.libraryRoots) || patch.libraryRoots.some(root => typeof root !== 'string' || !path.isAbsolute(root) || !approvedRoots.has(root))) throw new Error('请通过“选择文件夹”设置目录');
+    next.libraryRoots = [...new Set(patch.libraryRoots)];
+    next.libraryRoot = next.libraryRoots.includes(next.libraryRoot) ? next.libraryRoot : next.libraryRoots[0] || '';
+  }
+  if (Object.hasOwn(patch, 'defaultTheme')) {
+    if (typeof patch.defaultTheme !== 'string' || patch.defaultTheme.length > 200 || /[\x00-\x1f]/.test(patch.defaultTheme)) throw new Error('请填写有效主题名称');
+    next.defaultTheme = patch.defaultTheme;
   }
   if (patch.editorPaths && typeof patch.editorPaths === 'object') {
     for (const editor of ['photoshop', 'lightroom']) {
@@ -104,14 +117,21 @@ async function persistSettings(patch = {}) {
     if (typeof patch.checkUpdatesAutomatically !== 'boolean') throw new Error('无效的自动更新检查设置');
     next.checkUpdatesAutomatically = patch.checkUpdatesAutomatically;
   }
+  if (Object.hasOwn(patch, 'installUpdatesAutomatically')) {
+    if (typeof patch.installUpdatesAutomatically !== 'boolean') throw new Error('无效的自动更新设置');
+    next.installUpdatesAutomatically = patch.installUpdatesAutomatically;
+  }
   Object.assign(next, languagePatch(patch));
   await atomicJSON(settingsPath, next);
   settings = next;
   if (Object.hasOwn(patch, 'language')) { setApplicationMenu(); win?.setTitle(nativeMessage('时光杂货店 · 摄影回忆时光机', settings.language)); }
+  if (Object.hasOwn(patch, 'installUpdatesAutomatically') || Object.hasOwn(patch, 'checkUpdatesAutomatically')) updater?.automaticPreferencesChanged();
   return publicSettings();
 }
 async function approvedFolder(folder) {
   if (!folder || typeof folder !== 'string') throw new Error('请先选择照片文件夹');
+  const stat = await fs.lstat(folder);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('请选择真实文件夹，不能选择符号链接');
   const real = await fs.realpath(folder);
   if (!approvedRoots.has(real)) throw new Error('请通过“选择文件夹”授权访问该目录');
   return real;
@@ -202,11 +222,22 @@ function bindAPI() {
     return chosen;
   });
   handle('scan', async root => {
-    const chosen = await approvedFolder(root);
-    const result = await library.scan(chosen);
-    await saveSettings({ libraryRoot: chosen });
+    if (root && !settings.libraryRoots.includes(root)) throw new Error('请先将文件夹加入相册索引');
+    const result = await library.scanRoots(settings.libraryRoots);
     mediaTokens.clear();
-    return result;
+    return { ...result, root: settings.libraryRoot, settings: publicSettings() };
+  });
+  handle('registerLibrary', async root => {
+    const chosen = await approvedFolder(root);
+    const indexed = await library.scan(chosen, {stream:false});
+    const themes = [...new Set(indexed.photos.map(photo => photo.theme).filter(Boolean))];
+    await saveSettings(registerLibrary(settings, chosen, themes.length === 1 ? themes[0] : ''));
+    return { root: chosen, roots: settings.libraryRoots, theme: settings.defaultTheme, settings: publicSettings() };
+  });
+  handle('removeLibrary', async root => {
+    if (typeof root !== 'string' || !settings.libraryRoots.includes(root)) throw new Error('找不到已索引目录');
+    await saveSettings(removeLibrary(settings, root));
+    return { root: settings.libraryRoot, roots: settings.libraryRoots, theme: settings.defaultTheme, settings: publicSettings() };
   });
   handle('update', ({ ids, patch }) => library.update(ids, patch));
   handle('thumbnail', async ({ id, size }) => mediaURL(await library.thumbnail(id, Math.min(2400, Math.max(120, Number(size) || 600)))));
@@ -219,7 +250,17 @@ function bindAPI() {
     const destination = await approvedFolder(args.destination || settings.importDestination);
     const theme = String(args.theme || '').trim();
     if (!theme || /[\x00-\x1f/\\]/.test(theme) || theme === '.' || theme === '..') throw new Error('请填写有效主题名称');
-    return library.importPhotos({ source, destination, theme });
+    if (library.jobs.has('import')) throw new Error('请等待当前照片处理结束');
+    const result = await library.importPhotos({ source, destination, theme });
+    if (result.indexedCount > 0 || result.imported?.length > 0 || (!result.cancelled && result.skipped > 0)) {
+      // Register the actual theme, never the entire archive or the SD card.
+      const chosen = await fs.realpath(result.destination).catch(() => null);
+      if (chosen) {
+        approvedRoots.add(chosen);
+        await saveSettings({ ...registerLibrary(settings, chosen, theme), importDestination: destination });
+      }
+    }
+    return { ...result, root: settings.libraryRoot, libraryRoot: settings.libraryRoot, roots: settings.libraryRoots, settings: publicSettings() };
   });
   handle('copySelected', async args => {
     const requested = args?.directory || args?.destination;
@@ -300,7 +341,7 @@ function bindAPI() {
     for (const file of files) {
       try { await shell.trashItem(file); trashed.push(file); } catch (e) { failed.push({ path: file, message: e.message }); }
     }
-    if (settings.libraryRoot) await library.scan(settings.libraryRoot);
+    if (settings.libraryRoots.length) await library.scanRoots(settings.libraryRoots);
     return { canceled: false, count: trashed.length, failed };
   });
   handle('saveImage', async ({ dataUrl, suggestedName = '拾光拼图.jpg', overwriteId, preserveEncoding = false }) => {
@@ -344,7 +385,7 @@ function setApplicationMenu() {
 async function start() {
   await app.whenReady();
   settingsPath = path.join(app.getPath('userData'), 'settings.json');
-  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2, checkUpdatesAutomatically: true };
+  settings = { libraryRoot: '', importDestination: '', editorPaths: { photoshop: await detectEditor('photoshop'), lightroom: await detectEditor('lightroom') }, cacheLimitMB: 512, fontScale: 1.2, checkUpdatesAutomatically: true, installUpdatesAutomatically: true };
   let saved = {}, existing = false;
   try { saved = JSON.parse(await fs.readFile(settingsPath, 'utf8')); existing = true; } catch {}
   settings = { ...settings, ...saved, ...languageDefaults(saved, existing) };
@@ -354,25 +395,42 @@ async function start() {
   settings.onboardingCompleted = typeof settings.onboardingCompleted === 'boolean' ? settings.onboardingCompleted : Boolean(settings.libraryRoot);
   settings.fontScale = typeof settings.fontScale === 'number' && Number.isFinite(settings.fontScale) ? Math.min(1.5, Math.max(1, settings.fontScale)) : 1.2;
   settings.checkUpdatesAutomatically = typeof settings.checkUpdatesAutomatically === 'boolean' ? settings.checkUpdatesAutomatically : true;
+  settings.installUpdatesAutomatically = typeof settings.installUpdatesAutomatically === 'boolean' ? settings.installUpdatesAutomatically : true;
+  Object.assign(settings, librarySettings(saved));
+  // macOS /var and /private/var can name the same directory. Store a single
+  // canonical scope, retaining unavailable external-drive paths for reconnect.
+  settings.libraryRoots = [...new Set(await Promise.all(settings.libraryRoots.map(root => fs.realpath(root).catch(() => root))))];
+  if (settings.libraryRoot) settings.libraryRoot = await fs.realpath(settings.libraryRoot).catch(() => settings.libraryRoot);
+  if (settings.importDestination) settings.importDestination = await fs.realpath(settings.importDestination).catch(() => settings.importDestination);
   delete settings.currentVersion;
-  for (const root of [settings.libraryRoot, settings.importDestination]) if (root) approvedRoots.add(root);
+  for (const root of [...settings.libraryRoots, settings.importDestination]) if (root) approvedRoots.add(root);
   if (verifyRoot && smoke) {
     const real = await fs.realpath(verifyRoot);
     approvedRoots.add(real);
-    settings.libraryRoot = real;
+    Object.assign(settings, registerLibrary(settings, real, ''));
   }
   if (qaOutput) {
     await fs.mkdir(path.resolve(qaOutput), { recursive: true });
     approvedRoots.add(await fs.realpath(qaOutput));
   }
+  await saveSettings({});
   library = new PhotoLibrary({ userData: app.getPath('userData'), emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress', payload); } });
   await library.init();
   gifService = new GifService({ library, allowDemo: demo, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:progress',payload); } });
-  updater = new UpdateService({ app, disabled: smoke || demo, automatic: () => settings.checkUpdatesAutomatically, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:update-state', payload); }, openInstaller: file => shell.openPath(file), beforeInstall: async () => {
-    if (activeOperations.size) throw new Error('请等待照片处理和设置保存结束后再更新');
+  const mainIsBusy = () => activeOperations.size > 0 || pendingSettings > 0 || library.jobs.size > 0 || gifService.preparing || Boolean(gifService.job);
+  const rendererAllowsAutomaticUpdate = async () => {
+    if (!win || win.isDestroyed() || mainIsBusy() || installingUpdate) return false;
+    return await win.webContents.executeJavaScript('window.UpdaterUI?.automaticInstallAllowed?.() === true') === true && !mainIsBusy();
+  };
+  updater = new UpdateService({ app, disabled: smoke || demo, automatic: () => settings.installUpdatesAutomatically !== false || settings.checkUpdatesAutomatically, autoInstallEnabled: () => settings.installUpdatesAutomatically !== false, canInstall: rendererAllowsAutomaticUpdate, emit: payload => { if (win && !win.isDestroyed()) win.webContents.send('memory:update-state', payload); }, openInstaller: file => shell.openPath(file), beforeInstall: async ({ automatic } = {}) => {
+    const busy = () => Object.assign(new Error('请等待照片处理和设置保存结束后再更新'), { code: 'UPDATE_BUSY' });
+    if (mainIsBusy() || (automatic && !await rendererAllowsAutomaticUpdate())) throw busy();
     installingUpdate = true;
-    await settingsSaveChain;
-    await library.saveChain;
+    try {
+      if (mainIsBusy() || (automatic && (!settings.installUpdatesAutomatically || !win || win.isDestroyed() || await win.webContents.executeJavaScript('window.UpdaterUI?.automaticInstallAllowed?.() === true') !== true))) throw busy();
+      await settingsSaveChain;
+      await library.saveChain;
+    } catch (error) { installingUpdate = false; throw error; }
   }, installFailed: () => { installingUpdate = false; }, quit: () => { app.quit(); } });
   await updater.init();
   const renderer = path.resolve(__dirname, '..', 'renderer');

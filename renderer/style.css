@@ -20,3 +20,17 @@
 @media(max-height:800px){.sidebar{padding-top:20px}.sidebar-caption{margin:12px 0 18px}.sidebar-divider{margin:14px 10px}.nav-item{padding-top:9px;padding-bottom:9px;margin-bottom:3px}.sidebar-bottom{padding-top:10px}.library-status{padding-top:8px;padding-bottom:9px}.nav-label{padding-bottom:8px}}
 
 .copy-folder-picker{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.copy-directory{min-width:0;flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#ffffff99;color:#62766a;font-size:calc(11px * var(--font-scale));line-height:1.7;overflow-wrap:anywhere}.copy-raw-option{display:flex;align-items:flex-start;gap:12px;margin:18px 0;padding:14px;border:1px solid #dce7d5;border-radius:10px;background:#f0f5ea99;font-size:calc(12px * var(--font-scale));line-height:1.6;cursor:pointer}.copy-raw-option input[type=checkbox]{width:18px;height:18px;flex:0 0 18px;margin:3px 0 0;padding:0;accent-color:var(--teal)}.copy-raw-option small{display:block;margin-top:4px;font-size:calc(11px * var(--font-scale));color:var(--muted);line-height:1.65}.copy-counts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}.copy-counts span{padding:8px 12px;background:#e8f0e3;border-radius:8px;font-size:calc(11px * var(--font-scale));color:#54725a}.copy-result-list{max-height:140px;overflow:auto;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:#fff8;scrollbar-width:thin;font-size:calc(11px * var(--font-scale));line-height:1.65;overflow-wrap:anywhere}.copy-result-list>div{padding:5px 0;border-bottom:1px solid var(--line)}.copy-result-list>div:last-child{border:0}#copy-results h4{margin:16px 0 8px;font-size:calc(12px * var(--font-scale));font-weight:500}#copy-results .field{margin-bottom:12px}
+
+/* Index status stays visible even when the photo grid is scrolled. */
+.main-panel > .progress-section{flex-shrink:0;margin:0;padding:12px 26px 10px;border:0;border-bottom:1px solid #d9e3d5;border-radius:0;background:rgba(242,246,237,.94);backdrop-filter:blur(22px)}
+.main-panel > .progress-section[hidden]{display:none}
+.main-panel > .progress-section .progress-heading{font-size:calc(11px * var(--font-scale));min-width:0;flex-wrap:wrap;gap:6px 14px}
+.main-panel > .progress-section .progress-heading strong{color:#435f4d}
+.main-panel > .progress-section #progress-text{margin-left:auto;color:#71846e;font-variant-numeric:tabular-nums}
+.main-panel > .progress-section .progress-track{margin-top:8px;height:3px}
+.main-scroll{min-height:0}
+.indexed-library-list{display:flex;flex-direction:column;gap:8px;max-height:180px;overflow-y:auto}
+.indexed-library-row{display:flex;align-items:center;gap:12px;padding:10px 12px;background:rgba(240,245,235,.7);border:1px solid #dfe7d8;border-radius:11px;min-width:0}
+.indexed-library-row>span{flex:1;min-width:0;overflow-wrap:anywhere;font-size:calc(11px * var(--font-scale));color:#586d58}
+.indexed-library-row>button{flex-shrink:0}
+@media(max-width:700px){.main-panel > .progress-section{padding:10px 14px}.indexed-library-row{align-items:flex-start}}

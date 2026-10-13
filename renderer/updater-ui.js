@@ -9,10 +9,16 @@
   let update = { status: 'idle', currentVersion: app.state.settings.currentVersion || '', latestVersion: null, support: 'manual', installSupported: false, progress: null, message: '' };
   let section = null, context = null, notice = null, dismissedVersion = null;
   let inlineMessage = '';
+  let installLock = null, lockedFocus = null;
+  const lockedNodes = new Map();
+  const blockLockedKey = event => { if (installLock) { event.preventDefault(); event.stopImmediatePropagation(); } };
+  document.addEventListener('keydown', blockLockedKey, true);
+  document.addEventListener('keyup', blockLockedKey, true);
   let openingSettings = false, activeAction = false, failureAction = 'check', autoInstall = null, revision = 0;
   const supported = () => typeof api.getUpdateState === 'function' && typeof api.checkForUpdates === 'function';
   const deb = () => update.support === 'deb';
   const busy = () => activeAction || ['checking', 'downloading', 'installing'].includes(update.status);
+  const automaticEnabled = () => app.state.settings.installUpdatesAutomatically !== false;
   const version = value => value ? `v${value}` : t('正在读取…');
   const bytes = value => {
     const number = Number(value);
@@ -44,6 +50,22 @@
       return false;
     }
     return true;
+  }
+  function automaticInstallAllowed() {
+    const progress = document.getElementById('progress-section');
+    const modal = document.getElementById('modal-root');
+    // Any open workbench/details/settings dialog may contain work that has not
+    // reached the main process yet. Automatic installation never closes it.
+    return app.state.settingsReady === true && automaticEnabled() && !app.state.settingsOpening &&
+      !app.state.scanning && !app.state.busy && !app.state.copying && !app.state.importing &&
+      !app.state.selected?.size && !app.state.selectionMode && !app.state.inspectorId &&
+      !(progress && !progress.hidden) && !modal?.children.length &&
+      !Array.from(document.querySelectorAll('[role="dialog"]')).some(node => node.getClientRects().length > 0);
+  }
+  async function saveAutomaticPreference(enabled) {
+    const saved = await api.saveSettings({ installUpdatesAutomatically: enabled, checkUpdatesAutomatically: enabled });
+    app.state.settings = { ...app.state.settings, ...saved };
+    render();
   }
   function failed(error, operation) {
     failureAction = operation;
@@ -89,14 +111,15 @@
       checking: ['正在查看新的光影', '检查更新期间，可以继续浏览照片。'],
       upToDate: ['已经是最新版本', '安心留住此刻，新的版本会在这里与你见面。'],
       available: [t('发现新版本 {version}', {version:version(update.latestVersion)}), deb() ? '下载并校验后打开系统安装器，请按系统提示完成安装。' : '一键下载并校验，随后重启更新；应用会在原位置替换。'],
-      downloading: ['正在下载更新', '可以继续看照片。关闭设置会保留下载，但取消自动重启。'],
+      downloading: ['正在下载更新', update.automaticUpdate ? '新版正在后台下载并校验；任务或编辑窗口结束后自动更新。' : '可以继续看照片。关闭设置会保留下载，但取消自动重启。'],
       ready: ['更新已下载并校验完成', deb() ? '点击打开系统安装器，由系统完成安装。' : '点击会重启并更新；应用会在原位置替换。'],
       installing: [deb() ? '正在打开系统安装器' : api.isDemo ? '正在演示更新流程' : '正在重启并更新', deb() ? '请按系统安装器的提示完成安装。' : '精品收藏、标签和相册设置都会保留。'],
       error: ['更新暂未完成', update.message || '请检查网络连接，然后重试。'],
     };
     const [heading, description] = descriptions[update.status] || descriptions.idle;
     find('#update-status').textContent = t(heading);
-    find('#update-description').textContent = message(!update.installSupported && ['available', 'ready'].includes(update.status) ? update.message || '当前安装方式暂不支持应用内更新，请使用正式安装包安装到可写的位置。' : deb() && update.status === 'ready' && update.message ? update.message : description);
+    find('#update-description').textContent = message(!update.installSupported && ['available', 'ready'].includes(update.status) ? update.message || '当前安装方式暂不支持应用内更新，请使用正式安装包安装到可写的位置。' : update.status === 'ready' && update.message && (deb() || update.automaticUpdate) ? update.message : description);
+    find('#update-auto-policy').textContent = t(deb() ? '默认开启。此安装方式会检查并提醒新版，安装仍需系统授权。' : !update.installSupported ? '默认开启。安装到可写的位置后，可自动下载并原位更新。' : '默认开启。检查到正式新版后自动下载；照片任务和编辑窗口结束后更新并重启。');
     const progress = update.progress || {}, percent = Math.max(0, Math.min(100, Number(progress.percent) || 0));
     find('#update-progress-wrap').hidden = update.status !== 'downloading';
     find('#update-progress').value = percent;
@@ -116,7 +139,7 @@
     primary.textContent = t(update.status === 'downloading' ? '正在下载…' : update.status === 'installing' ? deb() ? '正在打开…' : '正在更新…' : action === 'check' ? '重新检查' : action === 'install' ? deb() ? '打开安装器' : '重启并更新' : update.status === 'error' ? deb() ? '重试下载并安装' : '重试更新并重启' : deb() ? '下载并打开安装器' : '一键更新并重启');
     find('#update-retained').textContent = t('原片、精品收藏、标签与相册设置保留。');
     find('#update-demo-note').hidden = !api.isDemo;
-    if (!find('#update-auto').disabled) find('#update-auto').checked = app.state.settings.checkUpdatesAutomatically !== false;
+    if (!find('#update-auto').disabled) find('#update-auto').checked = automaticEnabled();
     if (inlineMessage) find('#update-error').textContent = message(inlineMessage);
   }
   function renderNotice() {
@@ -127,13 +150,46 @@
       document.body.append(notice);
       window.I18n?.apply(notice);
       notice.querySelector('#update-notice-view').onclick = openSettings;
-      notice.querySelector('#update-notice-later').onclick = () => { dismissedVersion = update.latestVersion; renderNotice(); };
+      notice.querySelector('#update-notice-later').onclick = async () => {
+        if (update.automaticUpdate && automaticEnabled()) {
+          const button = notice.querySelector('#update-notice-later'); button.disabled = true;
+          try { await saveAutomaticPreference(false); }
+          catch (error) { app.toast(t('未能保存自动更新设置：{error}', {error:message(error.message || String(error))}), true); }
+          finally { button.disabled = false; renderNotice(); }
+        } else { dismissedVersion = update.latestVersion; renderNotice(); }
+      };
     }
-    notice.querySelector('.update-notice-copy > span').textContent = t('为下一段旅程，准备新的时光杂货店。');
-    notice.hidden = !['available', 'ready'].includes(update.status) || !update.latestVersion || update.notify === false || dismissedVersion === update.latestVersion;
-    notice.querySelector('#update-notice-title').textContent = update.status === 'ready' ? t('更新已准备好，随时启程') : t('时光杂货店 {version} 已到来', {version:version(update.latestVersion)});
+    const automaticFlow = update.automaticUpdate && automaticEnabled();
+    notice.querySelector('.update-notice-copy > span').textContent = t(automaticFlow ? update.status === 'downloading' ? '新版正在后台下载并校验；任务或编辑窗口结束后自动更新。' : update.autoDeferred ? '更新已准备好，当前任务或编辑窗口结束后自动安装。' : '更新已准备好，将在空闲时自动更新并重启。' : '为下一段旅程，准备新的时光杂货店。');
+    notice.hidden = !(automaticFlow ? ['available', 'downloading', 'ready'].includes(update.status) : ['available', 'ready'].includes(update.status)) || !update.latestVersion || (!automaticFlow && (update.notify === false || dismissedVersion === update.latestVersion));
+    notice.querySelector('#update-notice-title').textContent = automaticFlow && update.autoRestartAt ? t('{seconds} 秒后自动更新并重启', {seconds:Math.max(0,Math.ceil((update.autoRestartAt-Date.now())/1000))}) : automaticFlow && update.status === 'downloading' ? t('正在自动下载 {version}', {version:version(update.latestVersion)}) : update.status === 'ready' ? t('更新已准备好，随时启程') : t('时光杂货店 {version} 已到来', {version:version(update.latestVersion)});
+    const later = notice.querySelector('#update-notice-later');
+    later.textContent = t(automaticFlow ? '关闭自动更新' : '稍后');
+    later.setAttribute('aria-label', t(automaticFlow ? '关闭自动更新' : '稍后提醒'));
   }
-  function render() { renderSection(); renderNotice(); }
+  function renderInstallLock() {
+    const lock = update.status === 'installing' && update.automaticUpdate === true;
+    if (lock) {
+      if (!installLock) {
+        lockedFocus = document.activeElement;
+        for (const target of [document.querySelector('.app-shell'), document.getElementById('modal-root')].filter(Boolean)) {
+          lockedNodes.set(target, target.inert); target.inert = true;
+        }
+        installLock = document.createElement('aside'); installLock.className = 'update-install-lock'; installLock.id = 'update-install-lock';
+        installLock.setAttribute('role', 'status'); installLock.setAttribute('aria-live', 'assertive');
+        installLock.innerHTML = '<div><i aria-hidden="true"></i><strong></strong><p></p></div>';
+        document.body.append(installLock);
+      }
+      installLock.querySelector('strong').textContent = t('正在重启并更新');
+      installLock.querySelector('p').textContent = t('精品收藏、标签和相册设置都会保留。');
+    } else if (installLock) {
+      for (const [target, wasInert] of lockedNodes) target.inert = wasInert;
+      lockedNodes.clear(); installLock.remove(); installLock = null;
+      if (lockedFocus?.isConnected) lockedFocus.focus?.({ preventScroll: true });
+      lockedFocus = null;
+    }
+  }
+  function render() { renderSection(); renderNotice(); renderInstallLock(); }
   function openSettings() {
     if (openingSettings) return;
     if (section?.isConnected) {
@@ -155,7 +211,7 @@
     const local = document.createElement('section');
     local.id = 'settings-updater'; local.className = 'settings-updater'; local.setAttribute('aria-label', t('时光杂货店版本与更新'));
     inlineMessage = '';
-    local.innerHTML = '<div class="update-section-heading"><div><span class="update-eyebrow">SHUTTER COVE · 软件更新</span><h4>每一段光影，都值得更新</h4><span class="update-version-label">当前版本 <strong id="update-current-version"></strong></span></div><label class="update-auto-label"><span>启动时自动检查</span><input id="update-auto" type="checkbox" role="switch" aria-label="启动时自动检查更新"><i aria-hidden="true"></i></label></div><div class="update-status-copy"><strong id="update-status" aria-live="polite"></strong><p id="update-description"></p></div><div id="update-progress-wrap" class="update-progress-wrap" hidden><progress id="update-progress" max="100" value="0" aria-label="更新下载进度"></progress><span id="update-progress-text"></span></div><p id="update-error" class="update-error" role="alert" hidden></p><div class="update-section-actions"><button class="button quiet" id="update-check">检查更新</button><button class="button primary" id="update-action" hidden></button><button class="update-download-only" id="update-download-only" hidden>仅下载，稍后安装</button></div><p id="update-retained" class="update-retained"></p><p id="update-demo-note" class="update-demo-note" hidden>演示模式 · 只模拟更新，不联网或替换应用。</p>';
+    local.innerHTML = '<div class="update-section-heading"><div><span class="update-eyebrow">SHUTTER COVE · 软件更新</span><h4>每一段光影，都值得更新</h4><span class="update-version-label">当前版本 <strong id="update-current-version"></strong></span></div><label class="update-auto-label"><span>自动下载并更新</span><input id="update-auto" type="checkbox" role="switch" aria-label="自动下载并更新"><i aria-hidden="true"></i></label></div><p id="update-auto-policy" class="update-auto-policy"></p><div class="update-status-copy"><strong id="update-status" aria-live="polite"></strong><p id="update-description"></p></div><div id="update-progress-wrap" class="update-progress-wrap" hidden><progress id="update-progress" max="100" value="0" aria-label="更新下载进度"></progress><span id="update-progress-text"></span></div><p id="update-error" class="update-error" role="alert" hidden></p><div class="update-section-actions"><button class="button quiet" id="update-check">检查更新</button><button class="button primary" id="update-action" hidden></button><button class="update-download-only" id="update-download-only" hidden>仅下载，稍后安装</button></div><p id="update-retained" class="update-retained"></p><p id="update-demo-note" class="update-demo-note" hidden>演示模式 · 只模拟更新，不联网或替换应用。</p>';
     root.querySelector('.modal-body').prepend(local);
     const localContext = { ...options, settings: options.settings || app.state.settings, alive: true };
     section = local; context = localContext;
@@ -169,12 +225,11 @@
     };
     local.querySelector('#update-download-only').onclick = () => download(local, localContext, false);
     local.querySelector('#update-auto').onchange = async event => {
-      const checkbox = event.target, previous = app.state.settings.checkUpdatesAutomatically !== false;
+      const checkbox = event.target, previous = automaticEnabled();
       checkbox.disabled = true; inline();
       try {
-        const saved = await api.saveSettings({ checkUpdatesAutomatically: checkbox.checked });
-        app.state.settings = { ...app.state.settings, ...saved };
-      } catch (error) { checkbox.checked = previous; inline(t('未能保存自动检查设置：{error}', {error:message(error.message || String(error))})); }
+        await saveAutomaticPreference(checkbox.checked);
+      } catch (error) { checkbox.checked = previous; inline(t('未能保存自动更新设置：{error}', {error:message(error.message || String(error))})); }
       finally { checkbox.disabled = false; renderSection(); }
     };
     render(); window.I18n?.apply(local);
@@ -192,5 +247,5 @@
     Promise.resolve(api.getUpdateState()).then(next => { if (revision === initialRevision) apply(next); }).catch(() => {});
   }
   window.I18n?.onChange(() => { render(); if (section?.isConnected) { section.setAttribute('aria-label', t('时光杂货店版本与更新')); window.I18n?.apply(section); } if (notice) window.I18n?.apply(notice); });
-  window.UpdaterUI = { mountSettings, openSettings, current: () => ({ ...update }) };
+  window.UpdaterUI = { mountSettings, openSettings, automaticInstallAllowed, current: () => ({ ...update }) };
 })();

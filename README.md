@@ -11,6 +11,7 @@
 Shutter Cove (时光杂货店) follows your photography workflow: import from an SD card, browse RAW / JPEG pairs, select your best shots, hand files to an editor, and turn photographs into posters or animated stories. Available for macOS and Linux. **Currently supports JPEG and Canon CR3; RAW support is limited to CR3.**
 
 - **Keep RAW and JPEG together.** Browse matching files as a pair, inspect details with zoom and fullscreen, and open either format in Photoshop / Lightroom on Mac or a configured local editor on Linux.
+- **One library, many photo folders.** Add independent directories to a persistent index, choose a theme to display by default, and browse all indexed folders with All themes. Importing opens its theme immediately; existing photos in that target theme are indexed in place. Removing a folder removes its index only.
 - **Browse quickly without duplicating originals.** On-demand thumbnails, nearby-photo prefetching, and a bounded, removable preview cache keep the library light while originals stay in their folders.
 - **Find and curate your best photographs.** Filter by date, color, theme, and tags; collect favorites, tag in batches, and search similar photographs on demand without building a vector database first.
 - **Make collages and posters with control over composition.** Zoom and move each photograph within its cell, preserve original aspect ratios in a magazine poster, or freely position, resize, rotate, and overlap full photographs on a wooden board. Set title size, customize background and text colors, arrange the story, and preview the actual encoded share JPEG before saving the same result.
@@ -26,6 +27,7 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 时光杂货店围绕相机摄影的完整流程设计：从 SD 卡导入、RAW / JPEG 配对浏览、精选整理和修图交接，到拼图海报与光影动图，让照片更容易找、选、用。支持 macOS 与 Linux；**当前支持 JPEG 与 Canon CR3，RAW 支持目前限于 CR3。**
 
 - **一张照片，RAW / JPEG 一起管理。** 配对浏览、放大查看细节与全屏看图；Mac 可交给 Photoshop / Lightroom，Linux 可配置本机编辑器。
+- **多个目录，一份相册索引。** 可添加不同位置的照片目录、设置默认主题，“全部主题”浏览所有已索引照片。导入完成立即显示本次主题；已有同名目标主题原位纳入，不重复复制。移除目录只移除索引，保留原片、收藏与标签。
 - **轻量预览，减少等待和存储负担。** 缩略图按需加载、预读，缓存有上限且可清理；原片留在原目录，浏览不额外复制完整照片。
 - **从一堆照片中找出值得留下的作品。** 按日期、色系、主题和标签筛选，收藏精品、批量加标签；相似照片按需计算，无需预先建立向量库。
 - **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号、背景色与文字颜色可调，分享压缩展示实际编码成品，预览与保存一致。
@@ -78,7 +80,7 @@ Some Linux distributions require FUSE 2 for AppImage. Photoshop and Lightroom ha
 
 To update on Mac, quit the running older version, drag the new app into Applications, choose Replace, and launch the new copy from Applications. Keep the same macOS account and application identifier to continue using existing local settings, tags, and favorites without copying photographs again. Verify the new package against its same-version checksums; follow the per-app approval steps above if macOS requests them again.
 
-Starting with v1.0.8, **Settings → Software update** shows the installed version and offers manual checks and downloads; earlier versions need one manual installation of v1.0.8 or later. Automatic checks are on by default and only notify; installation requires your click. For Mac / AppImage, the update-and-restart action verifies downloads and retains the existing installation path and local data. Mac apps need a writable Applications location; they cannot update in place from a disk image or build folder. AppImages also need a writable location. The Linux deb action downloads and opens the system package installer for authentication and installation; reopen the app manually afterward. See the [update guide](docs/updates.md).
+Starting with v1.0.8, **Settings → Software update** shows the installed version and offers manual checks and downloads; earlier versions need one manual installation of v1.0.8 or later. **From v1.3.7, automatic updates are on by default** and can be disabled in Settings. Supported Mac apps and writable AppImages download and verify stable updates, wait for photo tasks and editing windows to finish, then show a 10-second idle restart countdown and update in place. Opening a window or starting work delays installation. Explicit Download only remains manual. For Mac / AppImage, the update-and-restart action verifies downloads and retains the existing installation path and local data. Mac apps need a writable Applications location; they cannot update in place from a disk image or build folder. AppImages also need a writable location. The Linux deb action downloads and opens the system package installer for authentication and installation; reopen the app manually afterward. See the [update guide](docs/updates.md).
 
 On first launch, choose **English** or **Chinese** before the five-step guide. Switch instantly in **Settings > Interface language**; your choice is remembered after restarting. Existing Chinese profiles retain Chinese after an upgrade, along with their library, favorites, tags, and settings.
 
@@ -86,13 +88,16 @@ On first launch, choose **English** or **Chinese** before the five-step guide. S
 
 ![Custom collage palette: synthetic photographs](docs/screenshots/collage-colors.png)
 
+![Indexed photo folders and default theme: synthetic example paths only](docs/screenshots/indexed-folders.png)
+
 ## Features
 
 | Feature | How it works |
 | --- | --- |
 | Interface language | English and Simplified Chinese; first-launch language choice and instant switching in Settings, remembered across restarts |
 | First-use guide | Five steps introduce the library and photo workflow; skipping or finishing saves the state, and Settings can reopen the guide |
-| Update checks and installation | Check manually in Settings or receive automatic reminders; installed Mac apps and writable AppImages can download, verify, replace themselves in place, and restart while preserving favorites, tags, and settings |
+| Automatic updates | On by default, with a Settings toggle; writable Mac apps / AppImages download and verify stable updates, wait for tasks and dialogs, then update in place after an idle countdown; favorites, tags and settings are retained. Linux deb installation still needs explicit system authorization |
+| Multiple photo folders | Persistent directory index with a default theme; add independent folders, browse all themes, remove an index without deleting originals, and reconnect offline folders |
 | Detail zoom and pan | Hold Option / Alt while scrolling to zoom, then drag to pan; choose Fit to window or double-click to reset, with up to 16× relative zoom |
 | Native fullscreen details | Click Fullscreen or press F, switch between JPEG / CR3 previews, and browse adjacent photographs; Esc leaves fullscreen first, then closes details |
 | Color organization | Analyze image colors automatically and browse within a date range |
@@ -185,7 +190,7 @@ Choose “开始浏览” (Start browsing) to close the guide, or “选择照�
 4. Open similarity search, choose a reference photograph and search directory, then select pooling granularity. Computation happens for that search; results can be filtered further by date and other shared conditions.
 5. Open the collage workspace, choose a layout, and adjust photographs individually. Whitespace, film, and original-ratio magazine posters support 1–12 photos per row, defaulting to 2. Move photographs, adjust angles, and change stacking order on the wooden display board. Drag thumbnails to reorder or choose canvas swapping for direct exchanges. Alt / Option scrolling zooms the preview; ordinary dragging pans the canvas and Shift + drag adjusts a photograph. Fit to window resets the view. With share compression enabled, inspect the encoded JPEG result before saving a new photograph.
 6. Use the editor to crop, rotate, mirror, or add rectangular and elliptical mosaics. Choose overwrite or save-as. Canvas exports do not retain the original EXIF; editing does not overwrite CR3 files.
-7. Import from an SD card or another directory into your chosen memories root. Pick an existing theme or create one. Files are copied, sorted by capture date, and checked for duplicates; source files remain available.
+7. Import from an SD card or another directory into your chosen memories root. Pick an existing theme or create one. Preparation, copying and indexing progress stay visible above the scrolling gallery. New files are copied by capture date; if the source is already the target theme, it is indexed in place. The theme appears and opens immediately, alongside all previously indexed folders. Manage folders and the default theme in Settings; removing an index keeps originals, favorites and tags.
 8. Synchronize favorites or the current selection to an SD card. Review the keep and move lists first. Other photographs move into a `待删` batch on that card with their relative paths and a journal. Empty matches, ambiguity, or files changing after preview stop execution.
 9. Select photographs with JPEGs and open GIF / meme creation. Scroll through frames, drag to reorder, and add text per frame. Generate an encoded preview before saving the GIF, or save the current frame as a static meme.
 

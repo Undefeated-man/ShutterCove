@@ -67,6 +67,105 @@ test('identical camera file names remain separate across trips', async t => {
   assert.ok(photos.every(photo => path.dirname(photo.rawPath).endsWith(photo.theme)));
 });
 
+test('registered roots aggregate separate albums without mixing identical camera names or unrelated search scopes', async t => {
+  const events = [];
+  const { root, directory, library } = await fixture(t, { emit: event => events.push(event) });
+  const mountain = path.join(root, '山的回信'), sea = path.join(root, '海的来信');
+  await jpeg(path.join(mountain, 'IMG_0001.JPG'), '#335577');
+  await raw(path.join(mountain, 'IMG_0001.CR3'));
+  await jpeg(path.join(sea, 'IMG_0001.JPG'), '#884433');
+  const original = (await library.scan(mountain)).photos[0];
+  await library.update([original.id], { favorite: true, tags: ['山里'] });
+  const outside = path.join(directory, 'similarity-only');
+  await jpeg(path.join(outside, 'outside.JPG'));
+  await library.similar({ referenceId: original.id, directory: outside, grid: 4 });
+  assert.ok(library.roots.has(outside), 'similarity search authorizes its root');
+  events.length = 0;
+  const result = await library.scanRoots([mountain, sea]);
+  assert.deepEqual(result.roots, [mountain, sea]);
+  assert.equal(result.root, mountain);
+  assert.deepEqual(result.unavailableRoots, []);
+  assert.equal(result.photos.length, 2);
+  assert.equal(new Set(result.photos.map(photo => photo.id)).size, 2);
+  assert.deepEqual(new Set(result.photos.map(photo => photo.theme)), new Set(['山的回信', '海的来信']));
+  assert.ok(result.photos.every(photo => photo.allPaths.every(file => !inside(outside, file))));
+  assert.equal(result.photos.find(photo => photo.id === original.id).favorite, true);
+  assert.deepEqual(result.photos.find(photo => photo.id === original.id).tags, ['山里']);
+  const progress = events.filter(event => event.kind === 'scan' && event.phase === 'photos');
+  assert.ok(progress.some(event => event.photos?.length && event.done < event.total));
+  assert.ok(progress.every((event, index) => !index || event.done >= progress[index - 1].done), 'combined progress does not reset between folders');
+  assert.equal(progress.at(-1).done, progress.at(-1).total);
+  assert.equal(progress.at(-1).total, 3);
+  const nonStreaming = await library.scanRoots([mountain, sea], { stream: false });
+  assert.equal(nonStreaming.photos.length, 2);
+});
+
+test('overlapping registered roots prefer the specific scene, merge shared paths once, retain RAW pairs, and survive restart', async t => {
+  const { root, library } = await fixture(t);
+  const trip = path.join(root, '秋日旅程'), specific = path.join(trip, '2026-10-02');
+  await jpeg(path.join(specific, 'IMG_0001.JPG'));
+  const rawPath = await raw(path.join(trip, 'RAW', 'IMG_0001.CR3'));
+  await jpeg(path.join(trip, '2026-10-03', 'IMG_0002.JPG'), '#cc8899');
+  const original = (await library.scan(specific)).photos[0];
+  await library.update([original.id], { favorite: false, tags: ['独立目录'], theme: '我命名的场景' });
+  const result = await library.scanRoots([root, specific, root]);
+  assert.deepEqual(result.roots, [root, specific]);
+  assert.equal(result.photos.length, 2);
+  const selected = result.photos.find(photo => photo.stem === 'IMG_0001');
+  assert.equal(selected.id, original.id, 'specific-root identity wins even if parent root was registered first');
+  assert.equal(selected.rawPath, rawPath);
+  assert.equal(selected.theme, '我命名的场景');
+  assert.equal(selected.favorite, false, 'an explicit unfavorite is retained during path merging');
+  assert.deepEqual(selected.tags, ['独立目录']);
+  const allPaths = result.photos.flatMap(photo => photo.allPaths);
+  assert.equal(allPaths.length, 3);
+  assert.equal(new Set(allPaths).size, allPaths.length);
+  assert.equal(library.get(selected.id).rawPath, rawPath, 'the displayed winner remains usable by thumbnail/source requests');
+  assert.ok(selected.allPaths.every(file => library.state.aliases[file] === selected.id));
+  const metadataBeforeRestart = JSON.parse(JSON.stringify(library.state.metadata));
+  const reopened = await new PhotoLibrary({ userData: library.userData }).init();
+  try {
+    const restarted = await reopened.scanRoots([root, specific]);
+    const kept = restarted.photos.find(photo => photo.stem === 'IMG_0001');
+    assert.equal(kept.id, original.id);
+    assert.equal(kept.rawPath, rawPath);
+    assert.deepEqual(kept.tags, ['独立目录']);
+    assert.equal(kept.favorite, false);
+    assert.equal(kept.theme, '我命名的场景');
+    for (const id of Object.keys(metadataBeforeRestart)) assert.deepEqual(reopened.state.metadata[id], metadataBeforeRestart[id], 'old context metadata is not pruned');
+  } finally { await reopened.close(); }
+});
+
+test('offline registered folders retain registration and metadata and reappear when their disk returns', async t => {
+  const { root, directory, library } = await fixture(t);
+  const connected = path.join(root, '在线相册'), removable = path.join(directory, '移动硬盘');
+  await jpeg(path.join(connected, 'IMG_0001.JPG'));
+  await jpeg(path.join(removable, 'IMG_0002.JPG'), '#445588');
+  const initial = await library.scanRoots([connected, removable]);
+  const offlinePhoto = initial.photos.find(photo => photo.stem === 'IMG_0002');
+  await library.update([offlinePhoto.id], { favorite: true, tags: ['保留'] });
+  const metadata = JSON.parse(JSON.stringify(library.state.metadata[offlinePhoto.id]));
+  const parked = path.join(directory, 'temporarily-unmounted');
+  await fs.rename(removable, parked);
+  const disconnected = await library.scanRoots([connected, removable]);
+  assert.deepEqual(disconnected.roots, [connected, removable]);
+  assert.equal(disconnected.photos.length, 1);
+  assert.equal(disconnected.unavailableRoots.length, 1);
+  assert.equal(disconnected.unavailableRoots[0].root, removable);
+  assert.deepEqual(library.state.metadata[offlinePhoto.id], metadata);
+  await fs.rename(parked, removable);
+  const returned = await library.scanRoots([connected, removable]);
+  assert.deepEqual(returned.unavailableRoots, []);
+  assert.equal(returned.photos.length, 2);
+  const restored = returned.photos.find(photo => photo.id === offlinePhoto.id);
+  assert.equal(restored.favorite, true);
+  assert.deepEqual(restored.tags, ['保留']);
+  const empty = await library.scanRoots([]);
+  assert.equal(empty.root, '');
+  assert.deepEqual(empty.roots, []);
+  assert.deepEqual(empty.photos, []);
+});
+
 test('JPEG EXIF uses an owned bounded buffer instead of exifr file adapter', async t => {
   const { root, library } = await fixture(t);
   const file = await jpeg(path.join(root, 'large.jpg'));
@@ -213,6 +312,191 @@ test('imports pairs without touching SD originals; collision rename stays paired
   assert.equal(repeated.imported.length, 0);
   assert.equal(repeated.skipped, 2);
   assert.equal((await fs.readdir(path.join(root, '旅途', '2026-10-02'))).length, 4);
+});
+
+async function sourceSnapshot(library, root) {
+  const entries = [];
+  const walk = async directory => {
+    for (const entry of (await fs.readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) { entries.push({ directory: path.relative(root, file) }); await walk(file); }
+      else {
+        const stat = await fs.stat(file);
+        entries.push({ file: path.relative(root, file), mtime: stat.mtimeMs, size: stat.size, digest: await library._digest(file) });
+      }
+    }
+  };
+  await walk(root);
+  return entries;
+}
+
+test('importing an existing same-name theme indexes in place and preserves original files and metadata across a wider root', async t => {
+  const events = [];
+  const { root, library } = await fixture(t, { emit: event => events.push(event) });
+  const source = path.join(root, '中秋小记');
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  await raw(path.join(source, 'IMG_2001.CR3'));
+  await jpeg(path.join(source, '精品', 'IMG_2002.JPG'), '#449922');
+  const previous = (await library.scan(source)).photos;
+  const favorite = previous.find(photo => photo.stem === 'IMG_2001');
+  await library.update([favorite.id], { favorite: true, tags: ['家人'], theme: '旧的自定义主题' });
+  const before = await sourceSnapshot(library, source);
+  events.length = 0;
+  const result = await library.importPhotos({ source, destination: root, theme: '中秋小记' });
+  assert.equal(result.mode, 'indexed');
+  assert.equal(result.indexedCount, 2);
+  assert.equal(result.existingPaths.length, 3);
+  assert.deepEqual(result.imported, []);
+  assert.equal(result.skipped, 0);
+  assert.equal(result.cancelled, false);
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.libraryRoot, root);
+  assert.equal(result.destination, source);
+  assert.equal(result.theme, '中秋小记');
+  assert.deepEqual(await sourceSnapshot(library, source), before, 'in-place indexing does not copy, move, rewrite, or redate originals');
+  const wider = (await library.scan(root)).photos;
+  assert.deepEqual(wider.map(photo => photo.id).sort(), previous.map(photo => photo.id).sort());
+  assert.ok(wider.every(photo => photo.theme === '中秋小记'));
+  const kept = wider.find(photo => photo.id === favorite.id);
+  assert.equal(kept.favorite, true);
+  assert.deepEqual(kept.tags, ['家人']);
+  assert.ok(kept.rawPath && kept.jpegPath);
+  assert.ok(events.some(event => event.kind === 'import' && event.phase === 'preparing'));
+  assert.ok(events.some(event => event.kind === 'import' && event.phase === 'metadata' && event.done === 3));
+  assert.ok(events.some(event => event.kind === 'import' && event.phase === 'indexing' && event.done === event.total));
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('a source already inside the destination is copied to a different theme instead of deduplicated against itself', async t => {
+  const { root, library } = await fixture(t);
+  const source = path.join(root, '现有主题');
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  await raw(path.join(source, 'IMG_2001.CR3'));
+  const before = await sourceSnapshot(library, source);
+  const result = await library.importPhotos({ source, destination: root, theme: '新主题' });
+  assert.equal(result.mode, 'copied');
+  assert.equal(result.imported.length, 2);
+  assert.equal(result.skipped, 0);
+  assert.deepEqual(result.errors, []);
+  assert.ok(result.imported.every(file => inside(path.join(root, '新主题'), file)));
+  assert.deepEqual(await sourceSnapshot(library, source), before);
+  const newPhotos = (await library.scan(root)).photos.filter(photo => photo.theme === '新主题');
+  assert.equal(newPhotos.length, 1);
+  assert.ok(newPhotos[0].jpegPath && newPhotos[0].rawPath);
+  const repeated = await library.importPhotos({ source, destination: root, theme: '新主题' });
+  assert.deepEqual(repeated.imported, []);
+  assert.equal(repeated.skipped, 2);
+  assert.equal((await fs.readdir(path.join(root, '新主题', '2026-10-02'))).length, 2);
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('empty and fully deduplicated imports do not leave empty theme folders', async t => {
+  const { root, directory, library } = await fixture(t);
+  const source = path.join(directory, 'source');
+  await fs.mkdir(source);
+  const empty = await library.importPhotos({ source, destination: root, theme: '空主题' });
+  assert.deepEqual(empty.imported, []);
+  await assert.rejects(fs.lstat(path.join(root, '空主题')), { code: 'ENOENT' });
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  const first = await library.importPhotos({ source, destination: root, theme: '已有主题' });
+  assert.equal(first.imported.length, 1);
+  const duplicate = await library.importPhotos({ source, destination: root, theme: '另一个主题' });
+  assert.equal(duplicate.skipped, 1, 'existing cross-theme deduplication is preserved');
+  await assert.rejects(fs.lstat(path.join(root, '另一个主题')), { code: 'ENOENT' });
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('import progress starts before folder preparation and cancellation during preparation leaves no copies', async t => {
+  const events = [];
+  const { root, directory, library } = await fixture(t, { emit: event => events.push(event) });
+  const source = path.join(directory, 'source');
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  const before = await sourceSnapshot(library, source);
+  const walk = library._walk.bind(library);
+  let release, entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  library._walk = async (...args) => { entered(); await blocked; return walk(...args); };
+  const pending = library.importPhotos({ source, destination: root, theme: '取消主题' });
+  await started;
+  assert.ok(events.some(event => event.kind === 'import' && event.phase === 'preparing' && event.done === 0));
+  assert.equal(library.cancel('import'), true);
+  release();
+  const result = await pending;
+  assert.equal(result.cancelled, true);
+  assert.deepEqual(result.imported, []);
+  assert.deepEqual(await sourceSnapshot(library, source), before);
+  await assert.rejects(fs.lstat(path.join(root, '取消主题')), { code: 'ENOENT' });
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('cancellation during metadata reading is responsive and in-place indexing does not commit a cancelled theme', async t => {
+  const { root, library } = await fixture(t);
+  const source = path.join(root, '现有主题');
+  for (let index = 0; index < 8; index++) await jpeg(path.join(source, `IMG_${index}.JPG`));
+  const previous = (await library.scan(source)).photos;
+  await library.update(previous.map(photo => photo.id), { theme: '原主题' });
+  const before = await sourceSnapshot(library, source);
+  const describe = library._describe.bind(library);
+  let release, entered;
+  const blocked = new Promise(resolve => { release = resolve; });
+  const started = new Promise(resolve => { entered = resolve; });
+  let count = 0;
+  library._describe = async (...args) => { count++; entered(); await blocked; return describe(...args); };
+  const pending = library.importPhotos({ source, destination: root, theme: '现有主题' });
+  await started;
+  assert.equal(library.cancel('import'), true);
+  release();
+  const result = await pending;
+  assert.equal(result.cancelled, true);
+  assert.equal(result.indexedCount, 0);
+  assert.ok(count <= 4, 'queued metadata reads stop when cancellation is requested');
+  assert.ok(previous.every(photo => library.get(photo.id).theme === '原主题'));
+  assert.deepEqual(await sourceSnapshot(library, source), before);
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('preparation and metadata failures clean import jobs and unsafe nested destinations are still refused', async t => {
+  const { root, directory, library } = await fixture(t);
+  const source = path.join(directory, 'source');
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  const before = await sourceSnapshot(library, source);
+  const walk = library._walk;
+  library._walk = async () => { throw new Error('synthetic preparation failure'); };
+  await assert.rejects(library.importPhotos({ source, destination: root, theme: '失败主题' }), /synthetic preparation failure/);
+  assert.equal(library.jobs.has('import'), false);
+  library._walk = walk;
+  const describe = library._describe;
+  library._describe = async () => { throw new Error('synthetic metadata failure'); };
+  const failed = await library.importPhotos({ source, destination: root, theme: '失败主题' });
+  assert.equal(failed.errors.length, 1);
+  assert.match(failed.errors[0].message, /synthetic metadata failure/);
+  assert.deepEqual(failed.imported, []);
+  assert.equal(library.jobs.has('import'), false);
+  library._describe = describe;
+  await assert.rejects(fs.lstat(path.join(root, '失败主题')), { code: 'ENOENT' });
+  await assert.rejects(library.importPhotos({ source, destination: source, theme: '递归目标' }), /不能相互包含/);
+  const nestedSource = path.join(root, '嵌套主题', '来源');
+  await jpeg(path.join(nestedSource, 'IMG_3001.JPG'));
+  await assert.rejects(library.importPhotos({ source: nestedSource, destination: root, theme: '嵌套主题' }), /不能相互包含/);
+  assert.deepEqual(await sourceSnapshot(library, source), before);
+  assert.equal(library.jobs.has('import'), false);
+});
+
+test('failed copy verification removes the incomplete imported file and clears the job without changing originals', async t => {
+  const { root, directory, library } = await fixture(t);
+  const source = path.join(directory, 'source');
+  await jpeg(path.join(source, 'IMG_2001.JPG'));
+  const before = await sourceSnapshot(library, source);
+  const digest = library._digest.bind(library);
+  library._digest = file => inside(root, file) ? Promise.reject(new Error('synthetic copy verification failure')) : digest(file);
+  const result = await library.importPhotos({ source, destination: root, theme: '校验失败' });
+  assert.deepEqual(result.imported, []);
+  assert.equal(result.errors.length, 1);
+  assert.match(result.errors[0].message, /synthetic copy verification failure/);
+  assert.deepEqual(await fs.readdir(path.join(root, '校验失败', '2026-10-02')), []);
+  assert.deepEqual(await sourceSnapshot(library, source), before);
+  assert.equal(library.jobs.has('import'), false);
 });
 
 test('selected copy defaults to preferred JPEG, explains RAW-only skips, and optionally includes original CR3', async t => {

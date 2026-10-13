@@ -89,7 +89,7 @@ async function main() {
     const fontSmoke = path.join(__dirname, 'font-ui-smoke.js');
     if (!fs.existsSync(fontSmoke)) throw new Error('Required font-size UI smoke script is missing');
     launch(binary, ['--demo', '--smoke', '--compact', '--qa-script', fontSmoke]);
-    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'creative-ui-smoke.js', 'motion-ui-smoke.js', 'fullscreen-ui-smoke.js', 'update-ui-smoke.js', 'gallery-language-ui-smoke.js', 'studios-i18n-ui-smoke.js', 'widgets-english-ui-smoke.js', 'ambient-motion-ui-smoke.js', 'cove-layout-ui-smoke.js']) {
+    for (const script of ['date-ui-smoke.js', 'timeline-ui-smoke.js', 'dropdown-ui-smoke.js', 'copy-ui-smoke.js', 'scan-ui-smoke.js', 'import-ui-smoke.js', 'sticky-ui-smoke.js', 'detail-ui-smoke.js', 'zoom-ui-smoke.js', 'studio-ui-smoke.js', 'creative-ui-smoke.js', 'motion-ui-smoke.js', 'fullscreen-ui-smoke.js', 'update-ui-smoke.js', 'gallery-language-ui-smoke.js', 'studios-i18n-ui-smoke.js', 'widgets-english-ui-smoke.js', 'ambient-motion-ui-smoke.js', 'cove-layout-ui-smoke.js']) {
       const smoke = path.join(__dirname, script);
       if (!fs.existsSync(smoke)) throw new Error(`Required UI smoke script is missing: ${script}`);
       launch(binary, ['--demo', '--smoke', '--compact', ...(script === 'motion-ui-smoke.js' ? ['--qa-output', path.join(temporary, 'motion-ui-output')] : []), '--qa-script', smoke]);
@@ -118,6 +118,12 @@ async function main() {
     }
     require('./language-native-smoke.cjs').run(binary);
     const nativePID = launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'native-smoke.js')]);
+    const importProfile = path.join(temporary, 'import-profile');
+    const importArchive = path.join(temporary, 'import-archive');
+    fs.mkdirSync(importProfile); fs.mkdirSync(importArchive);
+    fs.writeFileSync(path.join(importProfile, 'settings.json'), JSON.stringify({libraryRoot:photos,libraryRoots:[photos],importDestination:importArchive,language:'en',languageChosen:true,onboardingCompleted:true}));
+    launch(binary, ['--smoke', '--verify-root', photos, '--qa-user-data', importProfile, '--qa-output', importArchive, '--qa-script', path.join(__dirname, 'native-import-smoke.js')]);
+    if (photoFiles(importArchive).length !== originals.length) throw new Error('Import created unexpected duplicate source files');
     nativeUserData = path.join(os.tmpdir(), `shiguang-smoke-${nativePID}`);
     const settings = JSON.parse(fs.readFileSync(path.join(nativeUserData, 'settings.json'), 'utf8'));
     if (settings.fontScale !== 1.4) throw new Error('Font-size setting was not persisted to the application settings file');

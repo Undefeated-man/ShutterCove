@@ -1,5 +1,5 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const methods = ['previewGif','saveGif','cancelGif','releaseGif','getPhotoFullscreen','setPhotoFullscreen','chooseFolder','chooseEditor','getSettings','saveSettings','getUpdateState','checkForUpdates','downloadUpdate','installUpdate','scan','update','thumbnail','source','analyzeColors','similar','cancel','importPhotos','copySelected','syncPreview','syncFavorites','revealDirectory','reveal','openEditor','trash','saveImage','cacheInfo','clearCache'];
+const methods = ['previewGif','saveGif','cancelGif','releaseGif','getPhotoFullscreen','setPhotoFullscreen','chooseFolder','chooseEditor','getSettings','saveSettings','getUpdateState','checkForUpdates','downloadUpdate','installUpdate','scan','registerLibrary','removeLibrary','update','thumbnail','source','analyzeColors','similar','cancel','importPhotos','copySelected','syncPreview','syncFavorites','revealDirectory','reveal','openEditor','trash','saveImage','cacheInfo','clearCache'];
 const api = Object.fromEntries(methods.map(name => [name, arg => ipcRenderer.invoke(`memory:${name}`, arg)]));
 api.onProgress = cb => {
   if (typeof cb !== 'function') return () => {};

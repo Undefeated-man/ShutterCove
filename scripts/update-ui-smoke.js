@@ -12,9 +12,9 @@
   await wait(() => window.App?.api.isDemo && window.UpdaterUI && App.state.settingsReady && !App.state.scanning);
   const api = App.api;
   const original = Object.fromEntries(['checkForUpdates','downloadUpdate','installUpdate','saveSettings','getSettings'].map(key => [key, api[key]]));
-  const originalSettings = await api.getSettings(), initialPhotos = JSON.stringify(App.state.photos);
+  const originalSettings = await api.getSettings(), initialPhotos = JSON.stringify(App.state.photos), originalLanguage = I18n.language();
   const emit = patch => api.qaEmitUpdateState(patch);
-  const available = (patch = {}) => emit({ status:'available',currentVersion:'1.0.7',latestVersion:'1.0.8',support:'mac',installSupported:true,message:'',progress:null,notify:undefined,...patch });
+  const available = (patch = {}) => emit({ status:'available',currentVersion:'1.0.7',latestVersion:'1.0.8',support:'mac',installSupported:true,message:'',progress:null,notify:undefined,automaticUpdate:false,autoDeferred:false,autoRestartAt:null,...patch });
   const close = async () => { App.closeModal(); await frames(); };
   const open = async () => { await App.openSettings(); await wait(() => el('settings-updater')); await new Promise(resolve => setTimeout(resolve, 35)); await frames(); };
   const clean = async () => { await close(); api.checkForUpdates=original.checkForUpdates;api.downloadUpdate=original.downloadUpdate;api.installUpdate=original.installUpdate;api.saveSettings=original.saveSettings;api.getSettings=original.getSettings; };
@@ -38,6 +38,10 @@
   };
   try {
     assert(api.isDemo && typeof api.qaEmitUpdateState==='function','Updater tests are confined to the synthetic demo bridge');
+    assert(UpdaterUI.automaticInstallAllowed(),'An idle ready gallery can safely acknowledge automatic installation');
+    App.state.importing=true;assert(!UpdaterUI.automaticInstallAllowed(),'An active import blocks automatic installation');App.state.importing=false;
+    App.state.busy=true;assert(!UpdaterUI.automaticInstallAllowed(),'Photo processing blocks automatic installation');App.state.busy=false;
+    App.state.selected.add(App.state.photos[0].id);assert(!UpdaterUI.automaticInstallAllowed(),'A current selection is preserved instead of being lost to automatic restart');App.state.selected.clear();
     assert(!el('update-notice') || el('update-notice').hidden,'Initial idle state creates no disruptive update notice');
     available({notify:false});assert(el('update-notice').hidden,'A manual or previously announced update does not create an extra banner');
     available({notify:true});assert(!el('update-notice').hidden,'A first automatic update notification is shown');
@@ -61,6 +65,7 @@
     available({latestVersion:'1.0.9'});assert(!el('update-notice').hidden,'A different new version may be announced');
     let closed=0;
     const work=App.modal({title:'合成未保存工作台',body:'<textarea id="update-work">合成未保存内容</textarea>',onClose:()=>closed++});
+    assert(!UpdaterUI.automaticInstallAllowed(),'An unsaved editing dialog blocks automatic installation without requiring main-process knowledge of its edits');
     await new Promise(resolve=>setTimeout(resolve,35));el('update-work').focus({preventScroll:true});
     clicked('update-notice-view');
     assert(work.isConnected && closed===0 && el('update-work').value==='合成未保存内容' && !el('settings-updater'),'Viewing an update never destroys an existing unsaved work modal');
@@ -77,7 +82,8 @@
     assert(lateWork.isConnected && lateClosed===0 && el('update-late-work').value==='待保留的合成编辑' && !el('settings-updater'),'A delayed settings response does not replace a newly opened unsaved work modal');
     api.getSettings=original.getSettings;await close();
     clicked('update-notice-view');await wait(()=>el('settings-updater'));
-    assert(el('update-current-version').textContent==='v1.0.7' && el('update-auto').checked,'Settings shows the installed version and automatic checking enabled by default');
+    assert(el('update-current-version').textContent==='v1.0.7' && el('update-auto').checked,'Settings shows the installed version and automatic updates enabled by default');
+    assert(!UpdaterUI.automaticInstallAllowed() && /默认开启.*自动下载/.test(el('update-auto-policy').textContent),'Open settings pauses automatic restart and clearly describes the default automatic update behavior');
     assert(el('update-action').textContent==='一键更新并重启' && /下载.*校验/.test(el('update-description').textContent),'The primary action states that one click downloads, verifies and restarts');
     assert(/精品收藏.*标签.*设置/.test(el('update-retained').textContent),'The update panel explains that user collections, tags and settings are preserved');
     assert(!el('update-demo-note').hidden && /不联网/.test(el('update-demo-note').textContent),'Demo update flows are clearly labelled as simulation');
@@ -87,16 +93,32 @@
     api.saveSettings=captureSave;
     el('update-auto').checked=false;el('update-auto').dispatchEvent(new Event('change',{bubbles:true}));
     await wait(()=>!el('update-auto').disabled);
-    assert(settingsCalls.length===1 && JSON.stringify(settingsCalls[0])==='{"checkUpdatesAutomatically":false}','Automatic checking saves only the boolean preference');
+    assert(settingsCalls.length===1 && JSON.stringify(settingsCalls[0])==='{"installUpdatesAutomatically":false,"checkUpdatesAutomatically":false}','Automatic update switch saves only the two compatibility boolean preferences');
     const saved=await api.getSettings();
-    assert(saved.checkUpdatesAutomatically===false && saved.libraryRoot===originalSettings.libraryRoot && saved.fontScale===originalSettings.fontScale && JSON.stringify(saved.editorPaths)===JSON.stringify(originalSettings.editorPaths),'Saving automatic checking preserves existing library, editor and font settings');
+    assert(saved.installUpdatesAutomatically===false && saved.checkUpdatesAutomatically===false && saved.libraryRoot===originalSettings.libraryRoot && saved.fontScale===originalSettings.fontScale && JSON.stringify(saved.editorPaths)===JSON.stringify(originalSettings.editorPaths),'Saving automatic updates preserves existing library, editor and font settings');
     api.saveSettings=async()=>{throw new Error('合成设置写入失败');};
     el('update-auto').checked=true;el('update-auto').dispatchEvent(new Event('change',{bubbles:true}));
     await wait(()=>!el('update-auto').disabled);
     assert(!el('update-auto').checked && !el('update-error').hidden && /写入失败/.test(el('update-error').textContent),'Preference save failure restores the prior switch and shows a useful error');
     api.saveSettings=captureSave;el('update-auto').checked=true;el('update-auto').dispatchEvent(new Event('change',{bubbles:true}));
     await wait(()=>!el('update-auto').disabled);
-    assert(el('update-auto').checked && (await api.getSettings()).checkUpdatesAutomatically,'Automatic checking can be retried successfully without saving other fields');
+    assert(el('update-auto').checked && (await api.getSettings()).installUpdatesAutomatically,'Automatic updates can be retried successfully without saving other fields');
+    emit({status:'downloading',automaticUpdate:true,notify:false,progress:{receivedBytes:3e6,totalBytes:10e6,percent:30}});
+    assert(!el('update-notice').hidden && /自动下载/.test(el('update-notice-title').textContent) && /后台下载/.test(el('update-description').textContent),'Automatic downloads remain visible outside settings even when ordinary reminder deduplication is active');
+    emit({status:'ready',automaticUpdate:true,autoDeferred:true,message:'更新已准备好，当前任务或编辑窗口结束后自动安装。',autoRestartAt:null});
+    assert(/当前任务/.test(el('update-description').textContent) && /编辑窗口/.test(el('update-notice').textContent),'Deferred automatic installation explains that current tasks and editing work will finish first');
+    emit({status:'ready',automaticUpdate:true,autoDeferred:false,autoRestartAt:Date.now()+9000});
+    assert(/秒后自动更新并重启/.test(el('update-notice-title').textContent) && el('update-notice-later').textContent==='关闭自动更新','Automatic installation exposes its grace period and a direct way to turn it off');
+    clicked('update-notice-later');await wait(()=>(App.state.settings.installUpdatesAutomatically===false));
+    assert(!el('update-auto').checked && !UpdaterUI.automaticInstallAllowed(),'The banner can persistently disable automatic restart during its grace period');
+    el('update-auto').checked=true;el('update-auto').dispatchEvent(new Event('change',{bubbles:true}));await wait(()=>!el('update-auto').disabled);available();
+    el('setting-photoshop').focus({preventScroll:true});const lockedDraft=el('setting-photoshop').value;
+    emit({status:'installing',automaticUpdate:true});
+    assert(document.querySelector('.app-shell').inert && el('modal-root').inert && el('update-install-lock').getAttribute('role')==='status','Final automatic installation locks new UI edits and exposes an accessible restart notice');
+    const protectedSelection=App.state.selected.size;document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'a',ctrlKey:true,bubbles:true,cancelable:true}));
+    assert(App.state.selected.size===protectedSelection,'The installation lock also blocks document-level keyboard shortcuts');
+    emit({status:'ready',automaticUpdate:true,autoDeferred:true,autoRestartAt:null});
+    assert(!document.querySelector('.app-shell').inert && !el('modal-root').inert && !el('update-install-lock') && el('setting-photoshop').value===lockedDraft && document.activeElement===el('setting-photoshop'),'A busy handshake or installation failure releases the lock and preserves the draft and focus');available();
     api.checkForUpdates=async()=>{checkCalls++;emit({status:'checking'});await new Promise(resolve=>setTimeout(resolve,80));throw new Error('合成网络失败');};
     clicked('update-check');assert(el('update-check').disabled,'Checking disables repeat check requests');clicked('update-check');
     await wait(()=>el('settings-updater').dataset.status==='error' && !el('update-action').disabled);
@@ -170,7 +192,7 @@
       const panel=el('settings-updater'),modal=panel.closest('.modal'),modalBody=panel.closest('.modal-body');
       assert(panel.scrollWidth<=panel.clientWidth+1 && modalBody.scrollWidth<=modalBody.clientWidth+1 && modal.scrollWidth<=modal.clientWidth+1 && document.documentElement.scrollWidth<=innerWidth+1,`${font*100}% update settings wraps within the dialog and viewport`);
       assert(parseFloat(getComputedStyle(el('update-description')).fontSize)>=13 && parseFloat(getComputedStyle(el('update-status')).fontSize)>=14,`${font*100}% essential update text stays readable`);
-      await reachable('update-auto',`${font*100}% automatic checking switch is reachable`);
+      await reachable('update-auto',`${font*100}% automatic updates switch is reachable`);
       await reachable('update-check',`${font*100}% manual check is reachable`);
       await reachable('update-action',`${font*100}% update action is reachable`);
       await reachable('settings-save',`${font*100}% settings save footer remains reachable`);
@@ -187,10 +209,19 @@
     await wait(()=>UpdaterUI.current().status==='upToDate' && !el('update-check').disabled);
     assert(negativeInvocations===1,'Restoring the action restores the real bridge invocation');
     assert(JSON.stringify(App.state.photos)===initialPhotos,'All updater flows leave synthetic photo metadata intact');
+    await clean();I18n.setLanguage('en');await frames();available();await open();setFont(1.5);await frames();
+    assert(el('update-auto').getAttribute('aria-label')==='Download and update automatically' && /On by default.*automatically/.test(el('update-auto-policy').textContent),'Automatic update switch and its full default behavior are localized in English');
+    const englishPanel=el('settings-updater'),englishBody=englishPanel.closest('.modal-body');
+    assert(englishPanel.scrollWidth<=englishPanel.clientWidth+1 && englishBody.scrollWidth<=englishBody.clientWidth+1,'English automatic-update settings fit at 150 percent font size');
+    emit({status:'ready',automaticUpdate:true,autoDeferred:true,autoRestartAt:null,message:'更新已准备好，当前任务或编辑窗口结束后自动安装。'});await frames();
+    assert(!/[\u4e00-\u9fff]/.test(el('update-description').textContent+el('update-notice').textContent),'Automatic wait state and its banner use English without leaking untranslated update copy');
+    emit({status:'installing',automaticUpdate:true});
+    assert(!/[\u4e00-\u9fff]/.test(el('update-install-lock').textContent),'The final automatic restart overlay is localized in English');
+    emit({status:'ready',automaticUpdate:false});
   } finally {
-    await clean();await original.saveSettings({fontScale:originalSettings.fontScale,checkUpdatesAutomatically:originalSettings.checkUpdatesAutomatically});
-    App.state.settings=await api.getSettings();App.applyFontScale(originalSettings.fontScale);App.state.selected.clear();
-    emit({status:'idle',currentVersion:'1.0.7',latestVersion:null,support:'mac',installSupported:true,message:'',progress:null});el('toast-root').replaceChildren();
+    await clean();await original.saveSettings({fontScale:originalSettings.fontScale,checkUpdatesAutomatically:originalSettings.checkUpdatesAutomatically,installUpdatesAutomatically:originalSettings.installUpdatesAutomatically});
+    App.state.settings=await api.getSettings();App.applyFontScale(originalSettings.fontScale);App.state.selected.clear();I18n.setLanguage(originalLanguage);
+    emit({status:'idle',currentVersion:'1.0.7',latestVersion:null,support:'mac',installSupported:true,message:'',progress:null,automaticUpdate:false,autoDeferred:false,autoRestartAt:null});el('toast-root').replaceChildren();
   }
   return {passed:checks.length,checks,viewport:{width:innerWidth,height:innerHeight}};
 })();

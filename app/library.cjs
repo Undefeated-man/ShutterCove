@@ -158,20 +158,25 @@ class PhotoLibrary {
     return real;
   }
 
-  async _walk(root) {
+  async _walk(root, { onFile, isCancelled = () => false } = {}) {
     const files = [];
     const walk = async directory => {
+      if (isCancelled()) return;
       let entries;
       try { entries = await fs.readdir(directory, { withFileTypes: true }); }
       catch (error) { this.emit({ kind: 'warning', message: `无法读取文件夹：${path.basename(directory)}` }); return; }
       entries.sort((a, b) => a.name.localeCompare(b.name));
       for (const entry of entries) {
+        if (isCancelled()) return;
         if (entry.isSymbolicLink()) continue;
         const absolute = path.join(directory, entry.name);
         if (inside(this.userData, absolute)) continue;
         if (entry.isDirectory()) {
           if (!IGNORE_FOLDERS.has(entry.name) && !entry.name.startsWith('.')) await walk(absolute);
-        } else if (entry.isFile() && PHOTO_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) files.push(absolute);
+        } else if (entry.isFile() && PHOTO_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+          files.push(absolute);
+          onFile?.(files.length);
+        }
       }
     };
     await walk(root);
@@ -274,7 +279,8 @@ class PhotoLibrary {
     return result.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
   }
 
-  async scan(root, { stream = true } = {}) {
+  async scan(root, { stream = true, onProgress } = {}) {
+    const report = payload => onProgress ? onProgress(payload) : this.emit(payload);
     root = await this._root(root);
     const files = await this._walk(root);
     const priority = file => path.extname(file).toLowerCase() === '.cr3' ? 2 : path.dirname(file).split(path.sep).some(folder => SPECIAL_FOLDER.test(folder)) ? 0 : 1;
@@ -284,7 +290,7 @@ class PhotoLibrary {
     }));
     let done = 0;
     const accumulated = [];
-    this.emit({ kind: 'scan', done, total: files.length, stream });
+    report({ kind: 'scan', done, total: files.length, stream });
     const descriptions = await parallel(files, 4, async file => {
       try {
         const key = `${this._themeContext(root, file).anchor}\0${path.basename(file, path.extname(file)).toLocaleLowerCase()}`;
@@ -305,7 +311,7 @@ class PhotoLibrary {
             for (const photo of earlyPhotos) this.photos.set(photo.id, photo);
             progress.photos = earlyPhotos.slice(0, 120);
           }
-          this.emit(progress);
+          report(progress);
         }
       }
     });
@@ -315,6 +321,85 @@ class PhotoLibrary {
     for (const photo of photos) this.photos.set(photo.id, photo);
     await this._save();
     return { root, photos };
+  }
+
+  async scanRoots(registeredRoots, { stream = true } = {}) {
+    if (!Array.isArray(registeredRoots) || registeredRoots.some(root => typeof root !== 'string' || !root)) throw new Error('请选择有效的相册目录');
+    const roots = [], available = [], unavailableRoots = [];
+    this.emit({ kind: 'scan', phase: 'preparing', done: 0, total: registeredRoots.length, stream });
+    for (const requested of registeredRoots) {
+      let root = path.resolve(requested);
+      try {
+        root = await this._root(root);
+        await fs.readdir(root); // _walk tolerates unreadable descendants; an unreadable root is offline.
+        if (!roots.includes(root)) {
+          roots.push(root);
+          available.push({ root, count: (await this._walk(root)).length });
+        }
+      } catch (error) {
+        if (!roots.includes(root)) {
+          roots.push(root);
+          unavailableRoots.push({ root, message: error.message });
+          this.emit({ kind: 'warning', message: `相册目录暂时无法读取：${path.basename(root)}` });
+        }
+      }
+    }
+    // A separately registered subfolder owns its photos when it overlaps an archive root.
+    available.sort((a, b) => b.root.split(path.sep).length - a.root.split(path.sep).length);
+    const winners = new Set(), owners = new Map(), precedence = new Map();
+    let nextPrecedence = 0;
+    const merge = (winner, other) => {
+      winner.allPaths = [...new Set([...winner.allPaths, ...other.allPaths])];
+      for (const field of ['jpegPath', 'rawPath', 'width', 'height', 'camera', 'lens']) if (!winner[field] && other[field]) winner[field] = other[field];
+      winner.path = winner.jpegPath || winner.rawPath;
+      winner.size = winner.allPaths.reduce((sum, file) => sum + (this.state.files[file]?.size || 0), 0);
+      for (const file of winner.allPaths) owners.set(file, winner);
+    };
+    const aggregate = photos => {
+      for (const photo of photos) {
+        const overlapping = [...new Set(photo.allPaths.map(file => owners.get(file)).filter(Boolean))].sort((a, b) => precedence.get(a) - precedence.get(b));
+        if (!overlapping.length) {
+          const winner = { ...photo, allPaths: [...photo.allPaths] };
+          winners.add(winner);
+          precedence.set(winner, nextPrecedence++);
+          for (const file of winner.allPaths) owners.set(file, winner);
+        } else {
+          const winner = overlapping[0];
+          for (const other of overlapping.slice(1)) { merge(winner, other); winners.delete(other); }
+          merge(winner, photo);
+        }
+      }
+      // scan(parent) can replace a child's context ID. Restore the selected winner for thumbnails,
+      // and use the same aliases on the next launch without removing any stored metadata.
+      for (const winner of winners) {
+        this.photos.set(winner.id, winner);
+        for (const file of winner.allPaths) this.state.aliases[file] = winner.id;
+      }
+      return [...winners].sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+    };
+    let completed = 0, total = available.reduce((sum, item) => sum + item.count, 0);
+    for (const item of available) {
+      let processed = 0;
+      try {
+        const result = await this.scan(item.root, { stream: false, onProgress: payload => {
+          if (payload.total !== item.count) { total += payload.total - item.count; item.count = payload.total; }
+          processed = payload.done;
+          this.emit({ kind: 'scan', phase: 'photos', done: completed + processed, total, stream, etaSeconds: payload.etaSeconds || 0 });
+        } });
+        const photos = aggregate(result.photos);
+        completed += item.count;
+        this.emit({ kind: 'scan', phase: 'photos', done: completed, total, stream, ...(stream ? { photos: photos.slice(0, 120) } : {}) });
+      } catch (error) {
+        unavailableRoots.push({ root: item.root, message: error.message });
+        this.emit({ kind: 'warning', message: `相册目录暂时无法读取：${path.basename(item.root)}` });
+        total -= item.count - processed;
+        completed += processed;
+      }
+    }
+    const photos = aggregate([]);
+    await this._save();
+    this.emit({ kind: 'scan', phase: 'photos', done: total, total, stream, ...(stream ? { photos: photos.slice(0, 120) } : {}) });
+    return { root: roots[0] || '', roots, photos, unavailableRoots };
   }
 
   _photo(id) {
@@ -477,18 +562,18 @@ class PhotoLibrary {
     return Boolean(job);
   }
 
-  _start(kind, total) {
+  _start(kind, total, phase) {
     this.cancel(kind);
-    const job = { cancelled: false, started: Date.now(), done: 0, total };
+    const job = { cancelled: false, started: Date.now(), done: 0, total, ...(phase ? { phase } : {}) };
     this.jobs.set(kind, job);
-    this.emit({ kind, done: 0, total, etaSeconds: Math.ceil(total * (kind === 'similarity' ? .18 : .09)) });
+    this.emit({ kind, done: 0, total, etaSeconds: Math.ceil(total * (kind === 'similarity' ? .18 : .09)), ...(phase ? { phase } : {}) });
     return job;
   }
 
   _progress(kind, job) {
     const remaining = job.total - job.done;
     const average = job.done >= 4 ? (Date.now() - job.started) / 1000 / job.done : kind === 'similarity' ? .18 : .09;
-    this.emit({ kind, done: job.done, total: job.total, etaSeconds: Math.ceil(remaining * average), cancelled: job.cancelled });
+    this.emit({ kind, done: job.done, total: job.total, etaSeconds: Math.ceil(remaining * average), cancelled: job.cancelled, ...(job.phase ? { phase: job.phase } : {}) });
   }
 
   async analyzeColors(ids) {
@@ -839,90 +924,155 @@ class PhotoLibrary {
   }
 
   async importPhotos({ source, destination, theme }) {
-    if (typeof theme !== 'string' || !theme.trim() || theme === '.' || theme === '..' || /[\\/\0]/.test(theme)) throw new Error('主题名称不能包含路径分隔符');
+    if (typeof theme !== 'string' || !theme.trim() || theme.trim() === '.' || theme.trim() === '..' || /[\\/\0]/.test(theme)) throw new Error('主题名称不能包含路径分隔符');
+    theme = theme.trim();
     source = await this._root(source);
     destination = path.resolve(destination);
     await fs.mkdir(destination, { recursive: true });
     destination = await this._root(destination);
-    const themeRoot = path.join(destination, theme.trim());
-    if (inside(source, themeRoot) || inside(themeRoot, source)) throw new Error('导入来源和目标不能相互包含');
-    await fs.mkdir(themeRoot, { recursive: true });
-    const themeStat = await fs.lstat(themeRoot);
-    if (themeStat.isSymbolicLink()) throw new Error('目标主题文件夹不能是符号链接');
-    const sourceFiles = await this._walk(source);
-    const knownFiles = await this._walk(destination);
-    const known = new Map();
-    for (const file of knownFiles) {
-      const stat = await fs.stat(file);
-      const key = `${path.extname(file).toLocaleLowerCase()}\0${stat.size}`;
-      if (!known.has(key)) known.set(key, []);
-      known.get(key).push(file);
-    }
-    const jpegKeys = new Set(sourceFiles.filter(file => path.extname(file).toLowerCase() !== '.cr3').map(file => `${path.dirname(file)}\0${path.basename(file, path.extname(file)).toLocaleLowerCase()}`));
-    const described = (await parallel(sourceFiles, 4, file => {
-      const key = `${path.dirname(file)}\0${path.basename(file, path.extname(file)).toLocaleLowerCase()}`;
-      return this._describe(file, source, { readRaw: path.extname(file).toLowerCase() === '.cr3' && !jpegKeys.has(key) }).catch(() => null);
-    })).filter(Boolean);
-    const grouped = new Map();
-    for (const file of described) {
-      const key = `${path.dirname(file.file)}\0${file.stem.toLocaleLowerCase()}`;
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(file);
-    }
-    const digestCache = new Map();
-    const digest = async file => {
-      if (!digestCache.has(file)) digestCache.set(file, this._digest(file));
-      return digestCache.get(file);
+    const themeRoot = path.join(destination, theme);
+    const indexing = source === themeRoot;
+    if (!indexing && (inside(source, themeRoot) || inside(themeRoot, source))) throw new Error('导入来源和目标不能相互包含');
+    const validateDirectory = async directory => {
+      const stat = await fs.lstat(directory);
+      if (stat.isSymbolicLink()) throw new Error('目标主题或日期文件夹不能是符号链接');
+      if (!stat.isDirectory()) throw new Error('目标位置不是文件夹');
     };
-    let done = 0, skipped = 0;
+    try { await validateDirectory(themeRoot); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
     const imported = [], errors = [];
-    const job = this._start('import', sourceFiles.length);
-    for (const group of grouped.values()) {
-      if (job.cancelled) break;
-      const date = group.find(file => file.ext !== '.cr3')?.date || group[0].date;
-      const directory = path.join(themeRoot, date);
-      await fs.mkdir(directory, { recursive: true });
-      const directoryStat = await fs.lstat(directory);
-      if (directoryStat.isSymbolicLink()) throw new Error('目标日期文件夹不能是符号链接');
-      const toCopy = [];
-      for (const file of group) {
-        const sameNames = known.get(`${file.ext}\0${file.size}`) || [];
-        const sourceDigest = sameNames.length ? await digest(file.file) : null;
-        let duplicate = false;
-        for (const previous of sameNames) if (await digest(previous) === sourceDigest) { duplicate = true; break; }
-        if (duplicate) { skipped++; done++; job.done = done; this._progress('import', job); }
-        else toCopy.push(file);
-      }
-      let suffix = '';
-      for (let n = 0;; n++) {
-        suffix = n ? `-${n + 1}` : '';
-        const destinations = toCopy.map(file => path.join(directory, `${file.stem}${suffix}${path.extname(file.file)}`));
-        const exists = await Promise.all(destinations.map(file => fs.lstat(file).then(() => true).catch(error => { if (error.code === 'ENOENT') return false; throw error; })));
-        if (exists.every(value => !value)) break;
-      }
-      for (const file of toCopy) {
-        const target = path.join(directory, `${file.stem}${suffix}${path.extname(file.file)}`);
-        let created = false;
-        try {
-          await this._authorized(file.file);
-          await fs.copyFile(file.file, target, require('node:fs').constants.COPYFILE_EXCL);
-          created = true;
-          const targetStat = await fs.stat(target);
-          if (targetStat.size !== file.size || await digest(file.file) !== await this._digest(target)) throw new Error('复制校验失败');
-          const originalStat = await fs.stat(file.file);
-          await fs.utimes(target, originalStat.atime, originalStat.mtime);
-          imported.push(target);
-          const key = `${file.ext}\0${file.size}`;
+    let skipped = 0, indexedCount = 0, existingPaths = [];
+    const job = this._start('import', 0, 'preparing');
+    const result = () => ({ mode: indexing ? 'indexed' : 'copied', imported, skipped, errors,
+      indexedCount, existingPaths, cancelled: job.cancelled, source, destination: themeRoot,
+      libraryRoot: destination, root: destination, theme });
+    const phase = (name, total, done = 0) => {
+      job.phase = name;
+      job.started = Date.now();
+      job.total = total;
+      job.done = done;
+      this._progress('import', job);
+    };
+    try {
+      const sourceFiles = await this._walk(source, {
+        isCancelled: () => job.cancelled,
+        onFile: found => {
+          if (found === 1 || found % 40 === 0) this.emit({ kind: 'import', phase: 'preparing', done: 0, total: 0, found, etaSeconds: 0 });
+        },
+      });
+      if (job.cancelled || !sourceFiles.length) return result();
+      const known = new Map();
+      if (!indexing) {
+        const knownFiles = await this._walk(destination, { isCancelled: () => job.cancelled });
+        for (const file of knownFiles) {
+          if (job.cancelled) return result();
+          // A source folder already inside the library is not an imported copy of itself.
+          if (inside(source, file)) continue;
+          const stat = await fs.stat(file);
+          const key = `${path.extname(file).toLocaleLowerCase()}\0${stat.size}`;
           if (!known.has(key)) known.set(key, []);
-          known.get(key).push(target);
-        } catch (error) {
-          if (created) await fs.rm(target, { force: true });
-          errors.push({ name: path.basename(file.file), message: error.message });
-        } finally { done++; job.done = done; this._progress('import', job); }
+          known.get(key).push(file);
+        }
       }
-    }
-    if (this.jobs.get('import') === job) this.jobs.delete('import');
-    return { imported, skipped, errors, cancelled: job.cancelled, destination: themeRoot };
+      if (job.cancelled) return result();
+      phase('metadata', sourceFiles.length);
+      const pairKey = file => `${indexing ? this._themeContext(source, file).anchor : path.dirname(file)}\0${path.basename(file, path.extname(file)).toLocaleLowerCase()}`;
+      const jpegKeys = new Set(sourceFiles.filter(file => path.extname(file).toLowerCase() !== '.cr3').map(pairKey));
+      const described = (await parallel(sourceFiles, 4, async file => {
+        if (job.cancelled) return null;
+        try {
+          const key = pairKey(file);
+          return await this._describe(file, source, { readRaw: path.extname(file).toLowerCase() === '.cr3' && !jpegKeys.has(key) });
+        } catch (error) {
+          errors.push({ name: path.basename(file), message: error.message });
+          return null;
+        } finally { job.done++; this._progress('import', job); }
+      })).filter(Boolean);
+      if (job.cancelled) return result();
+      if (indexing) {
+        phase('indexing', described.length);
+        if (job.cancelled) return result();
+        const photos = this._group(described);
+        const foundIds = new Set(photos.map(photo => photo.id));
+        for (const [id, photo] of this.photos) if (!foundIds.has(id) && photo.allPaths.every(file => inside(source, file))) this.photos.delete(id);
+        for (const photo of photos) this.photos.set(photo.id, photo);
+        // This changes only the app's metadata. Existing JPEG/RAW files stay in place.
+        if (photos.length) await this.update(photos.map(photo => photo.id), { theme });
+        else await this._save();
+        indexedCount = photos.length;
+        existingPaths = described.map(file => file.file);
+        job.done = described.length;
+        this._progress('import', job);
+        return result();
+      }
+      const grouped = new Map();
+      for (const file of described) {
+        const key = `${path.dirname(file.file)}\0${file.stem.toLocaleLowerCase()}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key).push(file);
+      }
+      const digestCache = new Map();
+      const digest = async file => {
+        if (!digestCache.has(file)) digestCache.set(file, this._digest(file));
+        return digestCache.get(file);
+      };
+      phase('copying', sourceFiles.length, errors.length);
+      for (const group of grouped.values()) {
+        if (job.cancelled) break;
+        const date = group.find(file => file.ext !== '.cr3')?.date || group[0].date;
+        const directory = path.join(themeRoot, date);
+        const toCopy = [];
+        for (const file of group) {
+          if (job.cancelled) break;
+          const sameNames = known.get(`${file.ext}\0${file.size}`) || [];
+          const sourceDigest = sameNames.length ? await digest(file.file) : null;
+          let duplicate = false;
+          for (const previous of sameNames) {
+            if (job.cancelled) break;
+            if (await digest(previous) === sourceDigest) { duplicate = true; break; }
+          }
+          if (job.cancelled) break;
+          if (duplicate) { skipped++; job.done++; this._progress('import', job); }
+          else toCopy.push(file);
+        }
+        if (job.cancelled) break;
+        if (!toCopy.length) continue;
+        // Avoid empty theme/date folders when every source file is already imported.
+        await fs.mkdir(themeRoot, { recursive: true });
+        await validateDirectory(themeRoot);
+        await fs.mkdir(directory, { recursive: true });
+        await validateDirectory(directory);
+        let suffix = '';
+        for (let n = 0;; n++) {
+          suffix = n ? `-${n + 1}` : '';
+          const destinations = toCopy.map(file => path.join(directory, `${file.stem}${suffix}${path.extname(file.file)}`));
+          const exists = await Promise.all(destinations.map(file => fs.lstat(file).then(() => true).catch(error => { if (error.code === 'ENOENT') return false; throw error; })));
+          if (exists.every(value => !value)) break;
+        }
+        for (const file of toCopy) {
+          if (job.cancelled) break;
+          const target = path.join(directory, `${file.stem}${suffix}${path.extname(file.file)}`);
+          let created = false;
+          try {
+            await this._authorized(file.file);
+            await fs.copyFile(file.file, target, require('node:fs').constants.COPYFILE_EXCL);
+            created = true;
+            const targetStat = await fs.stat(target);
+            if (targetStat.size !== file.size || await digest(file.file) !== await this._digest(target)) throw new Error('复制校验失败');
+            const originalStat = await fs.stat(file.file);
+            await fs.utimes(target, originalStat.atime, originalStat.mtime);
+            imported.push(target);
+            const key = `${file.ext}\0${file.size}`;
+            if (!known.has(key)) known.set(key, []);
+            known.get(key).push(target);
+          } catch (error) {
+            if (created) await fs.rm(target, { force: true });
+            errors.push({ name: path.basename(file.file), message: error.message });
+          } finally { job.done++; this._progress('import', job); }
+        }
+      }
+      return result();
+    } finally { if (this.jobs.get('import') === job) this.jobs.delete('import'); }
   }
 }
 

@@ -62,7 +62,7 @@ async function downloadedFixture(t) {
   const root = await fixture(t), image = path.join(root, '拾光屿.AppImage'); await fs.writeFile(image, appImageBytes(), { mode: 0o755 });
   const payload = Buffer.concat([appImageBytes(), Buffer.from('new release')]), published = release('1.0.7', 'Shiguang-Isle-1.0.7-linux-x86_64.AppImage', payload), app = { isPackaged: true, getVersion: () => '1.0.6', getPath: name => name === 'home' ? root : path.join(root, 'profile') };
   let requests = 0;
-  const options = { app, platform: 'linux', arch: 'x64', appImage: image, transport: async (url, options) => {
+  const options = { autoInstallEnabled: () => false, app, platform: 'linux', arch: 'x64', appImage: image, transport: async (url, options) => {
     requests++;
     if (url === core.RELEASE_API) return { data: Buffer.from(JSON.stringify(published)) };
     if (url.endsWith('SHA256SUMS.txt')) return { data: published.sums, sha256: digest(published.sums) };
@@ -154,7 +154,7 @@ test('metadata backup preserves settings/library bytes and excludes photos/cache
 test('wrong downloaded checksum clears partial data and leaves the current AppImage untouched', async t => {
   const root = await fixture(t), image = path.join(root, 'AppImage'); await fs.writeFile(image, appImageBytes(), { mode: 0o755 });
   const publish = release('1.0.7', 'Shiguang-Isle-1.0.7-linux-x86_64.AppImage', appImageBytes()), app = { isPackaged: true, getVersion: () => '1.0.6', getPath: name => name === 'home' ? root : path.join(root, 'profile') };
-  const service = new UpdateService({ app, platform: 'linux', arch: 'x64', appImage: image, transport: async (url, options) => {
+  const service = new UpdateService({ autoInstallEnabled: () => false, app, platform: 'linux', arch: 'x64', appImage: image, transport: async (url, options) => {
     if (url === core.RELEASE_API) return { data: Buffer.from(JSON.stringify(publish)) };
     if (url.endsWith('SHA256SUMS.txt')) return { data: publish.sums, sha256: digest(publish.sums) };
     await fs.writeFile(options.file, 'bad download'); return { sha256: digest('bad download'), size: 12 };
@@ -165,6 +165,119 @@ test('demo/smoke never request the network; automatic preference and persisted 2
   const root = await fixture(t), app = { isPackaged: false, getVersion: () => '1.0.6', getPath: () => root }; let requests = 0;
   const disabled = new UpdateService({ app, disabled: true, transport: async () => { requests++; } }); await disabled.init(); await disabled.checkForUpdates(); await disabled.downloadUpdate(); disabled.stop(); assert.equal(requests, 0);
   const automatic = new UpdateService({ app, automatic: () => false, transport: async () => { requests++; } }); await automatic.init(); await automatic.automaticCheck(); assert.equal(requests, 0); automatic.automatic = () => true; automatic.record.lastChecked = Date.now(); await automatic.automaticCheck(); assert.equal(requests, 0); automatic.stop();
+});
+test('automatic check downloads and validates once, defers while working, and requires a full idle grace period', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  await service.discardReady(); service.record.lastChecked = 0;
+  let safe = false, clock = Date.now(), installs = 0;
+  service.canInstall = () => safe; service.now = () => clock;
+  service.installUpdate = async options => { assert.equal(options.automatic, true); installs++; service.stop(); return service.set({ status: 'installing' }); };
+  const before = fixture.requests();
+  await service.automaticCheck();
+  assert.equal(fixture.requests(), before + 3); assert.equal(service.ready.automatic, true);
+  assert.equal(service.snapshot().autoDeferred, true); assert.equal(installs, 0);
+  assert.deepEqual(await fs.readFile(service.ready.downloaded), fixture.payload);
+  await service.automaticCheck(); assert.equal(fixture.requests(), before + 3);
+  safe = true; await service.resumeAutomatic();
+  const firstDeadline = service.snapshot().autoRestartAt;
+  assert.equal(firstDeadline, clock + 10_000); clock += 9000; await service.resumeAutomatic(); assert.equal(installs, 0);
+  safe = false; await service.resumeAutomatic(); assert.equal(service.snapshot().autoRestartAt, null);
+  clock += 1000; safe = true; await service.resumeAutomatic();
+  assert.equal(service.snapshot().autoRestartAt, clock + 10_000); assert.ok(service.snapshot().autoRestartAt > firstDeadline);
+  clock += 10_000; await service.resumeAutomatic(); assert.equal(installs, 1); assert.equal(fixture.requests(), before + 3);
+});
+test('turning automatic updates off during download leaves a verified manual download without restarting', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  await service.discardReady(); service.record.lastChecked = 0;
+  let enabled = true, resolveDownload, startedDownload;
+  const reachedDownload = new Promise(resolve => { startedDownload = resolve; });
+  const gate = new Promise(resolve => { resolveDownload = resolve; });
+  const transport = service.transport;
+  service.autoInstallEnabled = () => enabled; service.canInstall = () => true;
+  service.transport = async (url, options) => { if (options.file) { startedDownload(); await gate; } return transport(url, options); };
+  let installs = 0; service.installUpdate = async () => { installs++; };
+  const pipeline = service.automaticCheck(); await reachedDownload;
+  enabled = false; service.automaticPreferencesChanged(); resolveDownload(); await pipeline;
+  assert.equal(service.snapshot().status, 'ready'); assert.equal(service.snapshot().automaticUpdate, false);
+  assert.equal(service.snapshot().autoRestartAt, null); assert.equal(installs, 0);
+  assert.deepEqual(await fs.readFile(service.ready.downloaded), fixture.payload);
+  await service.resumeAutomatic(); assert.equal(installs, 0);
+  enabled = true; await service.resumeAutomatic(); assert.ok(service.snapshot().autoRestartAt);
+});
+test('closing settings does not erase automatic intent; restart reuses the verified payload and preserves manual download-only intent', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  // The manual download produced by the fixture must remain manual.
+  service.canInstall = () => true; let installs = 0;
+  service.installUpdate = async () => { installs++; }; await service.resumeAutomatic();
+  assert.equal(installs, 0); assert.equal(service.ready.automatic, false);
+  await service.discardReady(); service.record.lastChecked = 0; service.canInstall = () => false;
+  await service.automaticCheck(); const ready = service.ready, requests = fixture.requests(); service.stop();
+  const restored = new UpdateService({ ...fixture.options, autoInstallEnabled: () => true, canInstall: () => false }); await restored.init(); t.after(() => restored.stop());
+  await restored.automaticCheck();
+  assert.equal(restored.ready.automatic, true); assert.equal(restored.ready.staged, ready.staged);
+  assert.equal(restored.snapshot().autoDeferred, true); assert.equal(fixture.requests(), requests);
+});
+test('automatic failures and rollback retries do not create an install loop for the same release', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  service.ready.automatic = true; service.canInstall = () => true;
+  let attempts = 0;
+  service.beforeInstall = async () => { attempts++; throw new Error('合成更新准备失败'); };
+  assert.equal((await service.installUpdate({ automatic: true })).status, 'error');
+  assert.equal(service.record.autoInstallAttemptedVersion, '1.0.7'); assert.equal(attempts, 1);
+  const record = JSON.parse(await fs.readFile(service.recordFile, 'utf8')); assert.equal(record.autoInstallAttemptedVersion, '1.0.7');
+  await service.installUpdate({ automatic: true }); await service.resumeAutomatic(); assert.equal(attempts, 1);
+  service.stop();
+  await core.atomicJSON(service.readyFile, { ...service.ready, automatic: true });
+  const restored = new UpdateService({ ...fixture.options, autoInstallEnabled: () => true, canInstall: () => true, beforeInstall: service.beforeInstall }); await restored.init(); t.after(() => restored.stop());
+  await restored.resumeAutomatic(); assert.equal(attempts, 1); assert.equal(restored.snapshot().automaticUpdate, false);
+  // A deliberate manual retry is still available; the automatic guard only
+  // suppresses background installation of the same failing version.
+  await restored.installUpdate(); assert.equal(attempts, 2);
+});
+test('final install handshake racing with a photo task safely defers without recording a failed attempt', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  service.ready.automatic = true; service.canInstall = () => true;
+  let attempts = 0;
+  service.beforeInstall = async ({ automatic }) => { assert.equal(automatic, true); attempts++; const error = new Error('请等待当前照片任务完成'); error.code = 'UPDATE_BUSY'; throw error; };
+  const result = await service.installUpdate({ automatic: true });
+  assert.equal(result.status, 'ready'); assert.equal(result.autoDeferred, true); assert.equal(attempts, 1);
+  assert.equal(service.record.autoInstallAttemptedVersion, undefined);
+  assert.deepEqual(await fs.readFile(service.ready.downloaded), fixture.payload);
+});
+test('missing or failed renderer handshake, disabled preference and unsupported deb never silently restart', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  service.ready.automatic = true; service.autoInstallEnabled = () => false;
+  await service.installUpdate({ automatic: true }); assert.notEqual(service.snapshot().status, 'installing');
+  service.autoInstallEnabled = () => true;
+  await service.resumeAutomatic(); assert.equal(service.snapshot().autoDeferred, true);
+  service.canInstall = () => { throw new Error('renderer unavailable'); }; await service.resumeAutomatic(); assert.equal(service.snapshot().autoDeferred, true);
+  service.installation.support = 'deb'; let systemInstallers = 0; service.openInstaller = () => { systemInstallers++; };
+  await service.resumeAutomatic(); await service.installUpdate({ automatic: true }); assert.equal(systemInstallers, 0);
+});
+test('automatic checksum failure drops the partial file and does not repeatedly redownload the same candidate', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service; service.autoInstallEnabled = () => true;
+  await service.discardReady(); service.record.lastChecked = 0;
+  const transport = service.transport; service.transport = async (url, options) => {
+    const result = await transport(url, options); return options.file ? { ...result, sha256: '0'.repeat(64) } : result;
+  };
+  await service.automaticCheck(); assert.equal(service.snapshot().status, 'error'); assert.equal(service.ready, null);
+  assert.equal(service.record.autoDownloadFailedVersion, '1.0.7');
+  assert.deepEqual(await fs.readdir(service.updateBase), []);
+  const requests = fixture.requests(); service.record.lastChecked = 0; await service.automaticCheck();
+  assert.equal(fixture.requests(), requests + 1); assert.equal(service.ready, null);
+});
+test('manual check queues an automatic download, while an explicit download-only request wins the asynchronous reservation', async t => {
+  const fixture = await downloadedFixture(t), service = fixture.service;
+  await service.discardReady(); service.autoInstallEnabled = () => true;
+  await service.checkForUpdates();
+  for (let retry = 0; retry < 200 && !service.ready; retry++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(service.ready?.automatic, true); assert.deepEqual(await fs.readFile(service.ready.downloaded), fixture.payload);
+  await service.discardReady();
+  await service.checkForUpdates();
+  const downloading = service.downloadUpdate();
+  await service.resumeAutomatic(); await downloading;
+  assert.equal(service.ready.automatic, false); assert.equal(service.snapshot().autoRestartAt, null);
+  await service.resumeAutomatic(); assert.equal(service.snapshot().autoRestartAt, null);
 });
 test('successful in-place transaction preserves Chinese name and metadata and removes app backups/staging', async t => {
   const job = await jobFixture(t), before = await fs.readFile(path.join(job.userData, 'library.json'));

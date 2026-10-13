@@ -16,6 +16,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **Make collages and posters with control over composition.** Zoom and move each photograph within its cell, preserve original aspect ratios in a magazine poster, or freely position, resize, rotate, and overlap full photographs on a wooden board. Set title size, customize background and text colors, arrange the story, and preview the actual encoded share JPEG before saving the same result.
 - **Create GIF stories and memes.** Scroll a filmstrip, drag frames to reorder, and add movable speech bubbles or text to each photograph. Choose output scale, palette, frame timing, and looping; preview a real encoded GIF, or save one frame as a static PNG meme.
 - **Organize from SD card to delivery.** Import by capture date and gather selections across folders into one destination, optionally including CR3. Favorite synchronization first moves other JPEG / CR3 files on the chosen SD card into a recoverable pending-deletion folder for review.
+- **Keep several photo folders in one library.** Register folders without moving originals; the index, favorites, and tags survive restarts and disconnected drives. A source already in its target theme is indexed in place, while new imports show progress at the top and open their theme on completion.
+- **Stay up to date without losing your library.** From v1.3.7, automatic updates are on by default and can be disabled in Settings. Mac / writable AppImage updates wait for photo tasks and open workbenches, show a 10-second restart countdown, and replace the existing app. Debian packages still require system authorization.
 
 *Give every captured moment a small island to return to.*
 
@@ -31,6 +33,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号、背景色与文字颜色可调，分享压缩展示实际编码成品，预览与保存一致。
 - **GIF 与表情包，让回忆一帧一帧流动。** 滚轮浏览电影胶片、拖拽换序，逐帧添加可移动的对话气泡与文字；设置尺寸、色彩数、时长和循环，预览真实 GIF，也可保存单帧 PNG 表情包。
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
+- **多个照片目录，同一个相册。** 添加或移除索引不搬动原片，重启或硬盘暂时断开后仍保留目录、收藏与标签；已有同名主题原位纳入，导入时顶部显示进度，完成后展示本次主题。
+- **自动跟进新版，保留自己的相册。** v1.3.7 起默认自动更新，设置里可关闭；Mac / 可写 AppImage 在照片任务和工作台结束后显示 10 秒重启倒计时，沿用原安装位置。Debian 包仍需系统授权。
 
 *把一次快门，留成一座可以重返的小岛。*
 
@@ -78,7 +82,7 @@ Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官
 
 更新 Mac 版时，先退出正在运行的旧版，再将新版 App 拖入 Applications 并选择替换，从 Applications 启动新版。保持使用同一个 macOS 用户及相同应用标识，原有相册设置、标签与收藏会继续使用本机的应用资料，不需要重新复制照片。更新包同样应核对同版校验表，系统提示需要时按上面的单应用允许流程操作。
 
-从 v1.0.8 起，可在 **相册设置 → 软件更新** 查看当前版本、手动检查或下载更新；更早版本需先手动安装 v1.0.8 或更新版本一次。默认自动检查新版，仅提醒、不自动安装。Mac / AppImage 可点击“一键更新并重启”，下载校验后沿用原安装位置及本机资料。Mac 需安装在可写的 Applications，不能直接在 DMG 或构建目录中原位更新；AppImage 需位于可写位置。Linux deb 使用“下载并打开安装器”，由系统完成认证与安装，之后手动重新打开应用。详见 [更新说明](docs/updates.md)。
+从 v1.0.8 起，可在 **相册设置 → 软件更新** 手动检查、下载和安装更新。**v1.3.7 起自动更新默认开启**，可在同一位置关闭或开启。Mac / 可写 AppImage 检测到新版后后台下载并校验；当前没有照片任务、选片或打开的详情、编辑、拼图、GIF、设置窗口时，顶部显示 **10 秒自动更新并重启倒计时**。开始任务或打开窗口会延后安装，结束后重新倒计时；关闭自动更新会取消自动重启。更新替换现有应用并保留目录注册、收藏、标签和设置，避免生成多个应用副本。Mac 需安装在可写的 Applications，不能直接在 DMG 或构建目录更新；AppImage 需位于可写位置。Linux deb 检测到新版时提醒，需点击“下载并打开安装器”，由用户完成系统授权与安装，之后手动重新打开应用。详见 [更新说明](docs/updates.md)。
 
 ## 功能
 
@@ -86,7 +90,8 @@ Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官
 | --- | --- |
 | 界面语言 | 简体中文 / English；首次打开先选语言，设置里一键切换，重启后记住选择 |
 | 首次使用引导 | 五步介绍相册、选片与整理；跳过或完成后保存状态，可在设置中重新查看 |
-| 检查与安装更新 | 设置里手动检查，默认自动检查并提醒；Mac 正式安装与可写 AppImage 支持下载校验后原位替换及重启，保留收藏、标签和设置 |
+| 自动更新与手动安装 | v1.3.7 起默认开启，可在设置中关闭；Mac / 可写 AppImage 后台校验、任务结束后 10 秒倒计时原位更新，保留数据与单一应用；deb 仍需系统授权 |
+| 多目录持久索引 | 添加多个照片目录，移除只影响索引；保留原片、收藏与标签，离线目录连接后刷新即可恢复 |
 | 详情缩放与平移 | 按住 Option / Alt 滚轮缩放，放大后拖拽查看；点“适合窗口”或双击复位，最大 16 倍相对缩放 |
 | 详情系统全屏 | 点击“全屏”或按 F 进入系统全屏，切换 JPEG / CR3 预览并左右看图；Esc 先退出全屏，再次按下关闭详情 |
 | 色系整理 | 自动分析画面颜色，并结合日期区间浏览 |
@@ -104,7 +109,7 @@ Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官
 | 毛玻璃下拉菜单 | 与日历统一的鼠尾草绿样式，最多显示六项，滚动边缘轻微渐隐；长列表可搜索，支持方向键选择、Enter 确认与 Esc 关闭 |
 | 自适应窗口与字号 | 窗口可以调整大小；设置中的字号滑块即时预览并持久保存，默认 120%，可在 100%–150% 间调整 |
 | 简单修图 | 裁剪、旋转、水平 / 垂直镜像、矩形 / 椭圆马赛克；覆盖 JPEG 或另存为 |
-| SD 卡导入 | 复制新照片到指定回忆根目录，选择已有或新主题，按拍摄日期归档并跳过重复内容 |
+| SD 卡导入 / 纳入现有照片 | 新照片复制到指定主题并按日期归档；已有同名主题原位索引，无额外副本。顶部展示准备、读取、复制或索引进度，成功后默认展示本次主题 |
 | 批量选择与删除 | 多选、范围选取与筛选结果全选；确认后移入系统废纸篓 |
 | 批量复制到文件夹 | 选择已有或新建目标文件夹，跨子目录平铺汇集 JPEG，可勾选同时复制 CR3（默认关闭）；重名自动唯一改名，JPEG / CR3 共用名称，带进度、取消与结果 |
 | SD 卡精品同步 | 预览精品或当前选择的保留清单，其余 JPEG / CR3 移入可恢复的 `待删` 批次并保存操作记录 |
@@ -165,6 +170,12 @@ SD 卡精品同步先展示保留与待移走清单，确认后将其余照片�
 
 以上截图均使用合成照片，不含真人肖像、私人路径或真实拍摄信息。
 
+## 多个照片目录与导入
+
+在 **相册设置 → 已索引的照片目录** 添加独立照片文件夹，重启后仍保留所有目录。添加只是纳入浏览；“移除索引”不删除或移动文件，也保留收藏与标签，重新加入同一目录即可恢复。目录重叠时按实际文件路径去重，临时相似搜索目录不会自动加入相册。外置盘断开时保留注册路径，其他目录照常可用，连接后刷新即可。
+
+导入时选择照片来源、回忆归处与主题。新照片复制到主题目录，并按拍摄日期整理；如果来源已经就是归处下的同名主题目录，则直接纳入现有照片，不复制、不移动，也不强制重排文件。来源不会与自身进行重复比较；全部重复或没有可导入照片时，不创建空主题。窗口顶部持续显示准备、读取拍摄信息、复制或索引进度，图库滚动后仍可查看；取消后已完成副本保留。成功导入会保留原来加入的相册、加入本次主题，并默认显示它。可在 **默认展示主题** 中更改启动时的主题；普通添加或移除目录后显示全部主题。
+
 ## 用法
 
 首次正常启动会自动显示五步引导，依次介绍：本地 JPEG / CR3 相册、打开已有相册或从 SD 卡导入、筛选与精品标签、修图和分享，以及先预览再确认的 SD 卡整理。← / → 可切换步骤；跳过或完成后保存状态，下次启动不再自动弹出，保存失败时可重试。
@@ -173,13 +184,13 @@ SD 卡精品同步先展示保留与待移走清单，确认后将其余照片�
 
 ![首次使用五步引导：合成 JPEG / CR3 画面，无私人照片](docs/screenshots/onboarding.png)
 
-1. 选择照片根目录。相册递归读取照片，以文件名和目录关系识别 JPEG / CR3 配对，保留原文件位置。
+1. 选择照片目录，或在设置中添加多个目录。相册递归读取并聚合已注册目录，以文件名和目录关系识别 JPEG / CR3 配对，保留原文件位置和已有本地标记。
 2. 用日期区间、颜色、标签、主题筛选；日期可点击日历选择或直接输入。通过侧边纤细时间轴快速定位日期，悬停或按住时显示更大的半透明日期提示；时间轴覆盖当前全部筛选结果，默认日期倒序。收藏照片后可单独浏览精品。
 3. 批量选择后可添加标签、收藏、复制到文件夹或移入废纸篓。推荐用“复制到文件夹”汇集不同子目录中的照片，可以选择已有目标目录或在选择器中新建文件夹：默认只复制 JPEG，可勾选同时复制对应 CR3，原片保留；重名时自动改名且两种格式共用名称。界面显示进度、可取消，并列出成功、跳过或失败结果。仅有 RAW 的照片默认跳过，勾选 CR3 后可复制。单张照片仍可在文件管理器中显示，或选择 JPEG / CR3 交给编辑器。
 4. 进入相似搜索，选择一张参考照片与搜索目录，再设置池化粒度；结果可继续按日期等条件筛选。计算只在本次搜索发生，界面显示预计时间与进度。
 5. 选择多张照片打开拼图，选择布局并逐张调整构图；留白、胶片和原比例杂志海报可设置每行 1–12 张，默认 2 张。木质展示板可自由摆放照片、调整角度和叠放次序。缩略图拖拽换序；需要在画布上交换照片时选择“画布换位”。Alt / Option 滚轮放大预览，普通拖动平移画布，Shift + 拖动调整照片；点“适合窗口”恢复。分享压缩开启后，查看实际 JPEG 成品再存为新照片。
 6. 进入编辑，可裁剪、旋转、镜像并用矩形或圆形区域做马赛克。保存时选择覆盖 JPEG 或另存为；画布导出不保留原 EXIF，CR3 原片不参加覆盖编辑。
-7. 从 SD 卡或其他目录导入到自己指定的回忆根目录，选择原有主题或新建主题。导入读取拍摄日期归档，并跳过已经存在的内容。
+7. 从 SD 卡或其他目录导入到指定回忆根目录，选择已有或新主题。顶部进度从准备阶段开始显示；新文件按拍摄日期复制归档，已有同名主题直接纳入索引，来源保留，完成后展示本次主题。
 8. 将精品收藏或当前选择与 SD 卡同步：先预览保留与待移走的文件，再确认把其余 JPEG / CR3 移入 SD 卡的 `待删` 批次目录。保留相对路径与操作记录，可恢复；匹配为空、存在歧义或预览后文件发生变化时停止执行。
 9. 多选带 JPEG 的照片打开“GIF / 表情包”，滚轮查看帧、拖拽换序并逐帧加文字；生成压缩后的真实动图预览再保存，或将当前帧另存为静态表情包。
 
@@ -236,7 +247,7 @@ npm run build:linux
 
 ## 隐私与许可证
 
-应用没有账户、遥测、上传照片或联网分析功能。检查更新仅连接本项目的 GitHub Releases 及安装包下载服务，不发送照片、标签或相册路径；可以在设置中关闭自动检查。公开仓库只包括源代码、图标与合成截图。`npm run privacy` 检查原片、运行时数据库、个人绝对路径及常见密钥格式；截图还需人工核对画面内容。
+应用没有账户、遥测、上传照片或联网分析功能。检查更新仅连接本项目的 GitHub Releases 及安装包下载服务，不发送照片、标签或相册路径；可在设置中关闭自动更新，关闭后仍可手动检查与安装。公开仓库只包括源代码、图标与合成截图。`npm run privacy` 检查原片、运行时数据库、个人绝对路径及常见密钥格式；截图还需人工核对画面内容。
 
 应用源代码使用 [MIT License](LICENSE)。Electron、Sharp、ExifTool 等依赖保留各自许可证；ExifTool 是 Phil Harvey 的作品，采用与 Perl 相同的双授权条款，详见 [架构与第三方说明](docs/architecture.md)。
 

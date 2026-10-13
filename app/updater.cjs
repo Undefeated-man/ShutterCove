@@ -19,14 +19,15 @@ async function waitForBootReady(readReady, { timeoutMs = 40_000, intervalMs = 10
 }
 
 class UpdateService {
-  constructor({ app, emit = () => {}, automatic = () => true, disabled = false, beforeInstall, installFailed = () => {}, quit, openInstaller, platform = process.platform, arch = process.arch, execPath = process.execPath, appImage = process.env.APPIMAGE, transport = core.transfer }) {
+  constructor({ app, emit = () => {}, automatic = () => true, autoInstallEnabled = () => true, canInstall = () => false, disabled = false, beforeInstall, installFailed = () => {}, quit, openInstaller, platform = process.platform, arch = process.arch, execPath = process.execPath, appImage = process.env.APPIMAGE, transport = core.transfer, now = Date.now, restartDelayMs = 10_000 }) {
     this.app = app; this.emit = emit; this.automatic = automatic; this.disabled = disabled;
+    this.autoInstallEnabled = autoInstallEnabled; this.canInstall = canInstall; this.now = now; this.restartDelayMs = restartDelayMs;
     this.beforeInstall = beforeInstall; this.installFailed = installFailed; this.quit = quit; this.openInstaller = openInstaller;
     this.platform = platform; this.arch = arch; this.execPath = execPath; this.appImage = appImage; this.transport = transport;
     this.userData = app.getPath('userData'); this.currentVersion = app.getVersion();
     this.readyFile = path.join(this.userData, '.update-ready.json');
     this.updateBase = path.join(this.userData, '.updates.noindex');
-    this.state = { status: 'idle', currentVersion: this.currentVersion, latestVersion: null, support: 'manual', installSupported: false, progress: null, message: '可检查正式发布版本', releaseURL: core.RELEASES_URL };
+    this.state = { status: 'idle', currentVersion: this.currentVersion, latestVersion: null, support: 'manual', installSupported: false, progress: null, automaticUpdate: false, autoDeferred: false, autoRestartAt: null, message: '可检查正式发布版本', releaseURL: core.RELEASES_URL };
     this.busy = null; this.ready = null; this.release = null; this.record = {}; this.stopped = false;
   }
   snapshot() { return JSON.parse(JSON.stringify(this.state)); }
@@ -37,7 +38,7 @@ class UpdateService {
     if (this.platform === 'darwin') for (const directory of ['/Applications', path.join(this.app.getPath('home'), 'Applications')]) { const real = await fs.realpath(directory).catch(() => null); if (real) this.stageParents.add(real); }
     this.state = { ...this.state, support: this.installation.support, installSupported: this.installation.installSupported, message: this.disabled ? '演示与测试模式不连接更新服务器' : this.installation.message };
     this.recordFile = path.join(this.userData, '.update-check-state.json');
-    try { const saved = JSON.parse(await fs.readFile(this.recordFile, 'utf8')); if (saved && typeof saved === 'object' && !Array.isArray(saved)) this.record = { lastChecked: saved.lastChecked, notifiedVersion: saved.notifiedVersion }; } catch {}
+    try { const saved = JSON.parse(await fs.readFile(this.recordFile, 'utf8')); if (saved && typeof saved === 'object' && !Array.isArray(saved)) this.record = { lastChecked: saved.lastChecked, notifiedVersion: saved.notifiedVersion, autoInstallAttemptedVersion: saved.autoInstallAttemptedVersion, autoDownloadFailedVersion: saved.autoDownloadFailedVersion }; } catch {}
     try {
       const result = JSON.parse(await fs.readFile(path.join(this.userData, '.update-result.json'), 'utf8'));
       if (result.status === 'error') this.state = { ...this.state, status: 'error', message: result.message };
@@ -48,35 +49,83 @@ class UpdateService {
     } catch {}
     if (!this.disabled && this.app.isPackaged && this.installation.installSupported) await this.restoreReadyAndClean();
     if (!this.disabled) {
-      this.startTimer = setTimeout(() => this.automaticCheck(), 10_000); this.startTimer.unref();
-      this.interval = setInterval(() => this.automaticCheck(), 60 * 60 * 1000); this.interval.unref();
+      this.startTimer = setTimeout(() => this.automaticCheck().catch(() => {}), 10_000); this.startTimer.unref();
+      this.interval = setInterval(() => this.automaticCheck().catch(() => {}), 60 * 60 * 1000); this.interval.unref();
     }
     return this.snapshot();
   }
-  stop() { this.stopped = true; clearTimeout(this.startTimer); clearInterval(this.interval); }
-  automaticCheck() {
-    if (!this.stopped && this.automatic() && !this.busy && !this.ready && Date.now() - (Number(this.record.lastChecked) || 0) >= DAY) return this.checkForUpdates({ automatic: true });
+  stop() { this.stopped = true; clearTimeout(this.startTimer); clearInterval(this.interval); clearTimeout(this.autoTimer); clearTimeout(this.preferenceTimer); clearTimeout(this.checkResumeTimer); }
+  autoSupported() { return this.installation?.installSupported && ['mac', 'appimage'].includes(this.installation.support); }
+  async automaticCheck() {
+    if (this.stopped || this.disabled || !this.automatic() || !this.autoInstallEnabled() || this.busy || this.autoRunning || this.manualDownloadPending) return this.snapshot();
+    if (!this.ready && this.now() - (Number(this.record.lastChecked) || 0) >= DAY) await this.checkForUpdates({ automatic: true });
+    return this.resumeAutomatic();
+  }
+  scheduleAutomatic() {
+    clearTimeout(this.autoTimer);
+    if (!this.stopped && !this.disabled && this.autoInstallEnabled() && this.ready?.automatic && this.record.autoInstallAttemptedVersion !== this.ready.version) {
+      this.autoTimer = setTimeout(() => this.resumeAutomatic().catch(() => {}), 1000); this.autoTimer.unref();
+    }
+  }
+  automaticPreferencesChanged() {
+    clearTimeout(this.autoTimer);
+    if (!this.autoInstallEnabled()) {
+      this.autoRestartAt = null;
+      return this.set({ automaticUpdate: false, autoDeferred: false, autoRestartAt: null });
+    }
+    // The callback is deliberately detached from saveSettings, whose IPC is a
+    // tracked task. The final install handshake must never await its own save.
+    this.preferenceTimer = setTimeout(() => this.automaticCheck().catch(() => {}), 0); this.preferenceTimer.unref();
+  }
+  async resumeAutomatic() {
+    if (this.stopped || this.disabled || !this.autoInstallEnabled() || !this.autoSupported() || this.busy || this.autoRunning || this.manualDownloadPending) return this.snapshot();
+    this.autoRunning = true;
+    try {
+      if (!this.ready && this.release?.newer && this.state.status === 'available' && this.record.autoDownloadFailedVersion !== this.release.version && this.record.autoInstallAttemptedVersion !== this.release.version) {
+        await this.downloadUpdate({ automatic: true });
+      }
+      if (this.ready?.automatic !== true || this.record.autoInstallAttemptedVersion === this.ready.version || !this.autoInstallEnabled() || this.stopped) return this.snapshot();
+      let allowed = false;
+      try { allowed = await this.canInstall() === true; } catch {}
+      if (!this.autoInstallEnabled() || this.stopped || this.busy) return this.snapshot();
+      if (!allowed) {
+        this.autoRestartAt = null;
+        return this.set({ status: 'ready', automaticUpdate: true, autoDeferred: true, autoRestartAt: null, notify: true, message: '更新已准备好，当前任务或编辑窗口结束后自动安装。' });
+      }
+      // A visible grace period leaves room to open settings and turn this off.
+      // Opening a dialog or starting a task resets the entire period.
+      this.autoRestartAt ??= this.now() + this.restartDelayMs;
+      this.set({ status: 'ready', automaticUpdate: true, autoDeferred: false, autoRestartAt: this.autoRestartAt, notify: true, message: '更新已准备好，将在空闲时自动更新并重启。' });
+      if (this.now() >= this.autoRestartAt) return await this.installUpdate({ automatic: true });
+      return this.snapshot();
+    } finally { this.autoRunning = false; this.scheduleAutomatic(); }
   }
   async checkForUpdates({ automatic = false } = {}) {
     if (this.disabled) return this.set({ status: 'error', message: '演示与测试模式不连接更新服务器' });
-    if (this.busy) return this.snapshot();
+    if (this.busy || this.manualDownloadPending) return this.snapshot();
     if (this.ready) return this.set({ status: 'ready', message: this.ready.format === 'deb' ? '下载已校验，可打开系统安装器' : '下载已校验，点击后会退出并在原位置重启' });
-    this.busy = 'check'; this.set({ status: 'checking', progress: null, message: '正在检查 GitHub 正式发布版本…' });
+    this.busy = 'check'; this.set({ status: 'checking', progress: null, automaticUpdate: automatic && this.autoInstallEnabled() && this.autoSupported(), autoDeferred: false, autoRestartAt: null, message: '正在检查 GitHub 正式发布版本…' });
     try {
       const fetched = await this.transport(core.RELEASE_API, { kind: 'api', maxBytes: 1024 * 1024, timeoutMs: 20_000 });
       const release = core.selectRelease(JSON.parse(fetched.data.toString('utf8')), this.currentVersion, this.platform, this.arch, this.installation.support === 'deb' ? 'deb' : 'AppImage');
-      this.record.lastChecked = Date.now();
+      this.record.lastChecked = this.now();
       await core.atomicJSON(this.recordFile, this.record);
       this.release = release;
-      if (!release.newer) return this.set({ status: 'upToDate', latestVersion: release.version, message: '当前已是最新正式版本', releaseURL: release.releaseURL });
+      if (!release.newer) return this.set({ status: 'upToDate', automaticUpdate: false, latestVersion: release.version, message: '当前已是最新正式版本', releaseURL: release.releaseURL });
       const firstNotice = this.record.notifiedVersion !== release.version;
       if (firstNotice) { this.record.notifiedVersion = release.version; await core.atomicJSON(this.recordFile, this.record); }
       return this.set({ status: 'available', latestVersion: release.version, message: `发现新版本 ${release.version}。${this.installation.message}`, releaseURL: release.releaseURL, ...(automatic ? { notify: firstNotice } : { notify: false }) });
     } catch (error) {
       // Persist failed automatic checks too, so offline starts do not hammer GitHub.
-      if (automatic) { this.record.lastChecked = Date.now(); await core.atomicJSON(this.recordFile, this.record).catch(() => {}); }
+      if (automatic) { this.record.lastChecked = this.now(); await core.atomicJSON(this.recordFile, this.record).catch(() => {}); }
       return this.set({ status: 'error', message: this.safeError(error, '检查更新失败，请稍后重试') });
-    } finally { this.busy = null; }
+    } finally {
+      this.busy = null;
+      if (!automatic && this.state.status === 'available' && this.autoInstallEnabled() && this.autoSupported()) {
+        clearTimeout(this.checkResumeTimer);
+        this.checkResumeTimer = setTimeout(() => this.resumeAutomatic().catch(() => {}), 0); this.checkResumeTimer.unref();
+      }
+    }
   }
   safeError(error, fallback) { return /^[\u4e00-\u9fff]/.test(error?.message || '') && !/[\/\\]/.test(error.message) ? error.message : fallback; }
   async privateJSON(file) {
@@ -92,7 +141,7 @@ class UpdateService {
     return typeof workRoot === 'string' && path.dirname(workRoot) === this.updateBase && /^\.\d+\.\d+\.\d+-[A-Za-z\d]+$/.test(path.basename(workRoot));
   }
   readyBoundaries(saved) {
-    if (!saved || saved.schema !== 1 || !['ready', 'downloading'].includes(saved.phase) || !core.versionParts(saved.version) || saved.platform !== this.platform || saved.arch !== this.arch || !/^[a-f\d]{24}$/.test(saved.suffix || '') || !/^[a-f\d]{64}$/.test(saved.sha256 || '') || !this.validWorkRoot(saved.workRoot)) return false;
+    if (!saved || saved.schema !== 1 || !['ready', 'downloading'].includes(saved.phase) || (saved.automatic !== undefined && typeof saved.automatic !== 'boolean') || !core.versionParts(saved.version) || saved.platform !== this.platform || saved.arch !== this.arch || !/^[a-f\d]{24}$/.test(saved.suffix || '') || !/^[a-f\d]{64}$/.test(saved.sha256 || '') || !this.validWorkRoot(saved.workRoot)) return false;
     const format = this.platform === 'darwin' ? 'mac' : this.installation.support === 'deb' ? 'deb' : 'appimage';
     const assetArch = this.platform === 'linux' && this.arch === 'x64' ? (format === 'deb' ? 'amd64' : 'x86_64') : this.arch;
     const name = `Shiguang-Isle-${saved.version}-${this.platform === 'darwin' ? 'mac' : 'linux'}-${assetArch}.${format === 'mac' ? 'zip' : format === 'deb' ? 'deb' : 'AppImage'}`;
@@ -166,7 +215,7 @@ class UpdateService {
       if (saved && this.readyBoundaries(saved)) await this.removeOwnedStage(saved.stagingRoot, saved.workRoot);
       await fs.rm(this.readyFile, { force: true }).catch(() => {});
     }
-    if (this.ready) this.state = { ...this.state, status: 'ready', latestVersion: this.ready.version, releaseURL: `${core.RELEASES_URL}/tag/${encodeURIComponent(this.ready.tag)}`, progress: { receivedBytes: this.ready.size, totalBytes: this.ready.size, percent: 100 }, message: this.ready.format === 'deb' ? '已恢复校验过的下载，可打开系统安装器' : '已恢复校验过的下载，点击后会退出并在原位置重启' };
+    if (this.ready) this.state = { ...this.state, status: 'ready', automaticUpdate: this.ready.automatic === true && this.autoInstallEnabled() && this.record.autoInstallAttemptedVersion !== this.ready.version, latestVersion: this.ready.version, releaseURL: `${core.RELEASES_URL}/tag/${encodeURIComponent(this.ready.tag)}`, progress: { receivedBytes: this.ready.size, totalBytes: this.ready.size, percent: 100 }, message: this.ready.format === 'deb' ? '已恢复校验过的下载，可打开系统安装器' : '已恢复校验过的下载，点击后会退出并在原位置重启' };
     await this.cleanOrphans();
   }
   async discardReady() {
@@ -177,15 +226,28 @@ class UpdateService {
     this.ready = null;
     await fs.rm(this.readyFile, { force: true });
   }
-  async downloadUpdate() {
+  async downloadUpdate(options = {}) {
+    if (options.automatic === true) return this.prepareDownload(options);
+    // Reserve a user's explicit download intent before asynchronous pending-job
+    // checks, so a queued background pump cannot convert "download only" into
+    // an automatic restart. The reservation also prevents duplicate downloads.
+    if (this.manualDownloadPending || this.busy) return this.snapshot();
+    this.manualDownloadPending = true;
+    try { return await this.prepareDownload({ automatic: false }); }
+    finally { this.manualDownloadPending = false; }
+  }
+  async prepareDownload({ automatic = false } = {}) {
     if (this.disabled) return this.set({ status: 'error', message: '演示与测试模式不连接更新服务器' });
     if (this.busy) return this.snapshot();
+    if (automatic && this.manualDownloadPending) return this.snapshot();
     if (await this.protectedPending()) return this.set({ status: 'error', message: '上次更新仍在完成或原应用备份仍需保留，请稍后重试或重新安装正式版本' });
+    if (this.busy) return this.snapshot();
     if (this.ready) return this.set({ status: 'ready', message: this.ready.format === 'deb' ? '下载已校验，可打开系统安装器' : '下载已校验，点击后会退出并在原位置重启' });
     if (!this.release?.newer) return this.set({ status: 'error', message: '请先检查是否有新版本' });
     if (!this.installation.installSupported && this.installation.support !== 'deb') return this.set({ status: 'error', message: this.installation.message });
+    if (automatic && (!this.autoInstallEnabled() || !this.autoSupported())) return this.snapshot();
     this.busy = 'download'; let workRoot, stagingRoot;
-    this.set({ status: 'downloading', progress: { receivedBytes: 0, totalBytes: this.release.asset.size, percent: 0 }, message: '正在下载并校验更新…' });
+    this.set({ status: 'downloading', automaticUpdate: automatic, autoDeferred: false, autoRestartAt: null, notify: automatic, progress: { receivedBytes: 0, totalBytes: this.release.asset.size, percent: 0 }, message: '正在下载并校验更新…' });
     try {
       const base = this.updateBase; await fs.mkdir(base, { recursive: true, mode: 0o700 });
       if (!await this.ownedDirectory(base)) throw new Error('更新缓存目录不是安全的真实目录');
@@ -195,7 +257,7 @@ class UpdateService {
       const expected = core.checksumFor(manifest.data.toString('utf8'), this.release.asset.name, this.release.asset.digest);
       const suffix = crypto.randomBytes(12).toString('hex'), format = this.platform === 'darwin' ? 'mac' : this.installation.support === 'deb' ? 'deb' : 'appimage';
       const downloaded = path.join(workRoot, this.release.asset.name), partial = `${downloaded}.part`;
-      const prepared = { schema: 1, phase: 'downloading', workRoot, stagingRoot: format === 'deb' ? null : path.join(this.installation.parent, `.shiguang-update-${suffix}.noindex`), target: format === 'deb' ? null : this.installation.target, platform: this.platform, arch: this.arch, assetName: this.release.asset.name, downloaded, staged: format === 'deb' ? downloaded : null, bundleName: null, format, sha256: expected, size: this.release.asset.size, version: this.release.version, suffix, tag: this.release.tag };
+      const prepared = { schema: 1, phase: 'downloading', automatic, workRoot, stagingRoot: format === 'deb' ? null : path.join(this.installation.parent, `.shiguang-update-${suffix}.noindex`), target: format === 'deb' ? null : this.installation.target, platform: this.platform, arch: this.arch, assetName: this.release.asset.name, downloaded, staged: format === 'deb' ? downloaded : null, bundleName: null, format, sha256: expected, size: this.release.asset.size, version: this.release.version, suffix, tag: this.release.tag };
       await core.atomicJSON(this.readyFile, prepared);
       let lastProgress = 0;
       const result = await this.transport(core.assetURL(this.release.asset, this.release.tag), { file: partial, maxBytes: core.MAX_ASSET, expectedSize: this.release.asset.size, timeoutMs: 15 * 60_000, progress: (receivedBytes, totalBytes) => { if (Date.now() - lastProgress >= 200 || receivedBytes === totalBytes) { lastProgress = Date.now(); this.set({ progress: { receivedBytes, totalBytes, percent: totalBytes ? Math.min(100, Math.floor(receivedBytes / totalBytes * 100)) : null } }); } } });
@@ -223,31 +285,43 @@ class UpdateService {
       prepared.phase = 'ready'; prepared.staged = staged;
       await core.atomicJSON(this.readyFile, prepared);
       this.ready = { ...prepared, helperExecutable };
-      return this.set({ status: 'ready', progress: { receivedBytes: result.size, totalBytes: result.size, percent: 100 }, message: format === 'deb' ? '下载已校验，可打开系统安装器；安装完成后手动重新打开应用' : '下载与应用校验通过，点击后会退出并在原位置重启' });
+      return this.set({ status: 'ready', automaticUpdate: automatic && this.autoInstallEnabled(), notify: automatic, progress: { receivedBytes: result.size, totalBytes: result.size, percent: 100 }, message: format === 'deb' ? '下载已校验，可打开系统安装器；安装完成后手动重新打开应用' : '下载与应用校验通过，点击后会退出并在原位置重启' });
     } catch (error) {
       if (stagingRoot) await core.removePhysical(stagingRoot, { recursive: true, force: true }).catch(() => {});
       if (workRoot) await core.removePhysical(workRoot, { recursive: true, force: true }).catch(() => {});
       await fs.rm(this.readyFile, { force: true }).catch(() => {});
+      if (automatic) { this.record.autoDownloadFailedVersion = this.release.version; await core.atomicJSON(this.recordFile, this.record).catch(() => {}); }
       return this.set({ status: 'error', progress: null, message: this.safeError(error, '下载或应用校验失败，原应用未改变，请重试') });
     } finally { this.busy = null; }
   }
-  async installUpdate() {
+  async installUpdate({ automatic = false } = {}) {
     if (this.disabled) return this.set({ status: 'error', message: '演示与测试模式不安装更新' });
     if (this.busy) return this.snapshot();
     if (await this.protectedPending()) return this.set({ status: 'error', message: '上次更新仍在完成或原应用备份仍需保留，请稍后重试或重新安装正式版本' });
+    if (this.busy) return this.snapshot();
     if (!this.ready) return this.set({ status: 'error', message: '请先下载并校验更新' });
+    if (automatic) {
+      if (!this.autoInstallEnabled() || !this.autoSupported() || this.record.autoInstallAttemptedVersion === this.ready.version) return this.snapshot();
+      let allowed = false;
+      try { allowed = await this.canInstall() === true; } catch {}
+      if (!this.autoInstallEnabled() || this.stopped || this.busy) return this.snapshot();
+      if (!allowed) { this.autoRestartAt = null; return this.set({ status: 'ready', automaticUpdate: true, autoDeferred: true, autoRestartAt: null, notify: true, message: '更新已准备好，当前任务或编辑窗口结束后自动安装。' }); }
+    }
     if (this.ready.format === 'deb') {
       const error = await this.openInstaller(this.ready.staged);
       return this.set({ status: error ? 'error' : 'ready', message: error ? '无法打开系统安装器，请从正式发布页下载 deb 并使用系统包管理器安装' : '已打开系统安装器；请完成安装后手动重新打开时光杂货店' });
     }
-    this.busy = 'install'; this.set({ status: 'installing', message: '正在保存相册记录，即将退出并更新…' });
+    this.busy = 'install'; this.set({ status: 'installing', automaticUpdate: automatic, autoDeferred: false, autoRestartAt: null, message: '正在保存相册记录，即将退出并更新…' });
     let helper;
     try {
       const ready = this.ready;
       // Revalidate before closing; ready paths are private main-process state.
       if (ready.format === 'mac') await core.validateMacBundle(ready.staged, ready.version, this.arch);
       else if (await core.hashFile(ready.staged) !== ready.sha256) throw new Error('安装前更新校验失败，请重新下载');
-      await this.beforeInstall();
+      await this.beforeInstall({ automatic });
+      // Persist before handing off. A failed launch rolls back to this profile,
+      // which must not keep reinstalling the same broken release on every boot.
+      if (automatic) { this.record.autoInstallAttemptedVersion = ready.version; await core.atomicJSON(this.recordFile, this.record); }
       const metadataBackup = await core.backupMetadata(this.userData, this.currentVersion);
       const token = crypto.randomBytes(24).toString('hex'), target = this.installation.target, stat = await fs.lstat(target);
       const job = { platform: this.platform, arch: this.arch, target, staged: ready.staged, executableRelative: ready.format === 'mac' ? path.relative(ready.staged, ready.helperExecutable) : null, stagingRoot: ready.stagingRoot, backupRoot: path.join(this.installation.parent, `.shiguang-backup-${ready.suffix}.noindex`), workRoot: ready.workRoot, userData: this.userData, metadataBackup, readyFile: this.readyFile, resultFile: path.join(this.userData, '.update-result.json'), pendingFile: path.join(this.userData, '.update-pending.json'), launchMarker: path.join(ready.workRoot, '.launched.json'), token, version: ready.version, sha256: ready.sha256, parentPid: process.pid, targetIdentity: { dev: stat.dev, ino: stat.ino } };
@@ -271,6 +345,14 @@ class UpdateService {
       if (helper) helper.kill();
       await fs.rm(path.join(this.userData, '.update-pending.json'), { force: true }).catch(() => {});
       await this.installFailed();
+      if (automatic && error.code === 'UPDATE_BUSY') {
+        this.autoRestartAt = null;
+        return this.set({ status: 'ready', automaticUpdate: true, autoDeferred: true, autoRestartAt: null, notify: true, message: '更新已准备好，当前任务或编辑窗口结束后自动安装。' });
+      }
+      if (automatic) {
+        this.record.autoInstallAttemptedVersion = this.ready?.version;
+        await core.atomicJSON(this.recordFile, this.record).catch(() => {});
+      }
       return this.set({ status: 'error', message: this.safeError(error, '更新助手启动失败，原应用未改变，请重试') });
     } finally { this.busy = null; }
   }
