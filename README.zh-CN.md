@@ -44,7 +44,9 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 
 ![Photo gallery / 相册浏览：synthetic landscapes only / 仅合成风景](docs/screenshots/gallery-zh-current.png)
 
-The warm ivory and sage glass interface adds staggered spring entrances, tactile button feedback, and a continuous photo-card-to-detail transition. Animations respect the operating system’s Reduce motion preference. 中文界面采用「时光杂货店」新名字；暖白与鼠尾草绿玻璃界面加入交错入场、按钮轻回弹和照片连续转场，并遵循系统减少动态效果设置。
+Smoked sage glass gives the sidebar a quiet visual anchor, while warm-white surfaces keep photographs in focus. Consistent outline icons, clear theme selection, and frosted floating controls bring the interface together. Photographs keep their original colors. Spring entrances, tactile buttons, and continuous photo transitions respect Reduce motion; opaque fallbacks support Reduce transparency. 烟灰绿磨砂侧栏与暖白主区形成轻重层次；统一线条图标、主题高亮及悬浮玻璃控件，照片保持原色。交错入场、按钮回弹和连续转场遵循系统减少动态效果设置，并提供减少透明度时的实色样式。
+
+[Selected-theme workspace / 主题选择后的界面](docs/screenshots/glass-workspace.png)
 
 ![GIF and meme studio / GIF 与表情包工作台：synthetic artwork only / 仅合成画面](docs/screenshots/motion-studio.png)
 

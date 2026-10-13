@@ -29,6 +29,40 @@
     scrollWidth: node.scrollWidth, clientWidth: node.clientWidth,
     characters: textRects(node).map((rect, index) => ({ character: node.textContent.replace(/\s/g, '')[index], rect: rect.toJSON() }))
   });
+  const colors = value => [...value.matchAll(/rgba?\(([^)]+)\)/g)].map(match => match[1].split(',').map(Number)).map(rgb => [...rgb.slice(0, 3), rgb[3] ?? 1]);
+  const over = (front, back) => front.slice(0, 3).map((channel, i) => channel * front[3] + back[i] * (1 - front[3]));
+  const luminance = rgb => rgb.map(channel => { const n = channel / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; }).reduce((sum, n, i) => sum + n * [.2126, .7152, .0722][i], 0);
+  const contrast = (a, b) => { const values = [luminance(a), luminance(b)].sort((x, y) => y - x); return (values[0] + .05) / (values[1] + .05); };
+  // Check both ends of each translucent gradient against white and black
+  // backdrops, so the new dark navigation remains readable across materials.
+  const sidebarStyle = getComputedStyle(document.querySelector('.sidebar'));
+  const sidebarColors = colors(sidebarStyle.backgroundImage === 'none' ? sidebarStyle.backgroundColor : sidebarStyle.backgroundImage);
+  const sidebarBackdrops = sidebarColors.flatMap(color => [[0, 0, 0], [255, 255, 255]].map(back => over(color, back)));
+  const sidebarContrast = node => {
+    const css = getComputedStyle(node), text = colors(css.color)[0];
+    const ancestors = [];
+    for (let ancestor = node; ancestor && !ancestor.classList.contains('sidebar'); ancestor = ancestor.parentElement) ancestors.unshift(ancestor);
+    let backgrounds = sidebarBackdrops;
+    for (const ancestor of ancestors) {
+      const style = getComputedStyle(ancestor);
+      const layers = colors(style.backgroundImage === 'none' ? style.backgroundColor : style.backgroundImage);
+      backgrounds = backgrounds.flatMap(back => layers.map(layer => over(layer, back)));
+    }
+    return Math.min(...backgrounds.map(back => contrast(over(text, back), back)));
+  };
+  const sidebarText = [...document.querySelectorAll('.brand strong, .brand-caption, .sidebar-caption, .nav-label, .nav-item, .nav-count, .theme-bookmark, .library-status strong, .library-status span:last-child')];
+  const lowContrast = sidebarText.map(node => ({text:node.textContent.trim(),ratio:sidebarContrast(node)})).filter(item => item.ratio < 4.5);
+  assert(sidebarColors.length > 0 && lowContrast.length === 0, 'Dark glass navigation keeps at least 4.5:1 text contrast over either backdrop', lowContrast);
+  assert([...document.querySelectorAll('.nav-icon')].every(node => node.querySelector('svg') && node.getAttribute('aria-hidden') === 'true'), 'Navigation uses consistent decorative vector icons without polluting accessible names');
+  assert(getComputedStyle(document.querySelector('.photo-card img')).filter === 'none' && getComputedStyle(document.querySelector('.hero-art img')).filter === 'none', 'Gallery and cover photographs retain their unfiltered colors');
+  const firstTheme = document.querySelector('.theme-bookmark');
+  firstTheme.click(); await paint();
+  assert(document.querySelectorAll('.theme-bookmark[aria-current=true]').length === 1 && firstTheme.getAttribute('aria-current') === 'true' && App.state.filtered.every(photo => photo.theme === firstTheme.dataset.theme) && sidebarContrast(firstTheme) >= 4.5, 'Selected theme is readable, visibly marked and matches the actual filtered album');
+  el('reset-filters').click(); await paint();
+  assert(!document.querySelector('.theme-bookmark[aria-current]'), 'Reset clears the selected theme highlight');
+  document.querySelector('[data-view=favorites]').click(); await paint();
+  assert(document.querySelectorAll('#navigation [aria-current=page]').length === 1 && document.querySelector('[data-view=favorites]').getAttribute('aria-current') === 'page', 'Accessible navigation follows the active view');
+  document.querySelector('[data-view=all]').click();
   for (const language of ['zh-CN', 'en']) {
     I18n.setLanguage(language);
     for (const font of [1.2, 1.5]) {
