@@ -77,7 +77,7 @@
   saved = null;
   el('edit-save-as').click();
   await wait(() => saved !== null && !el('edit-canvas'));
-  assert(saved.dataUrl.startsWith('data:image/jpeg;base64,') && !saved.overwriteId, 'Editing save-as preserves original');
+  assert(saved.dataUrl.startsWith('data:image/png;base64,') && !saved.overwriteId && saved.suggestedName.endsWith('.jpg'), 'Editing save-as uses lossless handoff and preserves original');
   document.querySelectorAll('.photo-select')[0].click();
   document.querySelector('[data-view="similar"]').click();
   el('start-similar').click();
