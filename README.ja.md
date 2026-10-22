@@ -21,6 +21,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **Keep several photo folders in one library.** Register folders without moving originals; the index, favorites, and tags survive restarts and disconnected drives. A source already in its target theme is indexed in place, while new imports show progress at the top and open their theme on completion.
 - **Stay up to date without losing your library.** From v1.3.7, automatic updates are on by default and can be disabled in Settings. Mac / writable AppImage updates wait for photo tasks and open workbenches, show a 10-second restart countdown, and replace the existing app. Debian packages still require system authorization.
 
+- **Shape color and light locally.** Edit RGB, temperature and tint curves with a complementary color guide. AI Skin Radiance uses local color analysis, adjustable strength and a visible skin-color mask to gently lift skin midtones without smoothing texture. No AI model or upload is required. [Color studio guide](docs/color-studio.md).
+
 *Give every captured moment a small island to return to.*
 
 ## 简体中文
@@ -37,6 +39,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
 - **多个照片目录，同一个相册。** 添加或移除索引不搬动原片，重启或硬盘暂时断开后仍保留目录、收藏与标签；已有同名主题原位纳入，导入时顶部显示进度，完成后展示本次主题。
 - **自动跟进新版，保留自己的相册。** v1.3.7 起默认自动更新，设置里可关闭；Mac / 可写 AppImage 在照片任务和工作台结束后显示 10 秒重启倒计时，沿用原安装位置。Debian 包仍需系统授权。
+
+- **曲线调色与自然肤色通透。** RGB、色温、色调曲线配合互补色盘参考；AI 一键通透使用本地算法，可调强度、取样并查看肤色范围，柔和提亮、保留纹理，无需模型与上传。[调色室说明](docs/color-studio.md)。
 
 *把一次快门，留成一座可以重返的小岛。*
 
@@ -89,6 +93,8 @@ Mac 版を手動で更新する場合は、起動中の旧版を終了してか�
 v1.0.8 以降は **「相册设置 → 软件更新」（設定 → ソフトウェア更新）** から手動で確認・ダウンロード・インストールできます。**v1.3.7 から自動更新が標準で有効**になり、同じ設定でオン・オフを切り替えられます。Mac / 書き込み可能な AppImage は新版をバックグラウンドでダウンロード・検証し、写真処理、選択作業、詳細表示、編集、コラージュ、GIF、設定のウィンドウが終了すると、上部に **再起動まで 10 秒のカウントダウン**を表示します。作業を始めたりウィンドウを開いたりするとインストールを延期し、終了後にカウントダウンをやり直します。自動更新をオフにすると自動再起動も取り消されます。既存のアプリを同じ場所で置き換え、登録フォルダー、お気に入り、タグ、設定を維持するため、アプリの複製を増やしません。Mac は書き込み可能な Applications に、AppImage は書き込み可能な場所に設置してください。DMG やビルドフォルダー内の Mac アプリはその場で更新できません。Linux deb は新版を通知し、**「下载并打开安装器」（ダウンロードしてインストーラーを開く）** を押してシステムの認証とインストールを完了する必要があります。その後はアプリを手動で開き直してください。[更新ガイド](docs/updates.md) を参照してください。
 
 ## 機能
+
+**v1.4.0：色調整スタジオ。** 写真の詳細から「Color & edit / 调色与修图」を開きます。RGB・色温度・色かぶり補正のカーブをクリックして制御点を追加し、補色環を参照して調整できます。「AI Skin Radiance」はモデルや送信を使わないローカルの色解析です。強さ、肌色のサンプル、マスク表示を調節できますが、似た色の背景も対象になる場合があります。テクスチャをぼかさず穏やかに補正し、元画像との比較と取り消しに対応します。[英中ガイドと合成スクリーンショット](docs/color-studio.md)。アプリの表示言語は引き続き英語と簡体字中国語のみです。
 
 | 機能 | 使い方・動作 |
 | --- | --- |

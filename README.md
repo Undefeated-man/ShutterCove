@@ -18,6 +18,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **Create GIF stories and memes.** Scroll a filmstrip, drag frames to reorder, and add movable speech bubbles or text to each photograph. Choose output scale, palette, frame timing, and looping; preview a real encoded GIF, or save one frame as a static PNG meme.
 - **Organize from SD card to delivery.** Import by capture date and gather selections across folders into one destination, optionally including CR3. Favorite synchronization first moves other JPEG / CR3 files on the chosen SD card into a recoverable pending-deletion folder for review.
 
+- **Shape color and light locally.** Edit RGB, temperature and tint curves with a complementary color guide. AI Skin Radiance uses local color analysis, adjustable strength and a visible skin-color mask to gently lift skin midtones without smoothing texture. No AI model or upload is required. [Color studio guide](docs/color-studio.md).
+
 *Give every captured moment a small island to return to.*
 
 ## 简体中文
@@ -33,6 +35,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **拼图与海报，让每张照片都有合适的构图。** 单张缩放、拖动格内位置；杂志海报保留原比例，木质展示板可自由移动、调大小、旋转和叠放完整照片。标题字号、背景色与文字颜色可调，分享压缩展示实际编码成品，预览与保存一致。
 - **GIF 与表情包，让回忆一帧一帧流动。** 滚轮浏览电影胶片、拖拽换序，逐帧添加可移动的对话气泡与文字；设置尺寸、色彩数、时长和循环，预览真实 GIF，也可保存单帧 PNG 表情包。
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
+
+- **曲线调色与自然肤色通透。** RGB、色温、色调曲线配合互补色盘参考；AI 一键通透使用本地算法，可调强度、取样并查看肤色范围，柔和提亮、保留纹理，无需模型与上传。[调色室说明](docs/color-studio.md)。
 
 *把一次快门，留成一座可以重返的小岛。*
 
@@ -94,6 +98,8 @@ On first launch, choose **English** or **Chinese** before the five-step guide. S
 
 ## Features
 
+![Color curves and complementary reference, synthetic illustration only](docs/screenshots/color-studio.png)
+
 | Feature | How it works |
 | --- | --- |
 | Interface language | English and Simplified Chinese; first-launch language choice and instant switching in Settings, remembered across restarts |
@@ -116,7 +122,7 @@ On first launch, choose **English** or **Chinese** before the five-step guide. S
 | Sticky gallery toolbar | Filtering, selection, and sorting controls stay at the top; returning focus after calendar or menu interactions preserves the scroll position |
 | Frosted-glass dropdowns | Sage styling matches the calendar; show up to six options with subtle scroll-edge fades, searchable long lists, arrow-key selection, Enter to confirm, and Esc to close |
 | Responsive window and font size | Resize the window; a persistent font-size slider in Settings previews changes immediately, defaults to 120%, and supports 100%–150% |
-| Simple editing | Crop, rotate, mirror horizontally or vertically, and apply rectangular or elliptical pixel mosaics; overwrite a JPEG or save a new file |
+| Color & editing | Six editable curves, complementary wheel, relative white balance and local Skin Radiance with amount / sample / mask; crop, rotate, mirror and mosaic; before comparison, undo / redo, save as or confirmed JPEG replacement. [Guide](docs/color-studio.md) |
 | SD card import | Copy new photographs into a chosen memories root, use an existing or new theme, organize by capture date, and skip duplicate content |
 | Batch selection and deletion | Multi-select, range selection, and select all filtered results; move files to the system trash after confirmation |
 | Copy a selection to a folder | Choose an existing folder or create one in the picker, then collect JPEGs from different subfolders into one flat destination; optionally include CR3 (off by default), with unique collision names shared by each pair, progress, cancellation, and results |

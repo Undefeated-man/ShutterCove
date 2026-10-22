@@ -71,7 +71,7 @@
     App.closeModal();
     await Studio.edit(photos[0]); await frames();
     assert(el('rotate-left').textContent === '↶ Rotate left' && el('edit-status').textContent.includes('Choose a tool'), 'Photo editing actions and status are English');
-    assert(document.querySelector('.modal-header p').textContent.startsWith('退出全屏 · Full-resolution editing'), 'Edit subtitle retains the Chinese filename and translates surrounding chrome');
+    assert(document.querySelector('.modal-header p').textContent === photos[0].name, 'Editor subtitle retains the original Chinese filename');
     el('crop-tool').click(); const editPixels = el('edit-canvas').toDataURL(); await language('zh-CN');
     assert(el('edit-status').textContent.includes('拖动框选') && el('edit-canvas').toDataURL() === editPixels, 'Editor switches language without touching photo pixels or chosen tool');
     App.closeModal(); await language('en');

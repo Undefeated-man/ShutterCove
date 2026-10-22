@@ -21,6 +21,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **Keep several photo folders in one library.** Register folders without moving originals; the index, favorites, and tags survive restarts and disconnected drives. A source already in its target theme is indexed in place, while new imports show progress at the top and open their theme on completion.
 - **Stay up to date without losing your library.** From v1.3.7, automatic updates are on by default and can be disabled in Settings. Mac / writable AppImage updates wait for photo tasks and open workbenches, show a 10-second restart countdown, and replace the existing app. Debian packages still require system authorization.
 
+- **Shape color and light locally.** Edit RGB, temperature and tint curves with a complementary color guide. AI Skin Radiance uses local color analysis, adjustable strength and a visible skin-color mask to gently lift skin midtones without smoothing texture. No AI model or upload is required. [Color studio guide](docs/color-studio.md).
+
 *Give every captured moment a small island to return to.*
 
 ## 简体中文
@@ -37,6 +39,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
 - **多个照片目录，同一个相册。** 添加或移除索引不搬动原片，重启或硬盘暂时断开后仍保留目录、收藏与标签；已有同名主题原位纳入，导入时顶部显示进度，完成后展示本次主题。
 - **自动跟进新版，保留自己的相册。** v1.3.7 起默认自动更新，设置里可关闭；Mac / 可写 AppImage 在照片任务和工作台结束后显示 10 秒重启倒计时，沿用原安装位置。Debian 包仍需系统授权。
+
+- **曲线调色与自然肤色通透。** RGB、色温、色调曲线配合互补色盘参考；AI 一键通透使用本地算法，可调强度、取样并查看肤色范围，柔和提亮、保留纹理，无需模型与上传。[调色室说明](docs/color-studio.md)。
 
 *把一次快门，留成一座可以重返的小岛。*
 
@@ -89,6 +93,8 @@ Mac 버전을 수동으로 업데이트하려면 실행 중인 구버전을 종�
 v1.0.8부터 **相册设置 → 软件更新(설정 → 소프트웨어 업데이트)**에서 수동으로 확인·다운로드·설치할 수 있습니다. **v1.3.7부터 자동 업데이트가 기본으로 켜져 있으며**, 같은 설정에서 켜거나 끌 수 있습니다. Mac / 쓰기 가능한 AppImage는 새 버전을 백그라운드에서 다운로드하고 검증합니다. 사진 작업, 선택 작업, 상세 보기, 편집, 콜라주, GIF, 설정 창이 끝나면 화면 상단에 **다시 시작까지 10초 카운트다운**을 표시합니다. 새 작업을 시작하거나 창을 열면 설치를 미루고, 종료 후 카운트다운을 다시 시작합니다. 자동 업데이트를 끄면 자동 재시작도 취소됩니다. 기존 앱을 같은 위치에서 교체하고 등록 폴더, 즐겨찾기, 태그, 설정을 유지하므로 앱 사본을 추가하지 않습니다. Mac 앱은 쓰기 가능한 Applications에, AppImage는 쓰기 가능한 위치에 설치하세요. DMG나 빌드 폴더의 Mac 앱은 제자리 업데이트를 지원하지 않습니다. Linux deb는 새 버전을 알리며, **下载并打开安装器(다운로드 후 설치 프로그램 열기)**를 클릭해 시스템 인증과 설치를 직접 완료해야 합니다. 이후 앱을 수동으로 다시 실행하세요. [업데이트 안내](docs/updates.md)를 참고하세요.
 
 ## 기능
+
+**v1.4.0: 색상 편집 스튜디오.** 사진 상세 화면에서 “Color & edit / 调色与修图”를 엽니다. RGB, 색온도, 색조 곡선을 클릭해 조절점을 추가하고 보색환을 참고하여 색을 조정할 수 있습니다. “AI Skin Radiance”는 모델이나 업로드 없이 기기에서 색을 분석합니다. 강도, 피부색 샘플 및 마스크 표시를 조절할 수 있지만 비슷한 색의 배경도 선택될 수 있습니다. 피부 질감을 흐리지 않고 부드럽게 보정하며 원본 비교와 실행 취소를 지원합니다. [영문·중문 안내와 합성 화면](docs/color-studio.md). 앱 표시 언어는 여전히 영어와 간체 중국어 두 가지입니다.
 
 | 기능 | 사용 방식 |
 | --- | --- |

@@ -89,3 +89,10 @@ macOS 使用 ad-hoc 签名；不声明 Apple 公证或 Developer ID 身份。发
 ExifTool 版权所有 Phil Harvey。其上游说明为：可以在与 Perl 本身相同的条款下再分发或修改，即 Perl Artistic License 或 GPL 双授权。不要把上游没有明确指定版本的 Artistic License 擅自写为 Artistic 2.0。
 
 参考 [ExifTool 官方授权说明](https://exiftool.org/forum/index.php?topic=16703.0)、[ExifTool 源码](https://github.com/exiftool/exiftool) 与 [vendored.pl LICENSE](https://github.com/photostructure/exiftool-vendored.pl/blob/main/LICENSE)。本项目不修改 ExifTool 本体；发布时须保留依赖包中的原始版权和许可证资料。
+
+
+## Local color processing
+
+`renderer/color-engine.js` is a deterministic, dependency-free sRGB pixel core shared by preview, export and Node regressions. A dedicated `color-worker.js` caches a bounded preview, computes histograms and a soft skin-color range, and applies shape-preserving RGB curves plus brightness-dependent temperature/tint offsets. Preview jobs coalesce and discard stale results. Export reuses the preview analysis at full working resolution and sends a lossless PNG through the existing authorized native save path; no intermediate JPEG is written. The native save path performs the final selected-format encode.
+
+`photo-editor.js` separates immutable geometry canvases from curve/skin settings and bounded undo history. Sampling narrows a color range rather than locating a face. Mask and before views are excluded from export. Closing terminates the worker, rejects outstanding jobs and releases working canvases. Source decoding and geometry operations retain the existing safe canvas bounds. Compatibility-sensitive application IDs, library metadata and CR3 authorization are unchanged.

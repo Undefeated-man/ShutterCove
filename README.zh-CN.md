@@ -19,6 +19,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **Keep several photo folders in one library.** Register folders without moving originals; the index, favorites, and tags survive restarts and disconnected drives. A source already in its target theme is indexed in place, while new imports show progress at the top and open their theme on completion.
 - **Stay up to date without losing your library.** From v1.3.7, automatic updates are on by default and can be disabled in Settings. Mac / writable AppImage updates wait for photo tasks and open workbenches, show a 10-second restart countdown, and replace the existing app. Debian packages still require system authorization.
 
+- **Shape color and light locally.** Edit RGB, temperature and tint curves with a complementary color guide. AI Skin Radiance uses local color analysis, adjustable strength and a visible skin-color mask to gently lift skin midtones without smoothing texture. No AI model or upload is required. [Color studio guide](docs/color-studio.md).
+
 *Give every captured moment a small island to return to.*
 
 ## 简体中文
@@ -35,6 +37,8 @@ Shutter Cove (时光杂货店) follows your photography workflow: import from an
 - **从 SD 卡整理到作品交付。** 新照片按拍摄日期归档，跨目录选片后一键复制，可选携带 CR3；精品同步先将 SD 卡里其他 JPEG / CR3 移入可恢复的待删文件夹，方便核对。
 - **多个照片目录，同一个相册。** 添加或移除索引不搬动原片，重启或硬盘暂时断开后仍保留目录、收藏与标签；已有同名主题原位纳入，导入时顶部显示进度，完成后展示本次主题。
 - **自动跟进新版，保留自己的相册。** v1.3.7 起默认自动更新，设置里可关闭；Mac / 可写 AppImage 在照片任务和工作台结束后显示 10 秒重启倒计时，沿用原安装位置。Debian 包仍需系统授权。
+
+- **曲线调色与自然肤色通透。** RGB、色温、色调曲线配合互补色盘参考；AI 一键通透使用本地算法，可调强度、取样并查看肤色范围，柔和提亮、保留纹理，无需模型与上传。[调色室说明](docs/color-studio.md)。
 
 *把一次快门，留成一座可以重返的小岛。*
 
@@ -88,6 +92,8 @@ Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官
 
 ## 功能
 
+![曲线调色与互补色盘参考，仅合成示例](docs/screenshots/color-studio.png)
+
 | 功能 | 支持方式 |
 | --- | --- |
 | 界面语言 | 简体中文 / English；首次打开先选语言，设置里一键切换，重启后记住选择 |
@@ -110,7 +116,7 @@ Linux AppImage 在部分发行版需要 FUSE 2。Photoshop / Lightroom 没有官
 | 固定图库工具栏 | 滚动照片时，筛选、多选与排序栏保持在顶部；日历和菜单交互后返回焦点时保持当前位置 |
 | 毛玻璃下拉菜单 | 与日历统一的鼠尾草绿样式，最多显示六项，滚动边缘轻微渐隐；长列表可搜索，支持方向键选择、Enter 确认与 Esc 关闭 |
 | 自适应窗口与字号 | 窗口可以调整大小；设置中的字号滑块即时预览并持久保存，默认 120%，可在 100%–150% 间调整 |
-| 简单修图 | 裁剪、旋转、水平 / 垂直镜像、矩形 / 椭圆马赛克；覆盖 JPEG 或另存为 |
+| 调色与修图 | 六组可编辑曲线、互补色盘、白平衡偏移与本地一键通透，可调强度 / 取样 / 查看范围；裁剪、旋转、镜像、马赛克，对比、撤销 / 重做，另存为或确认后覆盖 JPEG。[说明](docs/color-studio.md) |
 | SD 卡导入 / 纳入现有照片 | 新照片复制到指定主题并按日期归档；已有同名主题原位索引，无额外副本。顶部展示准备、读取、复制或索引进度，成功后默认展示本次主题 |
 | 批量选择与删除 | 多选、范围选取与筛选结果全选；确认后移入系统废纸篓 |
 | 批量复制到文件夹 | 选择已有或新建目标文件夹，跨子目录平铺汇集 JPEG，可勾选同时复制 CR3（默认关闭）；重名自动唯一改名，JPEG / CR3 共用名称，带进度、取消与结果 |

@@ -95,6 +95,7 @@ async function main() {
       launch(binary, ['--demo', '--smoke', '--compact', ...(script === 'motion-ui-smoke.js' ? ['--qa-output', path.join(temporary, 'motion-ui-output')] : []), '--qa-script', smoke]);
     }
     launch(binary, ['--demo', '--smoke', '--qa-script', path.join(__dirname, 'cove-layout-ui-smoke.js')]);
+    for (const size of [[], ['--compact']]) launch(binary, ['--demo', '--smoke', ...size, '--qa-script', path.join(__dirname, 'color-ui-smoke.js')]);
     const ambientSmoke = path.join(__dirname, 'ambient-motion-ui-smoke.js');
     launch(binary, ['--demo', '--smoke', '--qa-script', ambientSmoke]);
     launch(binary, ['--demo', '--smoke', '--force-prefers-reduced-motion', '--qa-script', ambientSmoke]);
@@ -146,6 +147,20 @@ async function main() {
     if (motion.format !== 'gif' || motion.pages !== 2 || motion.pageHeight !== 100 || motion.width !== 160 || motion.delay.some(delay => delay !== 320) || motion.loop !== 0) throw new Error('Actual GIF file has incorrect frames, dimensions, timing or loop');
     if (photoFiles(photos).some(file => !originals.some(original => original.file === file && digest(file) === original.sha256))) throw new Error('Creative export changed source photos');
     if (process.platform === 'darwin') launch(binary, ['--demo', '--smoke', '--qa-script', path.join(__dirname, 'fullscreen-native-smoke.js')]);
+    const colorPhotos = path.join(temporary, 'color-photos'), colorOutput = path.join(temporary, 'color-output');
+    fs.mkdirSync(colorPhotos); fs.mkdirSync(colorOutput);
+    const colorJPEG = path.join(colorPhotos, 'synthetic-color.jpg'), colorRAW = path.join(colorPhotos, 'synthetic-color.CR3');
+    await sharp(Buffer.from('<svg width="2400" height="1600"><rect width="2400" height="1600" fill="#b17e60"/><rect x="1600" width="800" height="1600" fill="#486e9e"/><rect x="600" y="400" width="800" height="900" fill="#d6aa88"/></svg>')).jpeg({quality:98}).toFile(colorJPEG);
+    fs.writeFileSync(colorRAW, 'Synthetic CR3 color-pair fixture.');
+    const colorHashes = [digest(colorJPEG), digest(colorRAW)];
+    launch(binary, ['--smoke', '--verify-root', colorPhotos, '--qa-output', colorOutput, '--qa-script', path.join(__dirname, 'color-native-smoke.js')]);
+    const colorResult = launch.lastQA, colorFiles = photoFiles(colorOutput);
+    if (!colorResult || colorResult.passed !== colorResult.checks.length || colorFiles.length !== 1) throw new Error('Native color export did not produce one JPEG');
+    const colorFile = sharp(colorFiles[0]), colorInfo = await colorFile.metadata();
+    if (colorInfo.width !== 2400 || colorInfo.height !== 1600 || colorInfo.format !== 'jpeg') throw new Error('Native color export changed full-size dimensions');
+    const {data: colorPixels, info: colorPixelInfo} = await colorFile.removeAlpha().raw().toBuffer({resolveWithObject:true});
+    for (const sample of colorResult.samples) for (let i=0;i<3;i++) if (Math.abs(colorPixels[(sample.y*colorPixelInfo.width+sample.x)*3+i]-sample.rgb[i])>3) throw new Error('Native color JPEG differs from the graded preview calculation');
+    if (digest(colorJPEG)!==colorHashes[0] || digest(colorRAW)!==colorHashes[1] || photoFiles(colorPhotos).length!==2) throw new Error('Color editing modified source JPEG or CR3');
     launch(binary, ['--smoke', '--verify-root', photos, '--qa-output', output, '--qa-script', path.join(__dirname, 'sync-smoke.js')]);
     const retained = photoFiles(photos);
     const pending = path.join(photos, '待删');
